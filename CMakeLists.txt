@@ -43,7 +43,8 @@ IF (UNIX)
 	SET(SuiteSparse_LINKER_LIBS
 		${SuiteSparse_LINKER_LIBS}
 		lapack
-		blas			
+		blas
+		rt
 		)
 ELSE(UNIX)
 	IF(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
