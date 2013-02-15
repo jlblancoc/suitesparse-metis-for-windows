@@ -39,20 +39,6 @@ IF(BUILD_METIS)
 	SET(SuiteSparse_LINKER_LIBS "${SuiteSparse_LINKER_LIBS};metis")
 ENDIF(BUILD_METIS)
 
-IF(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
-	SET(WORD_SIZE 64)
-ELSE(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
-	SET(WORD_SIZE 32)
-ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
-
-if(WORD_SIZE EQUAL 64)
-	set(PATH_WORD_SIZE "x64")
-else(WORD_SIZE EQUAL 64)
-	set(PATH_WORD_SIZE "x32")
-endif(WORD_SIZE EQUAL 64)
-
-MESSAGE(STATUS "Detected platform for precompiled LAPACK: ${PATH_WORD_SIZE}")
-
 IF (UNIX)
 	SET(SuiteSparse_LINKER_LIBS
 		${SuiteSparse_LINKER_LIBS}
@@ -60,13 +46,18 @@ IF (UNIX)
 		blas			
 		)
 ELSE(UNIX)
+	IF(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
+		set(PATH_WORD_SIZE "x64")
+	ELSE(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
+		set(PATH_WORD_SIZE "x32")
+	ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+
 	SET(SuiteSparse_LINKER_LIBS
 		${SuiteSparse_LINKER_LIBS}
 		${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.lib
 		${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.lib
 		)
 ENDIF(UNIX)
-
 
 CONFIGURE_FILE(
 	"${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparseConfig.cmake.in"
