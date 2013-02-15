@@ -1,0 +1,98 @@
+$(C) -c ../Check/cholmod_check.c -o cholmod_check.o
+$(C) -c ../Check/cholmod_read.c -o cholmod_read.o
+$(C) -c ../Check/cholmod_write.c -o cholmod_write.o
+$(C) -DDLONG -c ../Check/cholmod_check.c -o cholmod_l_check.o
+$(C) -DDLONG -c ../Check/cholmod_read.c -o cholmod_l_read.o
+$(C) -DDLONG -c ../Check/cholmod_write.c -o cholmod_l_write.o
+$(C) -c ../Core/cholmod_common.c -o cholmod_common.o
+$(C) -c ../Core/cholmod_dense.c -o cholmod_dense.o
+$(C) -c ../Core/cholmod_factor.c -o cholmod_factor.o
+$(C) -c ../Core/cholmod_change_factor.c -o cholmod_change_factor.o
+$(C) -c ../Core/cholmod_memory.c -o cholmod_memory.o
+$(C) -c ../Core/cholmod_sparse.c -o cholmod_sparse.o
+$(C) -c ../Core/cholmod_complex.c -o cholmod_complex.o
+$(C) -c ../Core/cholmod_transpose.c -o cholmod_transpose.o
+$(C) -c ../Core/cholmod_band.c -o cholmod_band.o
+$(C) -c ../Core/cholmod_copy.c -o cholmod_copy.o
+$(C) -c ../Core/cholmod_triplet.c -o cholmod_triplet.o
+$(C) -c ../Core/cholmod_error.c -o cholmod_error.o
+$(C) -c ../Core/cholmod_aat.c -o cholmod_aat.o
+$(C) -c ../Core/cholmod_add.c -o cholmod_add.o
+$(C) -DDLONG -c ../Core/cholmod_common.c -o cholmod_l_common.o
+$(C) -DDLONG -c ../Core/cholmod_dense.c -o cholmod_l_dense.o
+$(C) -DDLONG -c ../Core/cholmod_factor.c -o cholmod_l_factor.o
+$(C) -DDLONG -c ../Core/cholmod_change_factor.c -o cholmod_l_change_factor.o
+$(C) -DDLONG -c ../Core/cholmod_memory.c -o cholmod_l_memory.o
+$(C) -DDLONG -c ../Core/cholmod_sparse.c -o cholmod_l_sparse.o
+$(C) -DDLONG -c ../Core/cholmod_complex.c -o cholmod_l_complex.o
+$(C) -DDLONG -c ../Core/cholmod_transpose.c -o cholmod_l_transpose.o
+$(C) -DDLONG -c ../Core/cholmod_band.c -o cholmod_l_band.o
+$(C) -DDLONG -c ../Core/cholmod_copy.c -o cholmod_l_copy.o
+$(C) -DDLONG -c ../Core/cholmod_triplet.c -o cholmod_l_triplet.o
+$(C) -DDLONG -c ../Core/cholmod_error.c -o cholmod_l_error.o
+$(C) -DDLONG -c ../Core/cholmod_aat.c -o cholmod_l_aat.o
+$(C) -DDLONG -c ../Core/cholmod_add.c -o cholmod_l_add.o
+$(C) -c ../Cholesky/cholmod_amd.c -o cholmod_amd.o
+$(C) -c ../Cholesky/cholmod_analyze.c -o cholmod_analyze.o
+$(C) -c ../Cholesky/cholmod_colamd.c -o cholmod_colamd.o
+$(C) -c ../Cholesky/cholmod_etree.c -o cholmod_etree.o
+$(C) -c ../Cholesky/cholmod_factorize.c -o cholmod_factorize.o
+$(C) -c ../Cholesky/cholmod_postorder.c -o cholmod_postorder.o
+$(C) -c ../Cholesky/cholmod_rcond.c -o cholmod_rcond.o
+$(C) -c ../Cholesky/cholmod_resymbol.c -o cholmod_resymbol.o
+$(C) -c ../Cholesky/cholmod_rowcolcounts.c -o cholmod_rowcolcounts.o
+$(C) -c ../Cholesky/cholmod_solve.c -o cholmod_solve.o
+$(C) -c ../Cholesky/cholmod_spsolve.c -o cholmod_spsolve.o
+$(C) -c ../Cholesky/cholmod_rowfac.c -o cholmod_rowfac.o
+$(C) -DDLONG -c ../Cholesky/cholmod_amd.c -o cholmod_l_amd.o
+$(C) -DDLONG -c ../Cholesky/cholmod_analyze.c -o cholmod_l_analyze.o
+$(C) -DDLONG -c ../Cholesky/cholmod_colamd.c -o cholmod_l_colamd.o
+$(C) -DDLONG -c ../Cholesky/cholmod_etree.c -o cholmod_l_etree.o
+$(C) -DDLONG -c ../Cholesky/cholmod_factorize.c -o cholmod_l_factorize.o
+$(C) -DDLONG -c ../Cholesky/cholmod_postorder.c -o cholmod_l_postorder.o
+$(C) -DDLONG -c ../Cholesky/cholmod_rcond.c -o cholmod_l_rcond.o
+$(C) -DDLONG -c ../Cholesky/cholmod_resymbol.c -o cholmod_l_resymbol.o
+$(C) -DDLONG -c ../Cholesky/cholmod_rowcolcounts.c -o cholmod_l_rowcolcounts.o
+$(C) -DDLONG -c ../Cholesky/cholmod_solve.c -o cholmod_l_solve.o
+$(C) -DDLONG -c ../Cholesky/cholmod_spsolve.c -o cholmod_l_spsolve.o
+$(C) -DDLONG -c ../Cholesky/cholmod_rowfac.c -o cholmod_l_rowfac.o
+$(C) -c ../Partition/cholmod_ccolamd.c -o cholmod_ccolamd.o
+$(C) -c ../Partition/cholmod_csymamd.c -o cholmod_csymamd.o
+$(C) -c ../Partition/cholmod_camd.c -o cholmod_camd.o
+$(C) -c ../Partition/cholmod_metis.c -o cholmod_metis.o
+$(C) -c ../Partition/cholmod_nesdis.c -o cholmod_nesdis.o
+$(C) -DDLONG -c ../Partition/cholmod_ccolamd.c -o cholmod_l_ccolamd.o
+$(C) -DDLONG -c ../Partition/cholmod_csymamd.c -o cholmod_l_csymamd.o
+$(C) -DDLONG -c ../Partition/cholmod_camd.c -o cholmod_l_camd.o
+$(C) -DDLONG -c ../Partition/cholmod_metis.c -o cholmod_l_metis.o
+$(C) -DDLONG -c ../Partition/cholmod_nesdis.c -o cholmod_l_nesdis.o
+$(C) -c ../MatrixOps/cholmod_horzcat.c -o cholmod_horzcat.o
+$(C) -c ../MatrixOps/cholmod_norm.c -o cholmod_norm.o
+$(C) -c ../MatrixOps/cholmod_scale.c -o cholmod_scale.o
+$(C) -c ../MatrixOps/cholmod_drop.c -o cholmod_drop.o
+$(C) -c ../MatrixOps/cholmod_sdmult.c -o cholmod_sdmult.o
+$(C) -c ../MatrixOps/cholmod_ssmult.c -o cholmod_ssmult.o
+$(C) -c ../MatrixOps/cholmod_submatrix.c -o cholmod_submatrix.o
+$(C) -c ../MatrixOps/cholmod_vertcat.c -o cholmod_vertcat.o
+$(C) -c ../MatrixOps/cholmod_symmetry.c -o cholmod_symmetry.o
+$(C) -DDLONG -c ../MatrixOps/cholmod_horzcat.c -o cholmod_l_horzcat.o
+$(C) -DDLONG -c ../MatrixOps/cholmod_norm.c -o cholmod_l_norm.o
+$(C) -DDLONG -c ../MatrixOps/cholmod_scale.c -o cholmod_l_scale.o
+$(C) -DDLONG -c ../MatrixOps/cholmod_drop.c -o cholmod_l_drop.o
+$(C) -DDLONG -c ../MatrixOps/cholmod_sdmult.c -o cholmod_l_sdmult.o
+$(C) -DDLONG -c ../MatrixOps/cholmod_ssmult.c -o cholmod_l_ssmult.o
+$(C) -DDLONG -c ../MatrixOps/cholmod_submatrix.c -o cholmod_l_submatrix.o
+$(C) -DDLONG -c ../MatrixOps/cholmod_vertcat.c -o cholmod_l_vertcat.o
+$(C) -DDLONG -c ../MatrixOps/cholmod_symmetry.c -o cholmod_l_symmetry.o
+$(C) -c ../Modify/cholmod_rowadd.c -o cholmod_rowadd.o
+$(C) -c ../Modify/cholmod_rowdel.c -o cholmod_rowdel.o
+$(C) -c ../Modify/cholmod_updown.c -o cholmod_updown.o
+$(C) -DDLONG -c ../Modify/cholmod_rowadd.c -o cholmod_l_rowadd.o
+$(C) -DDLONG -c ../Modify/cholmod_rowdel.c -o cholmod_l_rowdel.o
+$(C) -DDLONG -c ../Modify/cholmod_updown.c -o cholmod_l_updown.o
+$(C) -c ../Supernodal/cholmod_super_numeric.c -o cholmod_super_numeric.o
+$(C) -c ../Supernodal/cholmod_super_symbolic.c -o cholmod_super_symbolic.o
+$(C) -c ../Supernodal/cholmod_super_solve.c -o cholmod_super_solve.o
+$(C) -DDLONG -c ../Supernodal/cholmod_super_numeric.c -o cholmod_l_super_numeric.o
+$(C) -DDLONG -c ../Supernodal/cholmod_super_symbolic.c -o cholmod_l_super_symbolic.o
+$(C) -DDLONG -c ../Supernodal/cholmod_super_solve.c -o cholmod_l_super_solve.o
