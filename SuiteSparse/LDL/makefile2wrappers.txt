@@ -1,0 +1,2 @@
+	$(C) -c ../Source/ldl.c -o ldl.o
+	$(C) -DLDL_LONG -c ../Source/ldl.c -o ldll.o

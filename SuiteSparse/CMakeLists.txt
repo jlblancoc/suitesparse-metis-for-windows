@@ -81,7 +81,11 @@ ADD_LIBRARY(suitesparse
 	${LIBHDRS_BTF} ${LIBSRCS_BTF}
 	${LIBHDRS_KLU} ${LIBSRCS_KLU}
 	)
-
+	
 IF (BUILD_METIS)
 	add_dependencies(suitesparse metis)
 ENDIF (BUILD_METIS)
+
+add_subdirectory(SPQR)
+add_subdirectory(LDL)
+
