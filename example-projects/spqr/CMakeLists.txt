@@ -14,7 +14,7 @@ cmake_minimum_required(VERSION 2.8)
 # If not found automatically, set SuiteSparse_DIR in CMake to the 
 # directory where SuiteSparse was built.
 # ------------------------------------------------------------------
-LIST(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/.") # Add the directory where FindSuiteSparse.cmake module can be found.
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/..") # Add the directory where FindSuiteSparse.cmake module can be found.
 
 set(SuiteSparse_USE_LAPACK_BLAS ON)
 find_package(SuiteSparse QUIET NO_MODULE)  # 1st: Try to locate the *config.cmake file.
