@@ -7,3 +7,4 @@ ADD_LIBRARY(SuiteSparse_config
 	SuiteSparse_config.h
 	)
 
+install_suitesparse_project(SuiteSparse_config "SuiteSparse_config.h")

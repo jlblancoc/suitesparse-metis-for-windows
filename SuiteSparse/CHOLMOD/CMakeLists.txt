@@ -13,9 +13,20 @@ FILE(GLOB LIBHDRS "${CHOLMOD_SOURCE_DIR}/Include/*.h")
 FILE(GLOB LIBSRCS "SourceWrappers/*.c")
 
 ADD_LIBRARY(CHOLMOD ${LIBHDRS} ${LIBSRCS})
-ADD_DEPENDENCIES(CHOLMOD 
-	SuiteSparse_config AMD CAMD COLAMD CCOLAMD)
+
+if(BUILD_SHARED_LIBS)
+	target_link_libraries(CHOLMOD SuiteSparse_config AMD CAMD COLAMD CCOLAMD ${SuiteSparse_LINKER_LIBS})
+else()
+	ADD_DEPENDENCIES(CHOLMOD 
+		SuiteSparse_config AMD CAMD COLAMD CCOLAMD)
+endif()
 
 IF (BUILD_METIS)
-	ADD_DEPENDENCIES(CHOLMOD metis)
+	if(BUILD_SHARED_LIBS)
+		target_link_libraries(CHOLMOD metis)
+	else()
+		ADD_DEPENDENCIES(CHOLMOD metis)
+	endif()
 ENDIF (BUILD_METIS)
+
+install_suitesparse_project(CHOLMOD "${LIBHDRS}")

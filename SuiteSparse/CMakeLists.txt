@@ -21,27 +21,7 @@ endif(MSVC)
 
 include_directories(".")  # Needed for "SourceWrappers/*.c" files
 
-#add_subdirectory(SuiteSparse_config)
-#add_subdirectory(AMD)
-#add_subdirectory(CAMD)
-#add_subdirectory(CCOLAMD)
-#add_subdirectory(COLAMD)
-#add_subdirectory(CHOLMOD)
-#add_subdirectory(UMFPACK)
-
-SET(SUITESPARSE_INCLUDE_DIRS
-	${SuiteSparse_SOURCE_DIR}/SuiteSparse_config
-	${SuiteSparse_SOURCE_DIR}/AMD/Include
-	${SuiteSparse_SOURCE_DIR}/CAMD/Include
-	${SuiteSparse_SOURCE_DIR}/COLAMD/Include
-	${SuiteSparse_SOURCE_DIR}/CCOLAMD/Include
-	${SuiteSparse_SOURCE_DIR}/CHOLMOD/Include
-	${SuiteSparse_SOURCE_DIR}/UMFPACK/Include
-	${SuiteSparse_SOURCE_DIR}/BTF/Include
-	${SuiteSparse_SOURCE_DIR}/KLU/Include
-	CACHE INTERNAL "")
-
-include_directories(${SUITESPARSE_INCLUDE_DIRS})
+set(SuiteSparse_config_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse_config)
 
 FILE(GLOB LIBHDRS_AMD "AMD/Include/*.h")
 FILE(GLOB LIBSRCS_AMD "AMD/SourceWrappers/*.c")
@@ -67,25 +47,67 @@ FILE(GLOB LIBSRCS_BTF "BTF/SourceWrappers/*.c")
 FILE(GLOB LIBHDRS_KLU "KLU/Include/*.h")
 FILE(GLOB LIBSRCS_KLU "KLU/SourceWrappers/*.c")
 
-ADD_LIBRARY(suitesparse
-	# ---
-	SuiteSparse_config/SuiteSparse_config.c
-	SuiteSparse_config/SuiteSparse_config.h
-	# ---
-	${LIBHDRS_AMD} ${LIBSRCS_AMD}
-	${LIBHDRS_CAMD} ${LIBSRCS_CAMD}
-	${LIBHDRS_COLAMD} ${LIBSRCS_COLAMD}
-	${LIBHDRS_CCOLAMD} ${LIBSRCS_CCOLAMD}
-	${LIBHDRS_CHOLMOD} ${LIBSRCS_CHOLMOD}
-	${LIBHDRS_UMFPACK} ${LIBSRCS_UMFPACK}
-	${LIBHDRS_BTF} ${LIBSRCS_BTF}
-	${LIBHDRS_KLU} ${LIBSRCS_KLU}
-	)
-	
+set(SUBPROJECTS_TO_ADD 
+	SuiteSparse_config
+	AMD
+	CAMD
+	CCOLAMD
+	COLAMD
+	CHOLMOD
+	UMFPACK
+	CACHE STRING "list of all sub-directories to add to cmake build"
+)
+foreach(subdir ${SUBPROJECTS_TO_ADD})
+	add_subdirectory(${subdir})
+endforeach()
+
+SET(SUITESPARSE_INCLUDE_DIRS
+	${SuiteSparse_SOURCE_DIR}/SuiteSparse_config
+	${SuiteSparse_SOURCE_DIR}/AMD/Include
+	${SuiteSparse_SOURCE_DIR}/CAMD/Include
+	${SuiteSparse_SOURCE_DIR}/COLAMD/Include
+	${SuiteSparse_SOURCE_DIR}/CCOLAMD/Include
+	${SuiteSparse_SOURCE_DIR}/CHOLMOD/Include
+	${SuiteSparse_SOURCE_DIR}/UMFPACK/Include
+	${SuiteSparse_SOURCE_DIR}/BTF/Include
+	${SuiteSparse_SOURCE_DIR}/KLU/Include
+	CACHE INTERNAL "")
+
+include_directories(${SUITESPARSE_INCLUDE_DIRS})
+
+set(SUITESPARSE_HEADERS SuiteSparse_config/SuiteSparse_config.h
+	${LIBHDRS_AMD}
+	${LIBHDRS_CAMD}
+	${LIBHDRS_COLAMD}
+	${LIBHDRS_CCOLAMD}
+	${LIBHDRS_CHOLMOD}
+	${LIBHDRS_UMFPACK}
+	${LIBHDRS_BTF}
+	${LIBHDRS_KLU}
+)
+set(SUITESPARSE_SOURCES SuiteSparse_config/SuiteSparse_config.c
+	${LIBSRCS_AMD}
+	${LIBSRCS_CAMD}
+	${LIBSRCS_COLAMD}
+	${LIBSRCS_CCOLAMD}
+	${LIBSRCS_CHOLMOD}
+	${LIBSRCS_UMFPACK}
+	${LIBSRCS_BTF}
+	${LIBSRCS_KLU}
+)
+
+ADD_LIBRARY(suitesparse ${SUITESPARSE_HEADERS} ${SUITESPARSE_SOURCES})
+
+if(BUILD_SHARED_LIBS)
+	target_link_libraries(suitesparse SuiteSparse_config CHOLMOD AMD CAMD COLAMD CCOLAMD ${SuiteSparse_LINKER_LIBS} UMFPACK)
+endif()
+
 IF (BUILD_METIS)
 	add_dependencies(suitesparse metis)
 ENDIF (BUILD_METIS)
 
-add_subdirectory(SPQR)
-add_subdirectory(LDL)
+## prepare install for suitesparse target
+install_suitesparse_project(suitesparse "${SUITESPARSE_HEADERS}")
 
+#add_subdirectory(SPQR)
+#add_subdirectory(LDL)
