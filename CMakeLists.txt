@@ -133,12 +133,6 @@ SET(THE_CMAKE_BINARY_DIR "${CMAKE_BINARY_DIR}")
 # Linker libs:
 SET(SuiteSparse_LINKER_LIBS "${SuiteSparse_LINKER_LIBS};suitesparse")
 
-## For find SuiteSparce from the build dir
-CONFIGURE_FILE(
-	"${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparseConfig.cmake.in"
-	"${CMAKE_CURRENT_BINARY_DIR}/SuiteSparseConfig.cmake"
-	@ONLY)
-	
 ## For find SuiteSparse from the install dir
 install(FILES 		SuiteSparseConfigForInstall.cmake
 		DESTINATION	.
