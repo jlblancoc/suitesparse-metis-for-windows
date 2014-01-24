@@ -1,8 +1,10 @@
 PROJECT(SPQR)
 
+include_directories("${SuiteSparse_config_SOURCE_DIR}")
 include_directories("${SPQR_SOURCE_DIR}/Include")
+include_directories("${CHOLMOD_SOURCE_DIR}/Include")
 
-FILE(GLOB LIBHDRS "Include/*.h")
+FILE(GLOB LIBHDRS "Include/*.h*") # .h & .hpp
 SET(LIBSRCS 
 	Source/spqr_rmap.cpp
 	Source/SuiteSparseQR_C.cpp
@@ -47,9 +49,16 @@ SET(LIBSRCS
 	)
 	
 ADD_LIBRARY(SPQR ${LIBHDRS} ${LIBSRCS})
-ADD_DEPENDENCIES(SPQR SuiteSparse_config CAMD CCOLAMD)
+ADD_DEPENDENCIES(SPQR SuiteSparse_config CAMD CCOLAMD CHOLMOD)
 
 IF (BUILD_METIS)
 	add_dependencies(SPQR metis)
 ENDIF (BUILD_METIS)
 
+if(BUILD_SHARED_LIBS)
+	target_link_libraries(SPQR SuiteSparse_config)
+else()
+	ADD_DEPENDENCIES(SPQR SuiteSparse_config)
+endif()
+
+install_suitesparse_project(SPQR "${LIBHDRS}")
