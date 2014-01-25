@@ -76,6 +76,20 @@ macro(install_suitesparse_project targetName headersList)
 	)
 endmacro()
 
+## declare_suitesparse_library(targetName srcsList headersList)
+## 	Example of use: See SuiteSparse/*/CMakeLists.txt
+macro(declare_suitesparse_library targetName srcsList headersList)
+	ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
+	
+	if(BUILD_SHARED_LIBS)
+		target_link_libraries(${targetName} SuiteSparse_config)
+	else()
+		ADD_DEPENDENCIES(${targetName} SuiteSparse_config)
+	endif()
+	
+	install_suitesparse_project(${targetName} "${headersList}")
+endmacro()
+
 
 ## check if the SHARED variable has already been defined (by the metis project) and use it for our projects
 ## BUILD_SHARED_LIBS specific variable allow cmake to know what kind of lib (STATIC or SHARED) it have to build

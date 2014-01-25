@@ -8,13 +8,4 @@ include_directories("${LDL_SOURCE_DIR}/Include")
 FILE(GLOB LIBHDRS "${LDL_SOURCE_DIR}/Include/*.h")
 FILE(GLOB LIBSRCS "${LDL_SOURCE_DIR}/SourceWrappers/*.c")
 
-ADD_LIBRARY(LDL ${LIBHDRS} ${LIBSRCS})
-ADD_DEPENDENCIES(LDL SuiteSparse_config)
-
-if(BUILD_SHARED_LIBS)
-	target_link_libraries(LDL SuiteSparse_config)
-else()
-	ADD_DEPENDENCIES(LDL SuiteSparse_config)
-endif()
-
-install_suitesparse_project(LDL "${LIBHDRS}")
+declare_suitesparse_library(ldl "${LIBSRCS}" "${LIBHDRS}" )

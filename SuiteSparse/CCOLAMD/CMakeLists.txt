@@ -6,12 +6,5 @@ include_directories("${CCOLAMD_SOURCE_DIR}/Include")
 FILE(GLOB LIBHDRS "Include/*.h")
 FILE(GLOB LIBSRCS "SourceWrappers/*.c")
 
-ADD_LIBRARY(CCOLAMD ${LIBHDRS} ${LIBSRCS})
+declare_suitesparse_library(ccolamd "${LIBSRCS}" "${LIBHDRS}" )
 
-if(BUILD_SHARED_LIBS)
-	target_link_libraries(CCOLAMD SuiteSparse_config)
-else()
-	ADD_DEPENDENCIES(CCOLAMD SuiteSparse_config)
-endif()
-
-install_suitesparse_project(CCOLAMD "${LIBHDRS}")

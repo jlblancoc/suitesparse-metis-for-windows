@@ -9,12 +9,10 @@ include_directories("${UMFPACK_SOURCE_DIR}/Include")
 FILE(GLOB LIBHDRS "${UMFPACK_SOURCE_DIR}/Include/*.h")
 FILE(GLOB LIBSRCS "${UMFPACK_SOURCE_DIR}/SourceWrappers/*.c")
 
-ADD_LIBRARY(UMFPACK ${LIBHDRS} ${LIBSRCS})
+declare_suitesparse_library(umfpack "${LIBSRCS}" "${LIBHDRS}" )
 
 if(BUILD_SHARED_LIBS)
-	target_link_libraries(UMFPACK SuiteSparse_config CHOLMOD AMD CAMD COLAMD CCOLAMD ${SuiteSparse_LINKER_LIBS})
+	target_link_libraries(umfpack SuiteSparse_config cholmod amd camd colamd ccolamd ${SuiteSparse_LINKER_LIBS})
 else()
-	ADD_DEPENDENCIES(UMFPACK  SuiteSparse_config CHOLMOD)
+	ADD_DEPENDENCIES(umfpack  SuiteSparse_config cholmod)
 endif()
-
-install_suitesparse_project(UMFPACK "${LIBHDRS}")

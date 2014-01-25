@@ -48,17 +48,10 @@ SET(LIBSRCS
 	Source/spqr_tol.cpp
 	)
 	
-ADD_LIBRARY(SPQR ${LIBHDRS} ${LIBSRCS})
-ADD_DEPENDENCIES(SPQR SuiteSparse_config CAMD CCOLAMD CHOLMOD)
+declare_suitesparse_library(spqr "${LIBSRCS}" "${LIBHDRS}" )
+	
+ADD_DEPENDENCIES(spqr SuiteSparse_config camd ccoldamd cholmod)
 
 IF (BUILD_METIS)
-	add_dependencies(SPQR metis)
+	add_dependencies(spqr metis)
 ENDIF (BUILD_METIS)
-
-if(BUILD_SHARED_LIBS)
-	target_link_libraries(SPQR SuiteSparse_config)
-else()
-	ADD_DEPENDENCIES(SPQR SuiteSparse_config)
-endif()
-
-install_suitesparse_project(SPQR "${LIBHDRS}")

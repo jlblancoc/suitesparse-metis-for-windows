@@ -224,7 +224,7 @@ endmacro()
 
 ## Default behavior if user don't use the COMPONENTS flag in find_package(SuiteSparse ...) command
 if(NOT SuiteSparse_FIND_COMPONENTS)
-	list(APPEND SuiteSparse_FIND_COMPONENTS AMD CAMD CCOLAMD COLAMD CHOLMOD SPQR LDL)  ## suitesparse and metis are not searched by default (special case)
+	list(APPEND SuiteSparse_FIND_COMPONENTS AMD CAMD CCOLAMD COLAMD CHOLMOD SPQR LDL BTF KLU)  ## suitesparse and metis are not searched by default (special case)
 endif()
 
 SuiteSparse_FIND_COMPONENTS()
