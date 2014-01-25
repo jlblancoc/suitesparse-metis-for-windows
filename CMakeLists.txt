@@ -1,9 +1,9 @@
-# -----------------------------------------------
+# -----------------------------------------------------------------
 # CMake build system for SuiteSparse
 #  http://code.google.com/p/suitesparse-metis-for-windows/
-# Created by Jose Luis Blanco (University of Almeria) 2013
+# Created by Jose Luis Blanco (University of Almeria) 2013-2014
 # Updated by jesnault (jerome.esnault@inria.fr) 2014-01-21
-# -----------------------------------------------
+# -----------------------------------------------------------------
 
 PROJECT(SuiteSparseProject)
 
@@ -19,6 +19,13 @@ else()
   set(LIB_POSTFIX "" CACHE STRING "suffix for 32/64 inst dir placement")
 endif()
 mark_as_advanced(LIB_POSTFIX)
+
+# We want libraries to be named "libXXX" and "libXXXd" in all compilers:
+# ------------------------------------------------------------------------
+set(CMAKE_DEBUG_POSTFIX  "d")
+IF(MSVC)
+	set(SP_LIB_PREFIX "lib")  # Libs are: "libXXX"
+ENDIF(MSVC)
 
 ## check if we can build metis	
 SET(BUILD_METIS_DEFAULT ON)	
@@ -80,6 +87,9 @@ endmacro()
 ## 	Example of use: See SuiteSparse/*/CMakeLists.txt
 macro(declare_suitesparse_library targetName srcsList headersList)
 	ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
+	SET_TARGET_PROPERTIES(${targetName} PROPERTIES 
+		OUTPUT_NAME ${SP_LIB_PREFIX}${targetName}
+		)
 	
 	if(BUILD_SHARED_LIBS)
 		target_link_libraries(${targetName} SuiteSparse_config)
