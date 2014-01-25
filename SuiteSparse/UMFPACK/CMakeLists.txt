@@ -11,8 +11,5 @@ FILE(GLOB LIBSRCS "${UMFPACK_SOURCE_DIR}/SourceWrappers/*.c")
 
 declare_suitesparse_library(umfpack "${LIBSRCS}" "${LIBHDRS}" )
 
-if(BUILD_SHARED_LIBS)
-	target_link_libraries(umfpack SuiteSparse_config cholmod amd camd colamd ccolamd ${SuiteSparse_LINKER_LIBS})
-else()
-	ADD_DEPENDENCIES(umfpack  SuiteSparse_config cholmod)
-endif()
+target_link_libraries(umfpack SuiteSparse_config cholmod amd camd colamd ccolamd ${SuiteSparse_LINKER_LIBS})
+

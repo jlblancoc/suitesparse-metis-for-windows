@@ -91,12 +91,8 @@ macro(declare_suitesparse_library targetName srcsList headersList)
 		OUTPUT_NAME ${SP_LIB_PREFIX}${targetName}
 		)
 	
-	if(BUILD_SHARED_LIBS)
-		target_link_libraries(${targetName} SuiteSparse_config)
-	else()
-		ADD_DEPENDENCIES(${targetName} SuiteSparse_config)
-	endif()
-	
+	target_link_libraries(${targetName} SuiteSparse_config)
+
 	install_suitesparse_project(${targetName} "${headersList}")
 endmacro()
 

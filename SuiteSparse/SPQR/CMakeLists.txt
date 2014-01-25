@@ -50,8 +50,9 @@ SET(LIBSRCS
 	
 declare_suitesparse_library(spqr "${LIBSRCS}" "${LIBHDRS}" )
 	
-ADD_DEPENDENCIES(spqr SuiteSparse_config camd ccoldamd cholmod)
+target_link_libraries(spqr SuiteSparse_config camd ccolamd cholmod ${SuiteSparse_LINKER_LIBS})
 
 IF (BUILD_METIS)
-	add_dependencies(spqr metis)
+	target_link_libraries(spqr metis)
 ENDIF (BUILD_METIS)
+

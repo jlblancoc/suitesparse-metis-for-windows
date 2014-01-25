@@ -14,18 +14,9 @@ FILE(GLOB LIBSRCS "SourceWrappers/*.c")
 
 declare_suitesparse_library(cholmod "${LIBSRCS}" "${LIBHDRS}" )
 
-if(BUILD_SHARED_LIBS)
-	target_link_libraries(cholmod SuiteSparse_config amd camd colamd ccolamd ${SuiteSparse_LINKER_LIBS})
-else()
-	ADD_DEPENDENCIES(cholmod 
-		SuiteSparse_config amd camd colamd ccolamd)
-endif()
+target_link_libraries(cholmod SuiteSparse_config amd camd colamd ccolamd ${SuiteSparse_LINKER_LIBS})
 
 IF (BUILD_METIS)
-	if(BUILD_SHARED_LIBS)
-		target_link_libraries(cholmod metis)
-	else()
-		ADD_DEPENDENCIES(cholmod metis)
-	endif()
+	target_link_libraries(cholmod metis)
 ENDIF (BUILD_METIS)
 
