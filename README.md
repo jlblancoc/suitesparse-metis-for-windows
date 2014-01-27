@@ -54,7 +54,7 @@ Example CMake programs are provided for testing, based on Tim Davis' code in his
 3. Integration in your code (unique code for Windows/Linux)
 -------------------------------------------------------
 
-  * Copy this **[FindSuiteSparse.cmake](https://github.com/jlblancoc/suitesparse-metis-for-windows/blob/master/example-projects/FindSuiteSparse.cmake)** file.
+  * Copy this **[FindSuiteSparse.cmake](https://github.com/jlblancoc/suitesparse-metis-for-windows/blob/master/cmakemodule/FindSuiteSparse.cmake)** file.
   * Add a block like this to your CMake code (see complete [example](https://github.com/jlblancoc/suitesparse-metis-for-windows/blob/master/example-projects/cholmod/CMakeLists.txt)):
    
   
