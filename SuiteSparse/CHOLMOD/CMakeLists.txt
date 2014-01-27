@@ -12,11 +12,8 @@ FILE(GLOB LIBHDRS "${CHOLMOD_SOURCE_DIR}/Include/*.h")
 
 FILE(GLOB LIBSRCS "SourceWrappers/*.c")
 
-declare_suitesparse_library(cholmod "${LIBSRCS}" "${LIBHDRS}" )
-
-target_link_libraries(cholmod SuiteSparse_config amd camd colamd ccolamd ${SuiteSparse_LINKER_LIBS})
-
-IF (BUILD_METIS)
-	target_link_libraries(cholmod metis)
-ENDIF (BUILD_METIS)
+declare_suitesparse_library(cholmod "${LIBSRCS}" "${LIBHDRS}"
+	TARGET_PRIVATE_LINK	${SuiteSparse_LINKER_LAPACK_BLAS_LIBS}
+	TARGET_PUBLIC_LINK 	${SuiteSparse_LINKER_METIS_LIBS} amd camd colamd ccolamd
+)
 

@@ -48,11 +48,8 @@ SET(LIBSRCS
 	Source/spqr_tol.cpp
 	)
 	
-declare_suitesparse_library(spqr "${LIBSRCS}" "${LIBHDRS}" )
-	
-target_link_libraries(spqr SuiteSparse_config camd ccolamd cholmod ${SuiteSparse_LINKER_LIBS})
-
-IF (BUILD_METIS)
-	target_link_libraries(spqr metis)
-ENDIF (BUILD_METIS)
+declare_suitesparse_library(spqr "${LIBSRCS}" "${LIBHDRS}"
+	TARGET_PRIVATE_LINK	${SuiteSparse_LINKER_LAPACK_BLAS_LIBS}
+	TARGET_PUBLIC_LINK 	camd ccolamd cholmod ${SuiteSparse_LINKER_METIS_LIBS}
+)
 

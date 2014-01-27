@@ -9,7 +9,8 @@ include_directories("${UMFPACK_SOURCE_DIR}/Include")
 FILE(GLOB LIBHDRS "${UMFPACK_SOURCE_DIR}/Include/*.h")
 FILE(GLOB LIBSRCS "${UMFPACK_SOURCE_DIR}/SourceWrappers/*.c")
 
-declare_suitesparse_library(umfpack "${LIBSRCS}" "${LIBHDRS}" )
-
-target_link_libraries(umfpack SuiteSparse_config cholmod amd camd colamd ccolamd ${SuiteSparse_LINKER_LIBS})
+declare_suitesparse_library(umfpack "${LIBSRCS}" "${LIBHDRS}"
+	TARGET_PRIVATE_LINK	${SuiteSparse_LINKER_LAPACK_BLAS_LIBS}
+	TARGET_PUBLIC_LINK 	amd camd colamd ccolamd cholmod ${SuiteSparse_LINKER_PUBLIC_LIBS}
+)
 

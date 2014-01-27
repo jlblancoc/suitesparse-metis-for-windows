@@ -32,11 +32,20 @@ set(SuiteSparse_LIBRARIES 	"")
 set(SuiteSparse_LIB_DIR 	"${SuiteSparse_DIR}/lib@LIB_POSTFIX@")
 
 if(WIN32 AND SuiteSparse_USE_LAPACK_BLAS)
-	set(SuiteSparse_LAPACK_BLAS_LIB_DIR 		"@SuiteSparse_LAPACK_BLAS_LIB_DIR@")
+	set(SuiteSparse_LAPACK_BLAS_LIB_DIR 		"${SuiteSparse_DIR}/@SuiteSparse_LAPACK_BLAS_LIB_DIR@")
 	file(GLOB SuiteSparse_LAPACK_BLAS_LIBRARIES "${SuiteSparse_LAPACK_BLAS_LIB_DIR}/*.lib")
 	file(GLOB SuiteSparse_LAPACK_BLAS_DLL 		"${SuiteSparse_LAPACK_BLAS_LIB_DIR}/*.dll")
-	if(SuiteSparse_LAPACK_BLAS_LIBRARIES)
-		list(APPEND SuiteSparse_LIBRARIES ${SuiteSparse_LAPACK_BLAS_LIBRARIES})
+	
+	if(SuiteSparse_LAPACK_BLAS_LIBRARIES AND SuiteSparse_LAPACK_BLAS_DLL)
+		add_library(blas SHARED IMPORTED)
+		set_property(TARGET blas PROPERTY IMPORTED_LOCATION "${SuiteSparse_LAPACK_BLAS_LIB_DIR}/libblas.dll")
+		set_property(TARGET blas PROPERTY IMPORTED_IMPLIB 	"${SuiteSparse_LAPACK_BLAS_LIB_DIR}/libblas.lib")
+		
+		add_library(lapack SHARED IMPORTED)
+		set_property(TARGET lapack PROPERTY IMPORTED_LOCATION 	"${SuiteSparse_LAPACK_BLAS_LIB_DIR}/liblapack.dll")
+		set_property(TARGET lapack PROPERTY IMPORTED_IMPLIB 	"${SuiteSparse_LAPACK_BLAS_LIB_DIR}/liblapack.lib")
+	
+		list(APPEND SuiteSparse_LIBRARIES blas lapack)
 	endif()
 else()
 	set(SuiteSparse_LAPACK_BLAS_LIB_DIR "")

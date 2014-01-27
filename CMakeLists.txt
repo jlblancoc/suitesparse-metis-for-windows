@@ -83,15 +83,33 @@ macro(install_suitesparse_project targetName headersList)
 	)
 endmacro()
 
+	cmake_policy(SET CMP0022 NEW)
+	cmake_policy(SET CMP0023 NEW)
+	
 ## declare_suitesparse_library(targetName srcsList headersList)
 ## 	Example of use: See SuiteSparse/*/CMakeLists.txt
 macro(declare_suitesparse_library targetName srcsList headersList)
+
+	## following args are optional
+	include(CMakeParseArguments)
+    cmake_parse_arguments(dsl "" "" "TARGET_PRIVATE_LINK;TARGET_PUBLIC_LINK" ${ARGN} )
+
+	if(NOT dsl_TARGET_PRIVATE_LINK)
+		set(dsl_TARGET_PRIVATE_LINK "")
+	endif()
+	if(NOT dsl_TARGET_PUBLIC_LINK)
+		set(dsl_TARGET_PUBLIC_LINK "")
+	endif()
+	
 	ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
 	SET_TARGET_PROPERTIES(${targetName} PROPERTIES 
 		OUTPUT_NAME ${SP_LIB_PREFIX}${targetName}
-		)
+	)
 	
-	target_link_libraries(${targetName} SuiteSparse_config)
+	target_link_libraries(${targetName} 
+		LINK_PUBLIC	${dsl_TARGET_PUBLIC_LINK} SuiteSparse_config ## SuiteSparse_config is used for every projects
+		LINK_PRIVATE ${dsl_TARGET_PRIVATE_LINK}
+	)
 
 	install_suitesparse_project(${targetName} "${headersList}")
 endmacro()
@@ -106,45 +124,46 @@ else()
 	set(BUILD_SHARED_LIBS OFF)
 endif()
 
-## Need to use SuiteSparse_LINKER_LIBS in our subproject in case of SHARED flag is set to ON
+## Need to use SuiteSparse_LINKER_LAPACK_BLAS_LIBS in our subproject in case of SHARED flag is set to ON
 IF (UNIX)
-	SET(SuiteSparse_LINKER_LIBS
-		${SuiteSparse_LINKER_LIBS}
-		lapack
-		blas
-		rt
-		)
-ELSE(UNIX)
+	SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas rt)
+ELSE()
 	IF(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
 		set(PATH_WORD_SIZE "x64")
 	ELSE(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
 		set(PATH_WORD_SIZE "x32")
 	ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
 
-	SET(SuiteSparse_LINKER_LIBS
-		${SuiteSparse_LINKER_LIBS}
-		${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.lib
-		${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.lib
-		)
+	add_library(blas SHARED IMPORTED)
+	set_property(TARGET blas PROPERTY IMPORTED_LOCATION ${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.dll)
+	set_property(TARGET blas PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.lib)
+	
+	add_library(lapack SHARED IMPORTED)
+	set_property(TARGET lapack PROPERTY IMPORTED_LOCATION 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.dll)
+	set_property(TARGET lapack PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.lib)
+ 
+	SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS blas lapack)
 	
 	## install lapack and blas dependencies
 	file(GLOB lapack_blas_windows_libs 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.lib")
 	file(GLOB lapack_blas_windows_dll 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.dll")
 	if(lapack_blas_windows_dll AND lapack_blas_windows_libs)
-		set(SuiteSparse_LAPACK_BLAS_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib${LIB_POSTFIX}/lapack_blas_windows") ## used in UseSuiteSparse*.cmake
+		set(SuiteSparse_LAPACK_BLAS_LIB_DIR "lib${LIB_POSTFIX}/lapack_blas_windows") ## used in UseSuiteSparse*.cmake
 		install(FILES 		${lapack_blas_windows_libs} 
 							${lapack_blas_windows_dll}
 				DESTINATION ${SuiteSparse_LAPACK_BLAS_LIB_DIR}
 		)
 	endif()
-ENDIF(UNIX)
+ENDIF()
 IF(BUILD_METIS)
-	SET(SuiteSparse_LINKER_LIBS "${SuiteSparse_LINKER_LIBS};metis")
-ENDIF(BUILD_METIS)
+	set(SuiteSparse_LINKER_METIS_LIBS "metis")
+else()
+	set(SuiteSparse_LINKER_METIS_LIBS "")
+ENDIF()
 
 add_subdirectory(SuiteSparse)
 
-# Parse config file:
+# Parse config file: TODO: remove since unused...
 # -------------------------------------------------
 SET(THE_SuiteSparse_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse/")
 SET(THE_SuiteSparse_LIBS_INCL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse/include")
@@ -165,4 +184,5 @@ install(FILES 		"${CMAKE_BINARY_DIR}/UseSuiteSparseForInstall.cmake"
 install(EXPORT  	SuiteSparse
         DESTINATION cmake
         FILE        SuiteSparse-config.cmake
+		EXPORT_LINK_INTERFACE_LIBRARIES
 )
