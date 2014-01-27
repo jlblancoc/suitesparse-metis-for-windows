@@ -54,7 +54,7 @@ endif()
 set(SuiteSparse_LIB_DIRS 	"${SuiteSparse_LIB_DIR}" "${SuiteSparse_LAPACK_BLAS_LIB_DIR}")
 link_directories(${SuiteSparse_LIB_DIRS})
 
-set(SuiteSparse_CMAKE_CONFIG "${SuiteSparse_DIR}/cmake/SuiteSparse-config.cmake")
+set(SuiteSparse_CMAKE_CONFIG "${SuiteSparse_DIR}/cmake/SuiteSparse-config@LIB_POSTFIX@.cmake")
 if(EXISTS "${SuiteSparse_CMAKE_CONFIG}")
 
 	## From SuiteSparse project => the install EXPORT cmd => cmake provide all imported target

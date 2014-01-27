@@ -15,4 +15,20 @@
 ## Updated by jesnault (jerome.esnault@inria.fr) 2014-01-21
 
 get_filename_component(SuiteSparse_IMPORT_PREFIX 	"${CMAKE_CURRENT_LIST_FILE}" PATH)
-set(USE_SuiteSparse ${SuiteSparse_IMPORT_PREFIX}/UseSuiteSparse.cmake)
+
+## check which build system version we have to load (32 or 64 bits)
+if(CMAKE_SIZEOF_VOID_P MATCHES "8")
+  set(SuiteSparse_LIB_POSTFIX "64")## suffix for 32/64 inst dir placement
+else()
+  set(SuiteSparse_LIB_POSTFIX "" ) ## suffix for 32/64 inst dir placement
+endif()
+
+set(USE_SuiteSparse ${SuiteSparse_IMPORT_PREFIX}/UseSuiteSparse${SuiteSparse_LIB_POSTFIX}.cmake)
+
+if(EXISTS ${USE_SuiteSparse})
+	## do nothing, it's OK
+else()
+	message(SEND_ERROR "correct version of SuiteSparse not found :\nUSE_SuiteSparse=${USE_SuiteSparse}")
+	set(SuiteSparse_FOUND OFF)
+	set(SUITESPARSE_FOUND OFF)
+endif()

@@ -177,12 +177,12 @@ install(FILES 		SuiteSparseConfigForInstall.cmake
 configure_file(UseSuiteSparseForInstall.cmake.in UseSuiteSparseForInstall.cmake @ONLY)
 install(FILES 		"${CMAKE_BINARY_DIR}/UseSuiteSparseForInstall.cmake"
 		DESTINATION	.
-		RENAME 		UseSuiteSparse.cmake
+		RENAME 		UseSuiteSparse${LIB_POSTFIX}.cmake
 )
 
 ## do the EXPORT for allowing other project to easily use suitesparse with cmake
 install(EXPORT  	SuiteSparse
         DESTINATION cmake
-        FILE        SuiteSparse-config.cmake
+        FILE        SuiteSparse-config${LIB_POSTFIX}.cmake
 		EXPORT_LINK_INTERFACE_LIBRARIES
 )
