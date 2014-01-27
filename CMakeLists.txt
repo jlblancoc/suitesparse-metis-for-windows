@@ -163,12 +163,6 @@ ENDIF()
 
 add_subdirectory(SuiteSparse)
 
-# Parse config file: TODO: remove since unused...
-# -------------------------------------------------
-SET(THE_SuiteSparse_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse/")
-SET(THE_SuiteSparse_LIBS_INCL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse/include")
-SET(THE_CMAKE_BINARY_DIR "${CMAKE_BINARY_DIR}")
-
 ## For find SuiteSparse from the install dir
 install(FILES 		SuiteSparseConfigForInstall.cmake
 		DESTINATION	.
