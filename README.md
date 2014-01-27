@@ -27,6 +27,7 @@ The goal is using one single CMake code to build against *SuiteSparse* in standa
           * Download [metis-X.Y.Z.tar.gz](http://glaros.dtc.umn.edu/gkhome/metis/metis/download).
           * Extract it.
           * Merge the tree `metis-X.Y.Z/*` into `SP_ROOT/metis/*`.
+          * Add the command `cmake_policy(SET CMP0022 NEW)` right after the line `project(METIS)` in `metis/CMakeLists.txt`.
 
   * (4) **Run CMake** (cmake-gui) and set the "Source code" directory to `SP_ROOT` and the "Build" directory to any empty directory. Press "Configure", change anything (if needed) and finally press "Generate".
     * **IMPORTANT!**: I recommend changing `CMAKE_INSTALL_PREFIX` to some other directory different than "Program Files" or "/usr/local" so the INSTALL command does not require Admin privileges.
