@@ -85,8 +85,9 @@ macro(install_suitesparse_project targetName headersList)
 	)
 endmacro()
 
-	cmake_policy(SET CMP0022 NEW)
-	cmake_policy(SET CMP0023 NEW)
+if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" GREATER 2.8.12)
+	cmake_policy(SET CMP0023 NEW) ## just for respecting the new target_link_libraries(...) signature procedure
+endif()
 	
 ## declare_suitesparse_library(targetName srcsList headersList)
 ## 	Example of use: See SuiteSparse/*/CMakeLists.txt
@@ -176,9 +177,16 @@ install(FILES 		"${CMAKE_BINARY_DIR}/UseSuiteSparseForInstall.cmake"
 		RENAME 		UseSuiteSparse${LIB_POSTFIX}.cmake
 )
 
+
+if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" GREATER 2.8.12)
+	cmake_policy(SET CMP0022 NEW) ## to not export the link of libblas and liblapack on targets
+	set(additionalExportOption EXPORT_LINK_INTERFACE_LIBRARIES)
+else()
+	set(additionalExportOption )
+endif()
 ## do the EXPORT for allowing other project to easily use suitesparse with cmake
 install(EXPORT  	SuiteSparse
         DESTINATION cmake
         FILE        SuiteSparse-config${LIB_POSTFIX}.cmake
-		EXPORT_LINK_INTERFACE_LIBRARIES
+		${additionalExportOption}
 )
