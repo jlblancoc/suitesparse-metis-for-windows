@@ -117,6 +117,18 @@ macro(declare_suitesparse_library targetName srcsList headersList)
 	install_suitesparse_project(${targetName} "${headersList}")
 endmacro()
 
+# Example of usage: 
+#  REMOVE_MATCHING_FILES_FROM_LIST(".*_LIN.cpp" my_srcs)
+MACRO(REMOVE_MATCHING_FILES_FROM_LIST match_expr lst_files)
+	SET(lst_files_aux "")
+	FOREACH(FIL ${${lst_files}})
+		IF(NOT ${FIL} MATCHES "${match_expr}")
+			SET(lst_files_aux "${lst_files_aux}" "${FIL}")
+		ENDIF(NOT ${FIL} MATCHES "${match_expr}")
+	ENDFOREACH(FIL)
+	SET(${lst_files} ${lst_files_aux})
+ENDMACRO(REMOVE_MATCHING_FILES_FROM_LIST)
+
 
 ## check if the SHARED variable has already been defined (by the metis project) and use it for our projects
 ## BUILD_SHARED_LIBS specific variable allow cmake to know what kind of lib (STATIC or SHARED) it have to build

@@ -15,7 +15,7 @@ def main():
 	
 	for l in lins:
 		l = l.strip();
-		if len(l)==0:
+		if len(l)==0 or l.startswith('#'):
 			continue;
 
 		print('Line: '+l);
