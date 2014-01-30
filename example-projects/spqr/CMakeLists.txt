@@ -19,7 +19,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../../cmakemodule/") # Add th
 set(SuiteSparse_USE_LAPACK_BLAS ON)
 find_package(SuiteSparse QUIET NO_MODULE)  # 1st: Try to locate the *config.cmake file.
 if(NOT SuiteSparse_FOUND)
-        set(SuiteSparse_VERBOSE ON)
+        #set(SuiteSparse_VERBOSE ON)
         find_package(SuiteSparse REQUIRED) # 2nd: Use FindSuiteSparse.cmake module
         include_directories(${SuiteSparse_INCLUDE_DIRS})
 else()
