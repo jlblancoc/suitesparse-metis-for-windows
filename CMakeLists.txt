@@ -140,36 +140,48 @@ else()
 endif()
 
 ## Need to use SuiteSparse_LINKER_LAPACK_BLAS_LIBS in our subproject in case of SHARED flag is set to ON
-IF (UNIX)
-	SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas rt)
+SET(SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS OFF CACHE BOOL "Check if you have custom LAPACK/BLAS libraries (AMD,...)")
+IF (SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS)
+	SET(SUITESPARSE_CUSTOM_BLAS_LIB "" CACHE FILE "Path to custom library file for BLAS")
+	SET(SUITESPARSE_CUSTOM_LAPACK_LIB "" CACHE FILE "Path to custom library file for LAPACK")
+	IF (NOT EXISTS "${SUITESPARSE_CUSTOM_BLAS_LIB}" OR NOT EXISTS "${SUITESPARSE_CUSTOM_LAPACK_LIB}")
+		MESSAGE("*Error*: Correctly set SUITESPARSE_CUSTOM_BLAS_LIB and SUITESPARSE_CUSTOM_LAPACK_LIB or uncheck SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS")
+	ELSE()
+		SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${SUITESPARSE_CUSTOM_BLAS_LIB} ${SUITESPARSE_CUSTOM_LAPACK_LIB})
+	ENDIF()
 ELSE()
-	IF(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
-		set(PATH_WORD_SIZE "x64")
-	ELSE(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
-		set(PATH_WORD_SIZE "x32")
-	ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+	IF (UNIX)
+		SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas rt)
+	ELSE()
+		IF(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
+			set(PATH_WORD_SIZE "x64")
+		ELSE(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
+			set(PATH_WORD_SIZE "x32")
+		ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
 
-	add_library(blas SHARED IMPORTED)
-	set_property(TARGET blas PROPERTY IMPORTED_LOCATION ${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.dll)
-	set_property(TARGET blas PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.lib)
-	
-	add_library(lapack SHARED IMPORTED)
-	set_property(TARGET lapack PROPERTY IMPORTED_LOCATION 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.dll)
-	set_property(TARGET lapack PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.lib)
- 
-	SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS blas lapack)
-	
-	## install lapack and blas dependencies
-	file(GLOB lapack_blas_windows_libs 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.lib")
-	file(GLOB lapack_blas_windows_dll 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.dll")
-	if(lapack_blas_windows_dll AND lapack_blas_windows_libs)
-		set(SuiteSparse_LAPACK_BLAS_LIB_DIR "lib${LIB_POSTFIX}/lapack_blas_windows") ## used in UseSuiteSparse*.cmake
-		install(FILES 		${lapack_blas_windows_libs} 
-							${lapack_blas_windows_dll}
-				DESTINATION ${SuiteSparse_LAPACK_BLAS_LIB_DIR}
-		)
-	endif()
+		add_library(blas SHARED IMPORTED)
+		set_property(TARGET blas PROPERTY IMPORTED_LOCATION ${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.dll)
+		set_property(TARGET blas PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.lib)
+		
+		add_library(lapack SHARED IMPORTED)
+		set_property(TARGET lapack PROPERTY IMPORTED_LOCATION 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.dll)
+		set_property(TARGET lapack PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.lib)
+	 
+		SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS blas lapack)
+		
+		## install lapack and blas dependencies
+		file(GLOB lapack_blas_windows_libs 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.lib")
+		file(GLOB lapack_blas_windows_dll 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.dll")
+		if(lapack_blas_windows_dll AND lapack_blas_windows_libs)
+			set(SuiteSparse_LAPACK_BLAS_LIB_DIR "lib${LIB_POSTFIX}/lapack_blas_windows") ## used in UseSuiteSparse*.cmake
+			install(FILES 		${lapack_blas_windows_libs} 
+								${lapack_blas_windows_dll}
+					DESTINATION ${SuiteSparse_LAPACK_BLAS_LIB_DIR}
+			)
+		endif()
+	ENDIF()
 ENDIF()
+
 IF(BUILD_METIS)
 	set(SuiteSparse_LINKER_METIS_LIBS "metis")
 else()
