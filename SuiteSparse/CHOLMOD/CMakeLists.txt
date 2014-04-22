@@ -1,6 +1,6 @@
 PROJECT(CHOLMOD)
 
-include_directories("${SuiteSparse_config_SOURCE_DIR}")
+include_directories("${suitesparseconfig_SOURCE_DIR}")
 include_directories("${AMD_SOURCE_DIR}/Include")
 include_directories("${CAMD_SOURCE_DIR}/Include")
 include_directories("${COLAMD_SOURCE_DIR}/Include")

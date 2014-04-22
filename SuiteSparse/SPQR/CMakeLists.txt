@@ -1,6 +1,6 @@
 PROJECT(SPQR)
 
-include_directories("${SuiteSparse_config_SOURCE_DIR}")
+include_directories("${suitesparseconfig_SOURCE_DIR}")
 include_directories("${SPQR_SOURCE_DIR}/Include")
 include_directories("${CHOLMOD_SOURCE_DIR}/Include")
 

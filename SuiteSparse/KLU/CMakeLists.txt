@@ -1,6 +1,6 @@
 PROJECT(KLU)
 
-include_directories("${SuiteSparse_config_SOURCE_DIR}")
+include_directories("${suitesparseconfig_SOURCE_DIR}")
 include_directories("${KLU_SOURCE_DIR}/Include")
 include_directories("${AMD_SOURCE_DIR}/Include")
 include_directories("${COLAMD_SOURCE_DIR}/Include")

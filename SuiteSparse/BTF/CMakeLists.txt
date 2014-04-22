@@ -1,6 +1,6 @@
 PROJECT(BTF)
 
-include_directories("${SuiteSparse_config_SOURCE_DIR}")
+include_directories("${suitesparseconfig_SOURCE_DIR}")
 include_directories("${BTF_SOURCE_DIR}/Include")
 
 FILE(GLOB LIBHDRS "Include/*.h")

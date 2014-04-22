@@ -21,7 +21,7 @@ endif(MSVC)
 
 include_directories(".")  # Needed for "SourceWrappers/*.c" files
 
-set(SuiteSparse_config_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse_config) # Needed by all subprojects
+set(suitesparseconfig_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse_config) # Needed by all subprojects
 
 
 set(SUBPROJECTS_TO_ADD 

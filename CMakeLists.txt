@@ -110,7 +110,7 @@ macro(declare_suitesparse_library targetName srcsList headersList)
 	)
 	
 	target_link_libraries(${targetName} 
-		LINK_PUBLIC	${dsl_TARGET_PUBLIC_LINK} SuiteSparse_config ## SuiteSparse_config is used for every projects
+		LINK_PUBLIC	${dsl_TARGET_PUBLIC_LINK} suitesparseconfig ## suitesparseconfig is used for every projects
 		LINK_PRIVATE ${dsl_TARGET_PRIVATE_LINK}
 	)
 
