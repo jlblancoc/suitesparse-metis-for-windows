@@ -91,8 +91,9 @@ endif()
 
 
 ## include (get from the install of the public headers)
-if(@BUILD_METIS@)
+if("@BUILD_METIS@" STREQUAL "ON") # BUILD_METIS?
 	set(SuiteSparse_METIS_INCLUDE_DIR "${SuiteSparse_DIR}/include")
+	ADD_DEFINITIONS(-DNPARTITION)
 else()
 	set(SuiteSparse_METIS_INCLUDE_DIR "")
 endif()
@@ -101,8 +102,3 @@ set(SuiteSparse_INCLUDE_DIR  "${SuiteSparse_DIR}/include/suitesparse")
 set(SuiteSparse_INCLUDE_DIRS "${SuiteSparse_INCLUDE_DIR}" "${SuiteSparse_METIS_INCLUDE_DIR}")
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 
-
-## definitions
-if(@BUILD_METIS@)
-	ADD_DEFINITIONS(-DNPARTITION)
-endif()
