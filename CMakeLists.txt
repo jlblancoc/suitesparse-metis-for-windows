@@ -14,6 +14,12 @@ include(checkGetSuiteSparse.cmake)
 SET(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
 SET(EXECUTABLE_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/bin CACHE PATH "Output directory for applications" )
 
+# Override "CMAKE_INSTALL_PREFIX", at least in Windows:
+IF(WIN32)
+	SET(SUITESPARSE_INSTALL_PREFIX "${${PROJECT_NAME}_BINARY_DIR}/install" CACHE PATH "Prefix prepended to install directories")
+	SET(CMAKE_INSTALL_PREFIX "${SUITESPARSE_INSTALL_PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
+ENDIF()
+
 ## get POSTFIX for lib install dir
 if(CMAKE_SIZEOF_VOID_P MATCHES "8")
   set(LIB_POSTFIX "64" CACHE STRING "suffix for 32/64 inst dir placement")
