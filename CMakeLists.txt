@@ -72,6 +72,22 @@ if(BUILD_METIS)
 endif(BUILD_METIS)
 
 
+## For EXPORT only :
+## Previous version of cmake (>2.8.12) doesn't auto take into account external lib (here I mean blas and lapack) we need to link to for our current target we want to export.
+## Or at least we need to investigate how to do with previous version.
+## This may cause some trouble in case you want to build in static mode and then use it into another custom project.
+## You will need to manually link your target into your custom project to the correct dependencies link interfaces.
+if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" GREATER 2.8.11) ## (policies introduced both in 2.8.12)
+	set(EXPORT_USE_INTERFACE_LINK_LIBRARIES ON CACHE BOOL "")
+	mark_as_advanced(EXPORT_USE_INTERFACE_LINK_LIBRARIES)
+	if(EXPORT_USE_INTERFACE_LINK_LIBRARIES)
+		cmake_policy(SET CMP0023 NEW) ## just for respecting the new target_link_libraries(...) signature procedure
+		cmake_policy(SET CMP0022 NEW) ## use INTERFACE_LINK_LIBRARIES property for in-build targets and ignore old properties (IMPORTED_)?LINK_INTERFACE_LIBRARIES(_<CONFIG>)?
+		## Here, next version of cmake 2.8.12 auto take into account the link interface dependencies (see generated cmake/SuiteSparse-config*.cmake into your install dir)
+	endif()
+endif()
+
+
 ## install_suitesparse_project(targetName headersList)  
 ## factorise the way we will install all projects (part of the suitesparse project)
 ## <targetName> is the target of the current project you build
@@ -90,10 +106,6 @@ macro(install_suitesparse_project targetName headersList)
 			PUBLIC_HEADER DESTINATION include/suitesparse
 	)
 endmacro()
-
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" GREATER 2.8.12)
-	cmake_policy(SET CMP0023 NEW) ## just for respecting the new target_link_libraries(...) signature procedure
-endif()
 	
 ## declare_suitesparse_library(targetName srcsList headersList)
 ## 	Example of use: See SuiteSparse/*/CMakeLists.txt
@@ -116,8 +128,8 @@ macro(declare_suitesparse_library targetName srcsList headersList)
 	)
 	
 	target_link_libraries(${targetName} 
-		LINK_PUBLIC	${dsl_TARGET_PUBLIC_LINK} suitesparseconfig ## suitesparseconfig is used for every projects
-		LINK_PRIVATE ${dsl_TARGET_PRIVATE_LINK}
+		LINK_PUBLIC	 ${dsl_TARGET_PUBLIC_LINK} suitesparseconfig ## suitesparseconfig is used for every projects (embedded into cmake build)
+		LINK_PRIVATE ${dsl_TARGET_PRIVATE_LINK}	## external required libs
 	)
 
 	install_suitesparse_project(${targetName} "${headersList}")
@@ -207,16 +219,8 @@ install(FILES 		"${CMAKE_BINARY_DIR}/UseSuiteSparseForInstall.cmake"
 		RENAME 		UseSuiteSparse${LIB_POSTFIX}.cmake
 )
 
-
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" GREATER 2.8.12)
-	cmake_policy(SET CMP0022 NEW) ## to not export the link of libblas and liblapack on targets
-	set(additionalExportOption EXPORT_LINK_INTERFACE_LIBRARIES)
-else()
-	set(additionalExportOption )
-endif()
 ## do the EXPORT for allowing other project to easily use suitesparse with cmake
 install(EXPORT  	SuiteSparse
         DESTINATION cmake
         FILE        SuiteSparse-config${LIB_POSTFIX}.cmake
-		${additionalExportOption}
 )
