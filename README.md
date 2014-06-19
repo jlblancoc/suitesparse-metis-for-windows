@@ -11,18 +11,19 @@ The goal is using one single CMake code to build against *SuiteSparse* in standa
 
   * (1) Install [CMake](http://www.cmake.org/).
   * (2) Only for Linux/Mac: Install LAPACK & BLAS. In Debian/Ubuntu: `sudo apt-get install liblapack-dev libblas-dev`
-  * (3) Clone or download this project ([ZIP](https://github.com/jlblancoc/suitesparse-metis-for-windows/archive/v1.2.0.zip), [TAR.GZ](https://github.com/jlblancoc/suitesparse-metis-for-windows/archive/v1.2.0.tar.gz)) and extract it somewhere in your disk, say `SP_ROOT`.
-      * (Optional, CMake script will download it for you) Populate the directories within `SP_ROOT` with the original sources from each project:
-        * *`SuiteSparse`:* 
-          * Download [SuiteSparse-X.Y.Z.tar.gz](http://www.cise.ufl.edu/research/sparse/SuiteSparse/) from Tim Davis' webpage. 
-          * Extract it.
-          * Merge (e.g. copy and paste from Windows Explorer) the tree `SuiteSparse/*` into `SP_ROOT/SuiteSparse/*`.
-          * Make sure of **looking for patches** in [the original webpage](http://www.cise.ufl.edu/research/sparse/SuiteSparse/) and apply them to prevent build errors.
-        * (Optional, only if need METIS for partitioning) *`METIS`:* 
-          * Download [metis-X.Y.Z.tar.gz](http://glaros.dtc.umn.edu/gkhome/metis/metis/download).
-          * Extract it.
-          * Merge the tree `metis-X.Y.Z/*` into `SP_ROOT/metis/*`.
-          * Add the command `cmake_policy(SET CMP0022 NEW)` right after the line `project(METIS)` in `metis/CMakeLists.txt`.
+  * (3) Clone or download this project ([ZIP](https://github.com/jlblancoc/suitesparse-metis-for-windows/archive/v1.2.1.zip), [TAR.GZ](https://github.com/jlblancoc/suitesparse-metis-for-windows/archive/v1.2.1.tar.gz)) and extract it somewhere in your disk, say `SP_ROOT`.
+      * (Optional: CMake script will download the following code for you if not found) 
+        * Populate the directories within `SP_ROOT` with the original sources from each project:
+          * *`SuiteSparse`:* 
+            * Download [SuiteSparse-X.Y.Z.tar.gz](http://www.cise.ufl.edu/research/sparse/SuiteSparse/) from Tim Davis' webpage. 
+            * Extract it.
+            * Merge (e.g. copy and paste from Windows Explorer) the tree `SuiteSparse/*` into `SP_ROOT/SuiteSparse/*`.
+            * Make sure of **looking for patches** in [the original webpage](http://www.cise.ufl.edu/research/sparse/SuiteSparse/) and apply them to prevent build errors.
+          * *`METIS`:*  (Optional, only if need METIS for partitioning)
+            * Download [metis-X.Y.Z.tar.gz](http://glaros.dtc.umn.edu/gkhome/metis/metis/download).
+            * Extract it.
+            * Merge the tree `metis-X.Y.Z/*` into `SP_ROOT/metis/*`.
+            * Add the command `cmake_policy(SET CMP0022 NEW)` right after the line `project(METIS)` in `metis/CMakeLists.txt`.
 
   * (4) **Run CMake** (cmake-gui), then: 
       * Set the "Source code" directory to `SP_ROOT` 
