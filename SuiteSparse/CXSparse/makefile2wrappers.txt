@@ -1,6 +1,6 @@
 # List manually extracted from the Makefile:
 
-$(C) -c ../Source/cs_convert.c -o cs_convert.o
+$(C) -DCS_COMPLEX -c ../Source/cs_convert.c -o cs_convert.o
 
 # _di.o: no flags
 # ---------------------
