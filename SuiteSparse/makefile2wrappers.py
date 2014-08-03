@@ -30,9 +30,21 @@ def main():
 			o = open(f,"w");
 			DEFs = defs.strip().split("-D");
 			DEFs = [x for x in DEFs if x]; # Remove empty 
+			# If we have "CS_COMPLEX", wrap the entire thing in a #ifndef NCOMPLEX ... #endif
+			has_complex=False
+			if 'CS_COMPLEX' in DEFs:
+				has_complex=True
+			# TODO: Other COMPLEX flags?
+			
+			if has_complex:
+				o.write('#ifndef NCOMPLEX\n');
+			# Pre-definitions:
 			for d in DEFs:
 				o.write('#define '+d+'\n');
+			# The source code itself:
 			o.write('#include <'+src+'>'+'\n');
+			if has_complex:
+				o.write('#endif // NCOMPLEX\n');
 			o.close();	
 		else:
 			src=re.match(".*-c(.*)",l).group(1).strip();
