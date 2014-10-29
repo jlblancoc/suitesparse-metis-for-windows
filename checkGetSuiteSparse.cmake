@@ -61,8 +61,8 @@ else()
 endif()
 
 if(SUITESPARSE_DL_LAST)
-	
-	set(SUITESPARSE_URL "http://www.cise.ufl.edu/research/sparse/SuiteSparse/current/SuiteSparse.tar.gz")
+	# JL says: It seems the "current" symlink in the server is no longer available... we'll have to update this manually :-(
+	set(SUITESPARSE_URL "http://faculty.cse.tamu.edu/davis/SuiteSparse/SuiteSparse-4.4.1.tar.gz")
 	set(SUITESPARSE_ZIP "${CMAKE_SOURCE_DIR}/SuiteSparse.tar.gz")
 	if(SUITESPARSE_URL AND SUITESPARSE_ZIP)
 	
