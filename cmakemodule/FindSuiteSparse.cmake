@@ -1,8 +1,7 @@
 ## CMake file to locate SuiteSparse and its useful composite projects
 ## The first developpement of this file was made fro Windows users who
-## use the http://code.google.com/p/suitesparse-metis-for-windows/
-## downloaded here :
-## svn checkout http://suitesparse-metis-for-windows.googlecode.com/svn/trunk/ suitesparse-metis-for-windows
+## use: 
+##  https://github.com/jlblancoc/suitesparse-metis-for-windows
 ## Anyway, it chould be work also on linux (tested on fedora 17 when you installed suitesparse from yum)
 ##
 ##
