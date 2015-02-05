@@ -12,8 +12,7 @@ The goal is using one single CMake code to build against *SuiteSparse* in standa
   * (1) Install [CMake](http://www.cmake.org/).
   * (2) Only for Linux/Mac: Install LAPACK & BLAS. In Debian/Ubuntu: `sudo apt-get install liblapack-dev libblas-dev`
   * (3) Clone or download this project ([latest release](https://github.com/jlblancoc/suitesparse-metis-for-windows/releases)) and extract it somewhere in your disk, say `SP_ROOT`.
-      * In Windows, install [7-Zip](http://www.7-zip.org/) if you want CMake to download SuiteSparse sources automatically for you. 
-	  * (OPTIONAL) Otherwise, manually install SuiteSparse as follows: 
+	  * (OPTIONAL) CMake will download SuiteSparse sources automatically for you (skip to step 4), but you may do it manually if preferred: 
         * Populate the directories within `SP_ROOT` with the original sources from each project:
           * *`SuiteSparse`:* 
             * Download [SuiteSparse-X.Y.Z.tar.gz](http://www.cise.ufl.edu/research/sparse/SuiteSparse/) from Tim Davis' webpage. 
