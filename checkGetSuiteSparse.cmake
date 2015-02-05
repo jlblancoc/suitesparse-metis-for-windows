@@ -12,6 +12,10 @@
 ## Created by jesnault (jerome.esnault@inria.fr) 2014-01-21
 ## Updated by jesnault (jerome.esnault@inria.fr) 2014-01-21
 
+if(POLICY CMP0053)
+	cmake_policy(SET CMP0053 OLD) # To correctly interpret the 7-zip strings below
+endif()
+
 ## try first with 7-Zip, and with standard cmake tar command otherwise
 macro(SuiteSparse_unzip whichZipFile)
 	find_program(7ZIP_CMD NAMES 7z DOC "7-zip executable" 
