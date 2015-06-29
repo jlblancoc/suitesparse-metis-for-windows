@@ -32,6 +32,8 @@ set(suitesparseconfig_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse_config)
 
 set(SUBPROJECTS_TO_ADD 
 	SuiteSparse_config
+	SuiteSparse_GPURuntime
+	GPUQREngine	
 	AMD
 	BTF
 	CAMD
