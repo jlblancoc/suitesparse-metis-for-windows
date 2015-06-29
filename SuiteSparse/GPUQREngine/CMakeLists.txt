@@ -8,4 +8,4 @@ FILE(GLOB LIBSRCS "Source/*.cpp" "Source/*.cu" "Include/*.cu")
 
 CUDA_ADD_LIBRARY(GPUQREngine ${LIBHDRS} ${LIBSRCS})
 #declare_suitesparse_library(GPUQREngine "${LIBSRCS}" "${LIBHDRS}")
-message("TEST")
+SET(SuiteSparse_GPUQREngine_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/Include" PARENT_SCOPE)

@@ -68,7 +68,7 @@ public:
 
     TaskType CurrentTask;
 
-    void *operator new(long unsigned int, LLBundle* p){ return p; }
+    void *operator new(size_t, LLBundle* p){ return p; }
     LLBundle(BucketList *buckets, Int panelSize, Int nativeBucket);
 
     // empty LLBundle constructor (currently used, kept for possible future use

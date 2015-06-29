@@ -986,7 +986,7 @@ typedef struct cholmod_common_struct
     CHOLMOD_CUDAEVENT     updateCKernelsComplete;
     CHOLMOD_CUDAEVENT     updateCBuffersFree[CHOLMOD_HOST_SUPERNODE_BUFFERS];
 
-    void *dev_mempool;    /* pointer to single allocation of device memory */
+    char *dev_mempool;    /* pointer to single allocation of device memory */
     size_t dev_mempool_size;
 
     void *host_pinned_mempool;  /* pointer to single allocation of pinned mem */
