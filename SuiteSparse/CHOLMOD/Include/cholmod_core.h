@@ -250,7 +250,7 @@
 #define CHOLMOD_VER_CODE(main,sub) ((main) * 1000 + (sub))
 #define CHOLMOD_MAIN_VERSION 3
 #define CHOLMOD_SUB_VERSION 0
-#define CHOLMOD_SUBSUB_VERSION 4
+#define CHOLMOD_SUBSUB_VERSION 5
 #define CHOLMOD_VERSION \
     CHOLMOD_VER_CODE(CHOLMOD_MAIN_VERSION,CHOLMOD_SUB_VERSION)
 
@@ -986,7 +986,7 @@ typedef struct cholmod_common_struct
     CHOLMOD_CUDAEVENT     updateCKernelsComplete;
     CHOLMOD_CUDAEVENT     updateCBuffersFree[CHOLMOD_HOST_SUPERNODE_BUFFERS];
 
-    char *dev_mempool;    /* pointer to single allocation of device memory */
+    void *dev_mempool;    /* pointer to single allocation of device memory */
     size_t dev_mempool_size;
 
     void *host_pinned_mempool;  /* pointer to single allocation of pinned mem */

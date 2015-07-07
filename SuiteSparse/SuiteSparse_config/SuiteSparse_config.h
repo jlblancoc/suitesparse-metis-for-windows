@@ -196,7 +196,7 @@ int SuiteSparse_divcomplex
  *  KLU             version 1.3.2
  *  LDL             version 2.2.1
  *  RBio            version 2.2.1
- *  SPQR            version 2.0.0
+ *  SPQR            version 2.0.1
  *  GPUQREngine     version 1.0.0
  *  SuiteSparse_GPURuntime  version 1.0.0
  *  UMFPACK         version 5.7.1
@@ -233,11 +233,11 @@ int SuiteSparse_version     /* returns SUITESPARSE_VERSION */
 */
 #define SUITESPARSE_HAS_VERSION_FUNCTION
 
-#define SUITESPARSE_DATE "Jan 19, 2015"
+#define SUITESPARSE_DATE "Mar 24, 2015"
 #define SUITESPARSE_VER_CODE(main,sub) ((main) * 1000 + (sub))
 #define SUITESPARSE_MAIN_VERSION 4
 #define SUITESPARSE_SUB_VERSION 4
-#define SUITESPARSE_SUBSUB_VERSION 3
+#define SUITESPARSE_SUBSUB_VERSION 4
 #define SUITESPARSE_VERSION \
     SUITESPARSE_VER_CODE(SUITESPARSE_MAIN_VERSION,SUITESPARSE_SUB_VERSION)
 
