@@ -121,15 +121,22 @@ macro(declare_suitesparse_library targetName srcsList headersList)
 	if(NOT dsl_TARGET_PUBLIC_LINK)
 		set(dsl_TARGET_PUBLIC_LINK "")
 	endif()
-	
-	ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
+	find_package(CUDA)
+	IF(${CUDA_FOUND})
+		INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
+		INCLUDE_DIRECTORIES(${SuiteSparse_GPUQREngine_INCLUDE})
+		INCLUDE_DIRECTORIES(${SuiteSparse_GPURuntime_INCLUDE})
+		CUDA_ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
+	ELSE(${CUDA_FOUND})
+		ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
+	ENDIF(${CUDA_FOUND})
 	SET_TARGET_PROPERTIES(${targetName} PROPERTIES 
 		OUTPUT_NAME ${SP_LIB_PREFIX}${targetName}
 	)
 	
 	target_link_libraries(${targetName} 
-		LINK_PUBLIC	 ${dsl_TARGET_PUBLIC_LINK} suitesparseconfig ## suitesparseconfig is used for every projects (embedded into cmake build)
-		LINK_PRIVATE ${dsl_TARGET_PRIVATE_LINK}	## external required libs
+			 ${dsl_TARGET_PUBLIC_LINK} suitesparseconfig ## suitesparseconfig is used for every projects (embedded into cmake build)
+		 ${dsl_TARGET_PRIVATE_LINK}	## external required libs
 	)
 
 	install_suitesparse_project(${targetName} "${headersList}")
@@ -150,12 +157,17 @@ ENDMACRO(REMOVE_MATCHING_FILES_FROM_LIST)
 
 ## check if the SHARED variable has already been defined (by the metis project) and use it for our projects
 ## BUILD_SHARED_LIBS specific variable allow cmake to know what kind of lib (STATIC or SHARED) it have to build
-if(DEFINED SHARED)
+if(DEFINED SHARED) 
 	set(BUILD_SHARED_LIBS ${SHARED})
 else()
 	set(SHARED FALSE CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
 	set(BUILD_SHARED_LIBS OFF)
 endif()
+
+FIND_PACKAGE(cuda)
+IF(${CUDA_FOUND})
+ADD_DEFINITIONS(-DGPU_BLAS)
+ENDIF(${CUDA_FOUND})
 
 ## Need to use SuiteSparse_LINKER_LAPACK_BLAS_LIBS in our subproject in case of SHARED flag is set to ON
 SET(SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS OFF CACHE BOOL "Check if you have custom LAPACK/BLAS libraries (AMD,...)")
