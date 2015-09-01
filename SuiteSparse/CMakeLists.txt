@@ -29,11 +29,8 @@ include_directories(".")  # Needed for "SourceWrappers/*.c" files
 
 set(suitesparseconfig_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse_config) # Needed by all subprojects
 
-
 set(SUBPROJECTS_TO_ADD 
 	SuiteSparse_config
-	SuiteSparse_GPURuntime
-	GPUQREngine	
 	AMD
 	BTF
 	CAMD
@@ -47,6 +44,15 @@ set(SUBPROJECTS_TO_ADD
 	SPQR
 	CACHE STRING "list of all sub-directories to add to cmake build"
 )
+
+if(WITH_CUDA)
+	set(SUBPROJECTS_TO_ADD
+		${SUBPROJECTS_TO_ADD}
+		SuiteSparse_GPURuntime
+		GPUQREngine	
+		)
+endif()
+
 foreach(subdir ${SUBPROJECTS_TO_ADD})
 	add_subdirectory(${subdir})
 endforeach()
