@@ -93,8 +93,8 @@ endif()
 ## include (get from the install of the public headers)
 if("@BUILD_METIS@" STREQUAL "ON") # BUILD_METIS?
 	set(SuiteSparse_METIS_INCLUDE_DIR "${SuiteSparse_DIR}/include")
-	ADD_DEFINITIONS(-DNPARTITION)
 else()
+	ADD_DEFINITIONS(-DNPARTITION)
 	set(SuiteSparse_METIS_INCLUDE_DIR "")
 endif()
 

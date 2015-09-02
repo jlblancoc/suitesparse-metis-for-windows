@@ -244,7 +244,7 @@ macro(SuiteSparse_FIND_COMPONENTS )
 		list(APPEND SuiteSparse_FOUND_LIST SuiteSparse_${suitesparseCompUC}_FOUND)
 		
 		## special definition needed for metis
-		if(${suitesparseComp} MATCHES "metis")
+		if(NOT ${suitesparseComp} MATCHES "metis")
 			set(SuiteSparse_${suitesparseCompUC}_DEFINITIONS "-DNPARTITION")
 			add_definitions(${SuiteSparse_${suitesparseCompUC}_DEFINITIONS})
 			if(SuiteSparse_VERBOSE)
