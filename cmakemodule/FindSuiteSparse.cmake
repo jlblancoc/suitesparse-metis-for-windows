@@ -56,7 +56,7 @@
 ##
 ## Created by jesnault (jerome.esnault@inria.fr) 2014-01-15
 ## Updated by jesnault (jerome.esnault@inria.fr) 2014-01-21
-
+## Licensed under 3-Claused BSD License. See https://github.com/jlblancoc/suitesparse-metis-for-windows/blob/master/LICENSE.md
 
 ## check if global root SuiteSparse folder is set or not and cache it in order to let user fill it
 if(NOT SuiteSparse_DIR)
