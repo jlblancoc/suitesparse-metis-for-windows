@@ -1,57 +1,100 @@
 #-------------------------------------------------------------------------------
-# CAMD Makefile for compiling on Unix systems (for original Make ONLY)
+# CAMD Lib/Makefile
 #-------------------------------------------------------------------------------
 
-# This is a very ugly Makefile, and is only provided for those who do not
-# have GNU make.  Note that it is not used if you have GNU make.  It ignores
-# dependency checking and just compiles everything.
+LIBRARY = libcamd
+VERSION = 2.4.4
+SO_VERSION = 2
 
-default: everything
+default: library
 
 include ../../SuiteSparse_config/SuiteSparse_config.mk
 
+# CAMD depends on SuiteSparse_config
+LDLIBS += -lsuitesparseconfig
+
+# compile and install in SuiteSparse/lib
+library:
+	$(MAKE) install INSTALL=$(SUITESPARSE)
+
 C = $(CC) $(CF) -I../Include -I../../SuiteSparse_config
 
-everything:
-	$(C) -DDINT -c ../Source/camd_aat.c -o camd_i_aat.o
-	$(C) -DDINT -c ../Source/camd_1.c -o camd_i_1.o
-	$(C) -DDINT -c ../Source/camd_2.c -o camd_i_2.o
-	$(C) -DDINT -c ../Source/camd_dump.c -o camd_i_dump.o
-	$(C) -DDINT -c ../Source/camd_postorder.c -o camd_i_postorder.o
-	$(C) -DDINT -c ../Source/camd_defaults.c -o camd_i_defaults.o
-	$(C) -DDINT -c ../Source/camd_order.c -o camd_i_order.o
-	$(C) -DDINT -c ../Source/camd_control.c -o camd_i_control.o
-	$(C) -DDINT -c ../Source/camd_info.c -o camd_i_info.o
-	$(C) -DDINT -c ../Source/camd_valid.c -o camd_i_valid.o
-	$(C) -DDINT -c ../Source/camd_preprocess.c -o camd_i_preprocess.o
-	$(C) -DDLONG -c ../Source/camd_aat.c -o camd_l_aat.o
-	$(C) -DDLONG -c ../Source/camd_1.c -o camd_l_1.o
-	$(C) -DDLONG -c ../Source/camd_2.c -o camd_l_2.o
-	$(C) -DDLONG -c ../Source/camd_dump.c -o camd_l_dump.o
-	$(C) -DDLONG -c ../Source/camd_postorder.c -o camd_l_postorder.o
-	$(C) -DDLONG -c ../Source/camd_defaults.c -o camd_l_defaults.o
-	$(C) -DDLONG -c ../Source/camd_order.c -o camd_l_order.o
-	$(C) -DDLONG -c ../Source/camd_control.c -o camd_l_control.o
-	$(C) -DDLONG -c ../Source/camd_info.c -o camd_l_info.o
-	$(C) -DDLONG -c ../Source/camd_valid.c -o camd_l_valid.o
-	$(C) -DDLONG -c ../Source/camd_preprocess.c -o camd_l_preprocess.o
-	$(ARCHIVE)  libcamd.a \
-            camd_i_aat.o camd_i_1.o camd_i_2.o camd_i_dump.o \
-	    camd_i_postorder.o camd_i_defaults.o camd_i_order.o \
-	    camd_i_control.o camd_i_info.o camd_i_valid.o camd_l_aat.o \
-	    camd_l_1.o camd_l_2.o camd_l_dump.o camd_l_postorder.o \
-	    camd_l_defaults.o camd_l_order.o camd_l_control.o camd_l_info.o \
-	    camd_l_valid.o camd_i_preprocess.o camd_l_preprocess.o
-	- $(RANLIB) libcamd.a
+#-------------------------------------------------------------------------------
+# source files
+#-------------------------------------------------------------------------------
+
+CAMD = camd_aat camd_1 camd_2 camd_dump camd_postorder camd_defaults \
+	camd_order camd_control camd_info camd_valid camd_preprocess
+
+INC = ../Include/camd.h ../Include/camd_internal.h \
+      ../../SuiteSparse_config/SuiteSparse_config.h
+
+#-------------------------------------------------------------------------------
+# object files for each version
+#-------------------------------------------------------------------------------
+
+CAMDI = $(addsuffix .o, $(subst camd_,camd_i_,$(CAMD)))
+CAMDL = $(addsuffix .o, $(subst camd_,camd_l_,$(CAMD)))
+OBJ = $(CAMDI) $(CAMDL)
+
+#-------------------------------------------------------------------------------
+# compile each int and long routine (with no real/complex version)
+#-------------------------------------------------------------------------------
+
+camd_i_%.o: ../Source/camd_%.c $(INC)
+	$(C) -DDINT -c $< -o $@
+
+camd_l_%.o: ../Source/camd_%.c $(INC)
+	$(C) -DDLONG -c $< -o $@
+
+#-------------------------------------------------------------------------------
+# Create the static and shared libraries (C versions only)
+#-------------------------------------------------------------------------------
+
+$(AR_TARGET): $(OBJ)
+	$(ARCHIVE) $@ $^
+	- $(RANLIB) $@
+
+#-------------------------------------------------------------------------------
+# install (shared C version only)
+#-------------------------------------------------------------------------------
+
+# install CAMD
+install: $(AR_TARGET) $(INSTALL_LIB)/$(SO_TARGET)
+
+$(INSTALL_LIB)/$(SO_TARGET): $(OBJ)
+	@mkdir -p $(INSTALL_LIB)
+	@mkdir -p $(INSTALL_INCLUDE)
+	@mkdir -p $(INSTALL_DOC)
+	$(CC) $(SO_OPTS) $^ -o $@ $(LDLIBS)
+	( cd $(INSTALL_LIB) ; ln -sf $(SO_TARGET) $(SO_PLAIN) )
+	( cd $(INSTALL_LIB) ; ln -sf $(SO_TARGET) $(SO_MAIN) )
+	$(CP) ../Include/camd.h $(INSTALL_INCLUDE)
+	$(CP) ../Doc/CAMD_UserGuide.pdf $(INSTALL_DOC)
+	$(CP) ../README.txt $(INSTALL_DOC)/CAMD_README.txt
+	chmod 755 $(INSTALL_LIB)/$(SO_TARGET)
+	chmod 644 $(INSTALL_INCLUDE)/camd.h
+	chmod 644 $(INSTALL_DOC)/CAMD_UserGuide.pdf
+	chmod 644 $(INSTALL_DOC)/CAMD_README.txt
+
+# uninstall CAMD
+uninstall:
+	$(RM) $(INSTALL_LIB)/$(SO_TARGET)
+	$(RM) $(INSTALL_LIB)/$(SO_PLAIN)
+	$(RM) $(INSTALL_LIB)/$(SO_MAIN)
+	$(RM) $(INSTALL_INCLUDE)/camd.h
+	$(RM) $(INSTALL_DOC)/CAMD_UserGuide.pdf
+	$(RM) $(INSTALL_DOC)/CAMD_README.txt
 
 #-------------------------------------------------------------------------------
 # Remove all but the files in the original distribution
 #-------------------------------------------------------------------------------
 
 clean:
-	- $(RM) $(CLEAN)
+	- $(RM) -r $(CLEAN)
 
 purge: distclean
 
 distclean: clean
-	- $(RM) libcamd.a
+	- $(RM) -r $(PURGE)
+

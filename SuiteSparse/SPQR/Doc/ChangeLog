@@ -1,3 +1,26 @@
+Feb 1, 2016: version 2.0.5
+
+    * update to Makefiles
+    * better error handling when -DNGPL is used in CHOLMOD.
+	SuiteSparseQR requires the CHOLMOD/Supernodal module.  This is now
+	checked both at compile time and at run time.
+
+Jan 30, 2016: versions 2.0.4
+
+    * modifications to Makefiles
+    * correction to mexFunctions required for MATLAB R2015b,
+	for sparse empty matrices and NULL mxGetPr
+    * added "#include <algorithm>" to spqr_tol.cpp.
+
+Jan 1, 2016: version 2.0.3
+
+    * modified Makefile to create shared libraries
+        No change to C code except version number
+
+Aug 28, 2015: version 2.0.2
+
+    * changed the default tol when A has inf's
+
 Mar 24, 2015: version 2.0.1
 
     * minor changes to documentation

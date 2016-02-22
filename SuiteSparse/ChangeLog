@@ -1,3 +1,53 @@
+Feb 1, 2016: SuiteSparse 4.5.1
+
+    * update to Makefiles.  Version 4.5.0 is broken on the Mac.
+	That version also compiles *.so libraries on Linux with
+	underlinked dependencies to other libraries in SuiteSparse.
+	For example, AMD requires SuiteSparse_config.  The links to
+	required libraries are now explicitly included in each library,
+	in SuiteSparse 4.5.1.
+    * minor change to CHOLMOD/Check/cholmod_write.c, when compiling with
+	-DNGPL
+
+Jan 30, 2016: SuiteSparse 4.5.0
+
+    * better Makefiles for creating and installing shared libraries
+    * CHOLMOD now uses METIS 5.1.0, which is distributed with SuiteSparse
+    * fix for MATLAB R2015b, which changed how it creates empty matrices,
+	as compared to prior versions of MATLAB.  This change in MATLAB
+	breaks many of the mexFunctions in prior versions of SuiteSparse.
+	If you use MATLAB R2015b, you must upgrade to SuiteSparse 4.5.0
+	or later.
+
+Jan 1, 2016: SuiteSparse 4.4.7
+
+    * note that this minor update fails on the Mac, so its
+        listed on my web page as a 'beta' release.
+    * Improved the Makefiles of all packages.  They now create *.so
+        shared libraries (*.dylib on the Mac).  Also, there is now
+        only a single SuiteSparse_config.mk file.  It now determines
+        your system automatically, and whether or not you have METIS
+        and CUDA.  It also automatically detects if you have the Intel
+        compiler or not, and uses it if it finds it.  There should be
+        no need to edit this file for most cases, but you may need to
+        for your particular system.  With this release, there are almost
+        no changes to the source code, except for the VERSION numbers
+        defined in the various include *.h files for each package.
+
+Aug 2015: SuiteSparse version 4.4.6
+
+    * SPQR: changed default tol when A has infs, from inf to realmax (~1e308)
+
+July 2015: SuiteSparse version 4.4.5
+
+    * CHOLMOD 3.0.6:
+        - minor fix to CHOLMOD (-DNGPL did not work as expected)
+        - added MATLAB interface for row add/delete (lurowmod)
+    * KLU 1.3.3: Fix for klu_dump.c (debugging case only)
+    * UFcollection:  added additional stats for matrix collection
+    * AMD: changed the license.  Was LGPL only, now either LGPL or BSD,
+        at the user's option.  See AMD/Doc/License.txt for details.
+
 Mar 24, 2015: SuiteSparse version 4.4.4
 
     * CHOLMOD version number corrected.  In 4.4.3, the CHOLMOD_SUBSUB_VERSION

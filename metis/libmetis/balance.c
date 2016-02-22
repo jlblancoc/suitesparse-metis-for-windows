@@ -10,6 +10,13 @@
 
 #include "metislib.h"
 
+/* -------------------------------------------------------------------------- */
+/* Added for SuiteSparse, to silence compiler warnings.
+   Tim Davis, Jan 12, 2016, Texas A&M University
+*/
+#define ABS(a) (((a) < 0) ? (-(a)) : (a))
+/* -------------------------------------------------------------------------- */
+
 /*************************************************************************
 * This function is the entry poidx_t of the bisection balancing algorithms.
 **************************************************************************/
@@ -20,8 +27,18 @@ void Balance2Way(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
 
   if (graph->ncon == 1) {
     /* return right away if the balance is OK */
+
+    /* [
+    old:
     if (iabs(ntpwgts[0]*graph->tvwgt[0]-graph->pwgts[0]) < 3*graph->tvwgt[0]/graph->nvtxs)
       return;
+    modified for SuiteSparse: */
+    real_t t =
+            (ntpwgts[0]*graph->tvwgt[0]-graph->pwgts[0]) ;
+    t = ABS (t) ;
+    if (t                                                < 3*graph->tvwgt[0]/graph->nvtxs)
+      return;
+    /* ] */
 
     if (graph->nbnd > 0)
       Bnd2WayBalance(ctrl, graph, ntpwgts);
@@ -67,7 +84,16 @@ void Bnd2WayBalance(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
   /* Determine from which domain you will be moving data */
   tpwgts[0] = graph->tvwgt[0]*ntpwgts[0];
   tpwgts[1] = graph->tvwgt[0] - tpwgts[0];
+
+  /* [
+  old:
   mindiff   = iabs(tpwgts[0]-pwgts[0]);
+  modified for SuiteSparse:
+  */
+  mindiff   =     (tpwgts[0]-pwgts[0]);
+  mindiff   =  ABS(mindiff) ;
+  /* ] */
+
   from      = (pwgts[0] < tpwgts[0] ? 1 : 0);
   to        = (from+1)%2;
 
@@ -195,7 +221,16 @@ void General2WayBalance(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
   /* Determine from which domain you will be moving data */
   tpwgts[0] = graph->tvwgt[0]*ntpwgts[0];
   tpwgts[1] = graph->tvwgt[0] - tpwgts[0];
+
+  /* [
+  old:
   mindiff   = iabs(tpwgts[0]-pwgts[0]);
+  modified for SuiteSparse:
+  */
+  mindiff   =     (tpwgts[0]-pwgts[0]);
+  mindiff   =  ABS(mindiff) ;
+  /* ] */
+
   from      = (pwgts[0] < tpwgts[0] ? 1 : 0);
   to        = (from+1)%2;
 

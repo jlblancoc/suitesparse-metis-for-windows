@@ -22,7 +22,6 @@
 
 #include "gk_arch.h" /*!< This should be here, prior to the includes */
 
-
 /*************************************************************************
 * Header file inclusion section
 **************************************************************************/
@@ -37,8 +36,26 @@
 #include <time.h>
 #include <string.h>
 #include <limits.h>
+
+/* -------------------------------------------------------------------------- */
+/* Added for SuiteSparse, to disable signal handling when incorporated into
+ * a MATLAB mexFunction.  Tim Davis, Jan 30, 2016, Texas A&M University. */
+#ifdef MATLAB_MEX_FILE
+#include "mex.h"
+#define SIGABRT 6
+#define SIGTERM 15
+#define jmp_buf int
+#define raise(sig) { mexErrMsgTxt ("METIS error") ; }
+#define signal(sig,func) NULL
+#define longjmp(env,val) { mexErrMsgTxt ("METIS error") ; }
+#define setjmp(x) (0)
+#define exit(x) { mexErrMsgTxt ("METIS error") ; }
+#else
 #include <signal.h>
 #include <setjmp.h>
+#endif
+/* -------------------------------------------------------------------------- */
+
 #include <assert.h>
 #include <sys/stat.h>
 
@@ -57,6 +74,23 @@
 #if defined(__OPENMP__) 
 #include <omp.h>
 #endif
+
+/* -------------------------------------------------------------------------- */
+/* Added for SuiteSparse, for incorporation into MATLAB, using MATLAB's
+   version of malloc, calloc, realloc, free, and printf.
+   Tim Davis, Jan 30, 2016, Texas A&M University. */
+#ifdef MATLAB_MEX_FILE
+#define malloc mxMalloc
+#define calloc mxCalloc
+#define free(p) { \
+    if ((p) == NULL) mexErrMsgTxt ("double mxFree!") ; \
+    mxFree (p) ; \
+    (p) = NULL ; \
+    }
+#define realloc mxRealloc
+#define printf mexPrintf
+#endif
+/* -------------------------------------------------------------------------- */
 
 
 

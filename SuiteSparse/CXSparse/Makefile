@@ -2,7 +2,8 @@
 # CXSparse Makefile
 #------------------------------------------------------------------------------
 
-VERSION = 3.1.4
+SUITESPARSE ?= $(realpath $(CURDIR)/..)
+export SUITESPARSE
 
 default: C
 
@@ -36,16 +37,10 @@ purge:
 
 distclean: purge
 
-# install CSparse
+# install CXSparse
 install:
-	$(CP) Lib/libcxsparse.a $(INSTALL_LIB)/libcxsparse.$(VERSION).a
-	( cd $(INSTALL_LIB) ; ln -sf libcxsparse.$(VERSION).a libcxsparse.a )
-	$(CP) Include/cs.h $(INSTALL_INCLUDE)
-	chmod 644 $(INSTALL_LIB)/libcxsparse*.a
-	chmod 644 $(INSTALL_INCLUDE)/cs.h
+	( cd Lib ; $(MAKE) install )
 
-# uninstall CSparse
+# uninstall CXSparse
 uninstall:
-	$(RM) $(INSTALL_LIB)/libcxsparse*.a
-	$(RM) $(INSTALL_INCLUDE)/cs.h
-
+	( cd Lib ; $(MAKE) uninstall )

@@ -10,12 +10,21 @@
  * CHOLMOD is also available under other licenses; contact authors for details.
  * -------------------------------------------------------------------------- */
 
-/* CHOLMOD interface to the METIS package (Version 4.0.1):
+/* CHOLMOD interface to the METIS package (Version 5.1.0):
  *
  * cholmod_metis_bisector:
  *
- *	Wrapper for METIS_ComputeVertexSeparator.  Finds a set of nodes that
- *	partitions the graph into two parts.
+ *	Wrapper for the METIS node separator function,
+ *      METIS_ComputeVertexSeparator (METIS 5.1).
+ *
+ *      Finds a set of nodes that partitions the graph into two parts.  METIS
+ *      4.0 (the function METIS_ComputeVertexSeparator) allowed for edge
+ *      weights to be passed to the bisector.  This feature is removed in METIS
+ *      5.1.  CHOLMOD itself does not rely on this feature (it calls the METIS
+ *      bisector with edge weights of all 1s).  However, user code can call
+ *      cholmod_metis_bisector directly, and pass in edge weights.  If you use
+ *      METIS 5.1, these edge weights are now ignored; if you pass a non-NULL
+ *      entry for edge weights, an error will be returned.
  *
  * cholmod_metis:
  *
@@ -46,22 +55,9 @@
 #ifndef NPARTITION
 
 #include "cholmod_internal.h"
-#undef ASSERT
-
 #include "metis.h"
-/* METIS has its own ASSERT that it reveals to the user, so remove it here: */
-#undef ASSERT
-
-/* and redefine it back again */
-#ifndef NDEBUG
-#define ASSERT(expression) (assert (expression))
-#else
-#define ASSERT(expression)
-#endif
-
 #include "cholmod_partition.h"
 #include "cholmod_cholesky.h"
-
 
 /* ========================================================================== */
 /* === dumpgraph ============================================================ */
@@ -107,7 +103,7 @@ static void dumpgraph (idx_t *Mp, idx_t *Mi, SuiteSparse_long n,
 /* === metis_memory_ok ====================================================== */
 /* ========================================================================== */
 
-/* METIS_NodeND and METIS_ComputeVertexSeparator will terminate your program it
+/* METIS will terminate your program if
  * they run out of memory.  In an attempt to workaround METIS' behavior, this
  * routine allocates a single block of memory of size equal to an observed
  * upper bound on METIS' memory usage.  It then immediately deallocates the
@@ -124,15 +120,6 @@ static void dumpgraph (idx_t *Mp, idx_t *Mi, SuiteSparse_long n,
  * If you do not mind having your program terminated if it runs out of memory,
  * set Common->metis_memory to zero.  Its default value is 2, which allows for
  * some memory fragmentation, and also accounts for the Gupta/gupta2 matrix.
- *
- * An alternative, if CHOLMOD is used in MATLAB, is to use a version of METIS
- * (4.0.2, perhaps) proposed to George Karypis.  This version uses function
- * pointer for malloc and free.  They can be set to mxMalloc and mxFree
- * (see sputil_config in MATLAB/sputil.c).  On Linux, with gcc, you must also
- * compile CHOLMOD, METIS, AMD, COLAMD, and CCOLAMD with the -fexceptions
- * compiler flag.  With this configuration, mxMalloc safely aborts the
- * mexFunction, frees all memory allocted by METIS, and safely returns to
- * MATLAB.  You may then set Common->metis_memory = 0.
  */
 
 #define GUESS(nz,n) (10 * (nz) + 50 * (n) + 4096)
@@ -190,7 +177,7 @@ static int metis_memory_ok
 /* ========================================================================== */
 
 /* Finds a set of nodes that bisects the graph of A or AA' (direct interface
- * to METIS_ComputeVertexSeparator).
+ * to METIS_ComputeVertexSeparator.
  *
  * The input matrix A must be square, symmetric (with both upper and lower
  * parts present) and with no diagonal entries.  These conditions are NOT
@@ -201,8 +188,13 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
 (
     /* ---- input ---- */
     cholmod_sparse *A,	/* matrix to bisect */
-    Int *Anw,		/* size A->nrow, node weights */
-    Int *Aew,		/* size nz, edge weights */
+    Int *Anw,		/* size A->nrow, node weights, can be NULL, */
+                        /* which means the graph is unweighted. */ 
+    Int *Aew,		/* size nz, edge weights (silently ignored). */
+                        /* This option was available with METIS 4, but not */
+                        /* in METIS 5.  This argument is now unused, but */
+                        /* it remains for backward compatibilty, so as not */
+                        /* to change the API for cholmod_metis_bisector. */
     /* ---- output --- */
     Int *Partition,	/* size A->nrow */
     /* --------------- */
@@ -210,10 +202,11 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
 )
 {
     Int *Ap, *Ai ;
-    idx_t *Mp, *Mi, *Mnw, *Mew, *Mpart ;
+    idx_t *Mp, *Mi, *Mnw, *Mpart ;
     Int n, nleft, nright, j, p, csep, total_weight, lightest, nz ;
-    int Opt [8], nn, csp ;
+    idx_t nn, csp ;
     size_t n1 ;
+    int ok ;
     DEBUG (Int nsep) ;
 
     /* ---------------------------------------------------------------------- */
@@ -222,8 +215,8 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
 
     RETURN_IF_NULL_COMMON (EMPTY) ;
     RETURN_IF_NULL (A, EMPTY) ;
-    RETURN_IF_NULL (Anw, EMPTY) ;
-    RETURN_IF_NULL (Aew, EMPTY) ;
+    /* RETURN_IF_NULL (Anw, EMPTY) ; */
+    /* RETURN_IF_NULL (Aew, EMPTY) ; */
     RETURN_IF_NULL (Partition, EMPTY) ;
     RETURN_IF_XTYPE_INVALID (A, CHOLMOD_PATTERN, CHOLMOD_ZOMPLEX, EMPTY) ;
     if (A->stype || A->nrow != A->ncol)
@@ -234,6 +227,7 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
 	return (EMPTY) ;
     }
     Common->status = CHOLMOD_OK ;
+    ASSERT (CHOLMOD(dump_sparse) (A, "A for bisector", Common) >= 0) ;
 
     /* ---------------------------------------------------------------------- */
     /* quick return */
@@ -254,43 +248,16 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
     Ai = A->i ;
     nz = Ap [n] ;
 
-    /* ---------------------------------------------------------------------- */
-    /* METIS does not have a 64-bit integer version */
-    /* ---------------------------------------------------------------------- */
-
-#ifdef LONG
-    if (sizeof (Int) > sizeof (idx_t) && MAX (n,nz) > INT_MAX / sizeof (int))
-    {
-	/* CHOLMOD's matrix is too large for METIS */
-	return (EMPTY) ;
-    }
-#endif
-
-    /* ---------------------------------------------------------------------- */
-    /* set default options */
-    /* ---------------------------------------------------------------------- */
-
-    Opt [0] = 0 ;	/* use defaults */
-    Opt [1] = 3 ;	/* matching type */
-    Opt [2] = 1 ;	/* init. partitioning algo*/
-    Opt [3] = 2 ;	/* refinement algorithm */
-    Opt [4] = 0 ;	/* no debug */
-    Opt [5] = 0 ;	/* unused */
-    Opt [6] = 0 ;	/* unused */
-    Opt [7] = -1 ;	/* random seed */
-
-    DEBUG (for (j = 0 ; j < n ; j++) ASSERT (Anw [j] > 0)) ;
+    if (Anw != NULL) DEBUG (for (j = 0 ; j < n ; j++) ASSERT (Anw [j] > 0)) ;
 
     /* ---------------------------------------------------------------------- */
     /* copy Int to METIS idx_t, if necessary */
     /* ---------------------------------------------------------------------- */
 
-    DEBUG (for (j = 0 ; j < nz ; j++) ASSERT (Aew [j] > 0)) ;
     if (sizeof (Int) == sizeof (idx_t))
     {
 	/* this is the typical case */
 	Mi    = (idx_t *) Ai ;
-	Mew   = (idx_t *) Aew ;
 	Mp    = (idx_t *) Ap ;
 	Mnw   = (idx_t *) Anw ;
 	Mpart = (idx_t *) Partition ;
@@ -299,14 +266,12 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
     {
 	/* idx_t and Int differ; copy the graph into the METIS idx_t */
 	Mi    = CHOLMOD(malloc) (nz, sizeof (idx_t), Common) ;
-	Mew   = CHOLMOD(malloc) (nz, sizeof (idx_t), Common) ;
 	Mp    = CHOLMOD(malloc) (n1, sizeof (idx_t), Common) ;
-	Mnw   = CHOLMOD(malloc) (n,  sizeof (idx_t), Common) ;
+	Mnw   = Anw ? (CHOLMOD(malloc) (n,  sizeof (idx_t), Common)) : NULL ;
 	Mpart = CHOLMOD(malloc) (n,  sizeof (idx_t), Common) ;
 	if (Common->status < CHOLMOD_OK)
 	{
 	    CHOLMOD(free) (nz, sizeof (idx_t), Mi,    Common) ;
-	    CHOLMOD(free) (nz, sizeof (idx_t), Mew,   Common) ;
 	    CHOLMOD(free) (n1, sizeof (idx_t), Mp,    Common) ;
 	    CHOLMOD(free) (n,  sizeof (idx_t), Mnw,   Common) ;
 	    CHOLMOD(free) (n,  sizeof (idx_t), Mpart, Common) ;
@@ -316,18 +281,17 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
 	{
 	    Mi [p] = Ai [p] ;
 	}
-	for (p = 0 ; p < nz ; p++)
-	{
-	    Mew [p] = Aew [p] ;
-	}
 	for (j = 0 ; j <= n ; j++)
 	{
 	    Mp [j] = Ap [j] ;
 	}
-	for (j = 0 ; j <  n ; j++)
-	{
-	    Mnw [j] = Anw [j] ;
-	}
+        if (Anw != NULL)
+        {
+            for (j = 0 ; j <  n ; j++)
+            {
+                Mnw [j] = Anw [j] ;
+            }
+        }
     }
 
     /* ---------------------------------------------------------------------- */
@@ -340,7 +304,6 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
 	if (sizeof (Int) != sizeof (idx_t))
 	{
 	    CHOLMOD(free) (nz, sizeof (idx_t), Mi,    Common) ;
-	    CHOLMOD(free) (nz, sizeof (idx_t), Mew,   Common) ;
 	    CHOLMOD(free) (n1, sizeof (idx_t), Mp,    Common) ;
 	    CHOLMOD(free) (n,  sizeof (idx_t), Mnw,   Common) ;
 	    CHOLMOD(free) (n,  sizeof (idx_t), Mpart, Common) ;
@@ -356,21 +319,31 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
     PRINT1 (("Metis graph, n = "ID"\n", n)) ;
     for (j = 0 ; j < n ; j++)
     {
-	Int ppp ;
-	PRINT2 (("M(:,"ID") node weight "ID"\n", j, (Int) Mnw [j])) ;
-	ASSERT (Mnw [j] > 0) ;
+	Int ppp, nodeweight = (Mnw ? Mnw [j] : 1) ;
+	PRINT2 (("M(:,"ID") node weight "ID"\n", j, nodeweight)) ;
+	ASSERT (nodeweight > 0) ;
 	for (ppp = Mp [j] ; ppp < Mp [j+1] ; ppp++)
 	{
-	    PRINT3 ((" "ID" : "ID"\n", (Int) Mi [ppp], (Int) Mew [ppp])) ;
+	    PRINT3 ((" "ID "\n", (Int) Mi [ppp])) ;
 	    ASSERT (Mi [ppp] != j) ;
-	    ASSERT (Mew [ppp] > 0) ;
 	}
     }
 #endif
 
+    /* 
+    METIS_ComputeVertexSeparator(
+            idx_t *nvtxs,       number of nodes
+            idx_t *xadj,        column pointers
+            idx_t *adjncy,      row indices
+            idx_t *vwgt,        vertex weights (NULL means unweighted)
+            idx_t *options,     options (NULL means defaults)
+            idx_t *sepsize,     separator size
+            idx_t *part);       partition.  part [i] = 0,1,2, where:
+                                0:left, 1:right, 2:separator
+    */
+
     nn = n ;
-    METIS_ComputeVertexSeparator (&nn, Mp, Mi, Mnw, Mew, Opt, &csp, Mpart) ;
-    n = nn ;
+    ok = METIS_ComputeVertexSeparator (&nn, Mp, Mi, Mnw, NULL, &csp, Mpart) ;
     csep = csp ;
 
     PRINT1 (("METIS csep "ID"\n", csep)) ;
@@ -379,17 +352,40 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
     /* copy the results back from idx_t, if required */
     /* ---------------------------------------------------------------------- */
 
-    if (sizeof (Int) != sizeof (idx_t))
+    if (ok == METIS_OK && (sizeof (Int) != sizeof (idx_t)))
     {
 	for (j = 0 ; j < n ; j++)
 	{
 	    Partition [j] = Mpart [j] ;
 	}
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /* free the workspace for METIS, if allocated */
+    /* ---------------------------------------------------------------------- */
+
+    if (sizeof (Int) != sizeof (idx_t))
+    {
 	CHOLMOD(free) (nz, sizeof (idx_t), Mi,    Common) ;
-	CHOLMOD(free) (nz, sizeof (idx_t), Mew,   Common) ;
 	CHOLMOD(free) (n1, sizeof (idx_t), Mp,    Common) ;
 	CHOLMOD(free) (n,  sizeof (idx_t), Mnw,   Common) ;
 	CHOLMOD(free) (n,  sizeof (idx_t), Mpart, Common) ;
+    }
+
+    if (ok == METIS_ERROR_MEMORY)
+    {
+        ERROR (CHOLMOD_OUT_OF_MEMORY, "out of memory in METIS") ;
+	return (EMPTY) ;
+    }
+    else if (ok == METIS_ERROR_INPUT)
+    {
+        ERROR (CHOLMOD_INVALID, "invalid input to METIS") ;
+	return (EMPTY) ;
+    }
+    else if (ok == METIS_ERROR)
+    {
+        ERROR (CHOLMOD_INVALID, "unspecified METIS error") ;
+	return (EMPTY) ;
     }
 
     /* ---------------------------------------------------------------------- */
@@ -409,17 +405,24 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
     {
 	/* The separator is empty, select lightest node as separator.  If
 	 * ties, select the highest numbered node. */
-	lightest = 0 ;
-	for (j = 0 ; j < n ; j++)
-	{
-	    if (Anw [j] <= Anw [lightest])
-	    {
-		lightest = j ;
-	    }
-	}
+        if (Anw == NULL)
+        {
+	    lightest = n-1 ;
+        }
+        else
+        {
+	    lightest = 0 ;
+            for (j = 0 ; j < n ; j++)
+            {
+                if (Anw [j] <= Anw [lightest])
+                {
+                    lightest = j ;
+                }
+            }
+        }
 	PRINT1 (("Force "ID" as sep\n", lightest)) ;
 	Partition [lightest] = 2 ;
-	csep = Anw [lightest] ;
+	csep = (Anw ? (Anw [lightest]) : 1) ;
     }
 
     /* determine the node weights in the left and right part of the graph */
@@ -431,17 +434,17 @@ SuiteSparse_long CHOLMOD(metis_bisector)	/* returns separator size */
 	PRINT1 (("Partition ["ID"] = "ID"\n", j, Partition [j])) ;
 	if (Partition [j] == 0)
 	{
-	    nleft += Anw [j] ;
+	    nleft += (Anw ? (Anw [j]) : 1) ;
 	}
 	else if (Partition [j] == 1)
 	{
-	    nright += Anw [j] ;
+	    nright += (Anw ? (Anw [j]) : 1) ;
 	}
 #ifndef NDEBUG
 	else
 	{
 	    ASSERT (Partition [j] == 2) ;
-	    nsep += Anw [j] ;
+	    nsep += (Anw ? (Anw [j]) : 1) ;
 	}
 #endif
     }
@@ -510,7 +513,7 @@ int CHOLMOD(metis)
     idx_t *Mp, *Mi, *Mperm, *Miperm ;
     cholmod_sparse *B ;
     Int i, j, n, nz, p, identity, uncol ;
-    int Opt [8], nn, zero = 0 ;
+    idx_t nn, zero = 0 ;
     size_t n1, s ;
     int ok = TRUE ;
 
@@ -595,35 +598,9 @@ int CHOLMOD(metis)
     Bi = B->i ;
     nz = Bp [n] ;
 
-    /* ---------------------------------------------------------------------- */
-    /* METIS does not have a SuiteSparse_long integer version */
-    /* ---------------------------------------------------------------------- */
-
-#ifdef LONG
-    if (sizeof (Int) > sizeof (idx_t) && MAX (n,nz) > INT_MAX / sizeof (int))
-    {
-	/* CHOLMOD's matrix is too large for METIS */
-	CHOLMOD(free_sparse) (&B, Common) ;
-	return (FALSE) ;
-    }
-#endif
-
     /* B does not include the diagonal, and both upper and lower parts.
      * Common->anz includes the diagonal, and just the lower part of B */
     Common->anz = nz / 2 + n ;
-
-    /* ---------------------------------------------------------------------- */
-    /* set control parameters for METIS_NodeND */
-    /* ---------------------------------------------------------------------- */
-
-    Opt [0] = 0 ;	/* use defaults */
-    Opt [1] = 3 ;	/* matching type */
-    Opt [2] = 1 ;	/* init. partitioning algo*/
-    Opt [3] = 2 ;	/* refinement algorithm */
-    Opt [4] = 0 ;	/* no debug */
-    Opt [5] = 1 ;	/* initial compression */
-    Opt [6] = 0 ;	/* no dense node removal */
-    Opt [7] = 1 ;	/* number of separators @ each step */
 
     /* ---------------------------------------------------------------------- */
     /* allocate the METIS input arrays, if needed */
@@ -729,9 +706,19 @@ int CHOLMOD(metis)
 	dumpgraph (Mp, Mi, n, Common) ;
 #endif
 
+        /*
+        int METIS_NodeND(
+            idx_t *nvtxs,       number of nodes
+            idx_t *xadj,        column pointers
+            idx_t *adjncy,      row indices
+            idx_t *vwgt,        vertex weights (NULL means unweighted)
+            idx_t *options,     options (NULL means defaults)
+            idx_t *perm,        fill-reducing ordering
+            idx_t *iperm);      inverse of perm
+        */
+
 	nn = n ;
-	METIS_NodeND (&nn, Mp, Mi, &zero, Opt, Mperm, Miperm) ;
-	n = nn ;
+	METIS_NodeND (&nn, Mp, Mi, NULL, NULL, Mperm, Miperm) ;
 
 	PRINT0 (("METIS_NodeND done\n")) ;
     }

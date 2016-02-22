@@ -2,58 +2,38 @@
 # SuiteSparseQR/Lib/Makefile
 #===============================================================================
 
-default: all
+LIBRARY = libspqr
+VERSION = 2.0.5
+SO_VERSION = 2
+
+default: library
 
 ccode: all
 
 include ../../SuiteSparse_config/SuiteSparse_config.mk
 
-#-------------------------------------------------------------------------------
-# the optional Partition module requires METIS, CAMD, and CCOLAMD
-I_WITH_PARTITION = 
-LIB_WITH_PARTITION =
-CONFIG_PARTITION = -DNPARTITION
-# check if METIS is requested and available
-ifeq (,$(findstring -DNPARTITION, $(CHOLMOD_CONFIG)))
-    # METIS is requested.  See if it is available
-    ifeq ($(METIS_PATH), $(wildcard $(METIS_PATH)))
-        ifeq (../../CAMD, $(wildcard ../../CAMD))
-            ifeq (../../CCOLAMD, $(wildcard ../../CCOLAMD))
-                # METIS, CAMD, and CCOLAMD are available
-                LIB_WITH_PARTITION = $(METIS) ../../CCOLAMD/Lib/libccolamd.a \
-                    ../../CAMD/Lib/libcamd.a
-                I_WITH_PARTITION = -I$(METIS_PATH)/Lib \
-                    -I../../CCOLAMD/Include -I../../CAMD/Include
-                CONFIG_PARTITION =
-            endif
-        endif
-    endif
-endif
-#-------------------------------------------------------------------------------
+# SPQR depends on CHOLMOD, AMD, COLAMD, LAPACK, the BLAS and SuiteSparse_config
+LDLIBS += -lamd -lcolamd -lcholmod -lsuitesparseconfig $(LAPACK) $(BLAS)
+
+# compile and install in SuiteSparse/lib
+library:
+	$(MAKE) install INSTALL=$(SUITESPARSE)
 
 #-------------------------------------------------------------------------------
 
-# no statement coverage, high optimization
-# CF = -O3 \
-# 	-Wall -W -Wshadow -Winline -Wno-unused-parameter \
-# 	-Wredundant-decls -Wdisabled-optimization \
-# 	-ansi -fexceptions
-
-all: libspqr.a
-
-library: libspqr.a
+all: library
 
 purge: distclean
 
 distclean: clean
-	- $(RM) libspqr.a
+	- $(RM) -r $(PURGE)
 
 clean:
-	- $(RM) $(CLEAN)
+	- $(RM) -r $(CLEAN)
 
 INC = ../Include/spqr.hpp ../Include/SuiteSparseQR_C.h \
 	../Include/SuiteSparseQR_definitions.h \
-	../Include/SuiteSparseQR.hpp Makefile
+	../Include/SuiteSparseQR.hpp
 
 OBJ = \
     spqr_rmap.o \
@@ -110,15 +90,23 @@ I = -I../../CHOLMOD/Include -I../../SuiteSparse_config -I../Include
 
 ifneq ($(GPU_CONFIG),)
     I += -I../../SuiteSparse_GPURuntime/Include \
-        -I../../GPUQREngine/Include \
-        -I$(CUDA_INC_PATH)
+         -I../../GPUQREngine/Include $(CUDA_INC)
 endif
 
-C = $(CXX) $(CF) $(SPQR_CONFIG) $(CONFIG_PARTITION) $(I)
+C = $(CXX) $(CF) $(SPQR_CONFIG) $(CHOLMOD_CONFIG) $(CONFIG_PARTITION) $(I)
 
-libspqr.a: $(OBJ)
-	$(ARCHIVE)  libspqr.a $(OBJ)
-	- $(RANLIB) libspqr.a
+ifneq ($(GPU_CONFIG),)
+    LDLIBS += $(CUDART_LIB) $(CUBLAS_LIB) \
+        -lSuiteSparse_GPURuntime -lGPUQREngine
+endif
+
+#-------------------------------------------------------------------------------
+
+$(AR_TARGET): $(OBJ)
+	$(ARCHIVE) $@ $^
+	- $(RANLIB) $@
+
+#-------------------------------------------------------------------------------
 
 spqr_1colamd.o: ../Source/spqr_1colamd.cpp
 	$(C) -c $<
@@ -248,3 +236,42 @@ spqrgpu_buildAssemblyMaps.o: ../SPQRGPU/spqrgpu_buildAssemblyMaps.cpp
 
 spqrgpu_computeFrontStaging.o: ../SPQRGPU/spqrgpu_computeFrontStaging.cpp
 	$(C) -c $<
+
+#-------------------------------------------------------------------------------
+
+# install SPQR
+install: $(AR_TARGET) $(INSTALL_LIB)/$(SO_TARGET)
+
+$(INSTALL_LIB)/$(SO_TARGET): $(OBJ)
+	@mkdir -p $(INSTALL_LIB)
+	@mkdir -p $(INSTALL_INCLUDE)
+	@mkdir -p $(INSTALL_DOC)
+	$(CC) $(SO_OPTS) $^ -o $@ $(LDLIBS)
+	( cd $(INSTALL_LIB) ; ln -sf $(SO_TARGET) $(SO_PLAIN) )
+	( cd $(INSTALL_LIB) ; ln -sf $(SO_TARGET) $(SO_MAIN) )
+	$(CP) ../Include/SuiteSparseQR.hpp $(INSTALL_INCLUDE)
+	$(CP) ../Include/SuiteSparseQR_C.h $(INSTALL_INCLUDE)
+	$(CP) ../Include/SuiteSparseQR_definitions.h $(INSTALL_INCLUDE)
+	$(CP) ../Include/spqr.hpp $(INSTALL_INCLUDE)
+	$(CP) ../Doc/spqr_user_guide.pdf $(INSTALL_DOC)
+	$(CP) ../README.txt $(INSTALL_DOC)/SPQR_README.txt
+	chmod 755 $(INSTALL_LIB)/$(SO_TARGET)
+	chmod 644 $(INSTALL_INCLUDE)/SuiteSparseQR.hpp
+	chmod 644 $(INSTALL_INCLUDE)/SuiteSparseQR_C.h
+	chmod 644 $(INSTALL_INCLUDE)/SuiteSparseQR_definitions.h
+	chmod 644 $(INSTALL_INCLUDE)/spqr.hpp
+	chmod 644 $(INSTALL_DOC)/spqr_user_guide.pdf
+	chmod 644 $(INSTALL_DOC)/SPQR_README.txt
+
+# uninstall SPQR
+uninstall:
+	$(RM) $(INSTALL_LIB)/$(SO_TARGET)
+	$(RM) $(INSTALL_LIB)/$(SO_PLAIN)
+	$(RM) $(INSTALL_LIB)/$(SO_MAIN)
+	$(RM) $(INSTALL_INCLUDE)/SuiteSparseQR.hpp
+	$(RM) $(INSTALL_INCLUDE)/SuiteSparseQR_C.h
+	$(RM) $(INSTALL_INCLUDE)/SuiteSparseQR_definitions.h
+	$(RM) $(INSTALL_INCLUDE)/spqr.hpp
+	$(RM) $(INSTALL_DOC)/spqr_user_guide.pdf
+	$(RM) $(INSTALL_DOC)/SPQR_README.txt
+

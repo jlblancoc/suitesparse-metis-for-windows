@@ -2,11 +2,22 @@
 # GPUQREngine/Lib/Makefile: for compiling the GPUQREngine library
 #-------------------------------------------------------------------------------
 
-default: all
+LIBRARY = libGPUQREngine
+VERSION = 1.0.3
+SO_VERSION = 1
+
+default: library
 
 ccode: all
 
 include ../../SuiteSparse_config/SuiteSparse_config.mk
+
+# GPUQREngine depends on SuiteSparse_config, CUDA, and SuiteSparse_GPURuntime
+LDLIBS += -lSuiteSparse_GPURuntime -lsuitesparseconfig $(CUDART_LIB)
+
+# compile and install in SuiteSparse/lib
+library:
+	$(MAKE) install INSTALL=$(SUITESPARSE)
 
 OBJS = GPUQREngine_GraphVizHelper.o                        \
        GPUQREngine_Internal.o                              \
@@ -35,9 +46,6 @@ OBJS = GPUQREngine_GraphVizHelper.o                        \
        ssgpu_maxQueueSize.o                                \
        TaskDescriptor_flops.o                              \
        GPUQREngine_UberKernel.o
-
-LIBS = $(CUDART_LIB) \
-    ../../SuiteSparse_GPURuntime/Lib/libSuiteSparse_GPURuntime.a
 
 INC  = -I../../SuiteSparse_GPURuntime/Include -I../Include \
     -I../../SuiteSparse_config
@@ -93,8 +101,7 @@ H3 = \
     ../../SuiteSparse_GPURuntime/Include/SuiteSparseGPU_macros.hpp \
     ../../SuiteSparse_GPURuntime/Include/SuiteSparseGPU_Runtime.hpp \
     ../../SuiteSparse_GPURuntime/Include/SuiteSparseGPU_Workspace.hpp \
-    ../../SuiteSparse_GPURuntime/Include/SuiteSparseGPU_workspace_macros.hpp \
-    Makefile
+    ../../SuiteSparse_GPURuntime/Include/SuiteSparseGPU_workspace_macros.hpp
 
 H  += $(H3)
 H2 += $(H3)
@@ -103,21 +110,42 @@ H2 += $(H3)
 
 C = $(NVCC) $(NVCCFLAGS) $(INC)
 
-all: libGPUQREngine.a
-
-library: libGPUQREngine.a
+all: library
 
 clean:
-	$(RM) *.o
+	$(RM) -r $(CLEAN)
 
 purge: distclean
 
 distclean: clean
-	$(RM) libGPUQREngine.a
+	$(RM) -r $(PURGE)
 
-libGPUQREngine.a: $(OBJS)
-	$(ARCHIVE) libGPUQREngine.a $(OBJS)
-	- $(RANLIB) libGPUQREngine.a
+$(AR_TARGET): $(OBJS)
+	$(ARCHIVE) $@ $^
+	- $(RANLIB) $@
+
+#-------------------------------------------------------------------------------
+
+# install GPUQREngine.  Note that the include files are not installed.
+install: $(AR_TARGET) $(INSTALL_LIB)/$(SO_TARGET)
+
+$(INSTALL_LIB)/$(SO_TARGET): $(OBJS)
+	@mkdir -p $(INSTALL_LIB)
+	@mkdir -p $(INSTALL_INCLUDE)
+	@mkdir -p $(INSTALL_DOC)
+	$(CC) $(SO_OPTS) $^ -o $@ $(LDLIBS)
+	( cd $(INSTALL_LIB) ; ln -sf $(SO_TARGET) $(SO_PLAIN) )
+	( cd $(INSTALL_LIB) ; ln -sf $(SO_TARGET) $(SO_MAIN) )
+	$(CP) ../README.txt $(INSTALL_DOC)/GPUQRENGINE_README.txt
+	chmod 755 $(INSTALL_LIB)/$(SO_TARGET)
+	chmod 644 $(INSTALL_DOC)/GPUQRENGINE_README.txt
+
+# uninstall GPUQREngine
+uninstall:
+	$(RM) $(INSTALL_LIB)/$(SO_TARGET)
+	$(RM) $(INSTALL_LIB)/$(SO_PLAIN)
+	$(RM) $(INSTALL_LIB)/$(SO_MAIN)
+	$(RM) $(INSTALL_DOC)/GPUQRENGINE_README.txt
 
 #-------------------------------------------------------------------------------
 

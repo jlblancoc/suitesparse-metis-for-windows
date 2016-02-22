@@ -2,8 +2,6 @@
 # CSparse Makefile
 #------------------------------------------------------------------------------
 
-VERSION = 3.1.4
-
 C:
 	( cd Lib ; $(MAKE) )
 	( cd Demo ; $(MAKE) )
@@ -32,9 +30,9 @@ purge:
 
 distclean: purge
 
-# do not install CSparse; use CXSparse instead
-install:
+install: library
+	( cd Lib ; $(MAKE) install )
 
-# uninstall CSparse: do nothing
 uninstall:
+	( cd Lib ; $(MAKE) uninstall )
 

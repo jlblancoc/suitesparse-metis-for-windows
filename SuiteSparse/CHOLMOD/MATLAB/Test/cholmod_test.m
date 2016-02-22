@@ -112,7 +112,7 @@ h = waitbar (0.5/tt, 'CHOLMOD demo:') ;
 
 try
 
-    cholmod_demo                    ; waitbar ( 1/tt, h, 'CHOLMOD graph demo');
+    cholmod_demo                    ; waitbar ( 2/tt, h, 'CHOLMOD graph demo');
     if (do_metis)
         graph_demo ;
     end
