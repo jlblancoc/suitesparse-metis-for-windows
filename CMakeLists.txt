@@ -20,6 +20,11 @@ IF(WIN32)
 	SET(CMAKE_INSTALL_PREFIX "${SUITESPARSE_INSTALL_PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
 ENDIF()
 
+# Fix GKlib path:
+IF(NOT WIN32)
+	SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/metis/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
+ENDIF()
+
 ## get POSTFIX for lib install dir
 if(CMAKE_SIZEOF_VOID_P MATCHES "8")
   set(LIB_POSTFIX "64" CACHE STRING "suffix for 32/64 inst dir placement")
