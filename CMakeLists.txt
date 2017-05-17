@@ -25,12 +25,14 @@ IF(NOT WIN32)
 	SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/metis/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
 ENDIF()
 
-## get POSTFIX for lib install dir
 if(CMAKE_SIZEOF_VOID_P MATCHES "8")
-  set(LIB_POSTFIX "64" CACHE STRING "suffix for 32/64 inst dir placement")
+  set(SUITESPARSE_LIB_POSTFIX "64")
 else()
-  set(LIB_POSTFIX "" CACHE STRING "suffix for 32/64 inst dir placement")
+  set(SUITESPARSE_LIB_POSTFIX "")
 endif()
+
+## get POSTFIX for lib install dir
+set(LIB_POSTFIX "${SUITESPARSE_LIB_POSTFIX}" CACHE STRING "suffix for 32/64 inst dir placement")
 mark_as_advanced(LIB_POSTFIX)
 
 # We want libraries to be named "libXXX" and "libXXXd" in all compilers:
@@ -238,7 +240,7 @@ install(FILES 		SuiteSparseConfigForInstall.cmake
 configure_file(UseSuiteSparseForInstall.cmake.in UseSuiteSparseForInstall.cmake @ONLY)
 install(FILES 		"${CMAKE_BINARY_DIR}/UseSuiteSparseForInstall.cmake"
 		DESTINATION	.
-		RENAME 		UseSuiteSparse${LIB_POSTFIX}.cmake
+		RENAME 		UseSuiteSparse${SUITESPARSE_LIB_POSTFIX}.cmake
 )
 
 ## do the EXPORT for allowing other project to easily use suitesparse with cmake
