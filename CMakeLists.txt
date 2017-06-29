@@ -182,6 +182,12 @@ if(WITH_CUDA)
 	ENDIF(${CUDA_FOUND})
 endif()
 
+find_package(LAPACK CONFIG)
+if (LAPACK_FOUND)
+	message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
+	set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas)
+else () # LAPACK is not found
+
 ## Need to use SuiteSparse_LINKER_LAPACK_BLAS_LIBS in our subproject in case of SHARED flag is set to ON
 SET(SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS OFF CACHE BOOL "Check if you have custom LAPACK/BLAS libraries (AMD,...)")
 IF (SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS)
@@ -224,6 +230,7 @@ ELSE()
 		endif()
 	ENDIF()
 ENDIF()
+ENDIF() # LAPACK found
 
 IF(BUILD_METIS)
 	set(SuiteSparse_LINKER_METIS_LIBS "metis")
