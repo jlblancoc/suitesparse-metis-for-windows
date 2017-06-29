@@ -5,6 +5,13 @@
 # Updated by jesnault (jerome.esnault@inria.fr) 2014-01-21
 # -----------------------------------------------------------------
 
+option(HUNTER_ENABLED "Enable Hunter package manager support" OFF)
+include("cmake/HunterGate.cmake")
+HunterGate(
+  URL "https://github.com/ruslo/hunter/archive/v0.23.34.tar.gz"
+  SHA1 "70287b1ffa810ee4e952052a9adff9b4856d0d54"
+)
+
 PROJECT(SuiteSparseProject)
 
 cmake_minimum_required(VERSION 3.1)
@@ -207,12 +214,25 @@ if(WITH_CUDA)
 	ENDIF(${CUDA_FOUND})
 endif()
 
-find_package(BLAS)
-find_package(LAPACK)
-if (LAPACK_FOUND AND BLAS_FOUND)
-	message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
-	set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
-else () # LAPACK is not found
+if (HUNTER_ENABLED)
+  hunter_add_package(LAPACK)
+  find_package(LAPACK CONFIG REQUIRED)
+  if (NOT TARGET lapack)
+    message(STATUS "found LAPACK config but missing link target 'lapack'")
+  endif()
+  if (NOT TARGET blas)
+    message(STATUS "found LAPACK config but missing link target 'blas'")
+  endif()
+  message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
+  set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas)
+else() # Hunter not enabled
+
+  find_package(BLAS)
+  find_package(LAPACK)
+  if (BLAS_FOUND AND LAPACK_FOUND)
+    message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
+    set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+  else () # LAPACK is not found
 
 ## Need to use SuiteSparse_LINKER_LAPACK_BLAS_LIBS in our subproject in case of SHARED flag is set to ON
 SET(SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS OFF CACHE BOOL "Check if you have custom LAPACK/BLAS libraries (AMD,...)")
@@ -257,6 +277,7 @@ ELSE()
 	ENDIF()
 ENDIF()
 ENDIF() # LAPACK found
+endif() # HUNTER_ENABLED
 
 if(SuiteSparse_LAPACK_BLAS_LIB_DIR) # "Export" the imported targets in config.cmake manually
 	set(ExternConfig "add_library(blas SHARED IMPORTED)
