@@ -14,10 +14,11 @@ include(checkGetSuiteSparse.cmake)
 SET(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
 SET(EXECUTABLE_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/bin CACHE PATH "Output directory for applications" )
 
-# Override "CMAKE_INSTALL_PREFIX", at least in Windows:
-IF(WIN32)
+# Override "CMAKE_INSTALL_PREFIX", on Windows if not set:
+IF(WIN32 AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 	SET(SUITESPARSE_INSTALL_PREFIX "${${PROJECT_NAME}_BINARY_DIR}/install" CACHE PATH "Prefix prepended to install directories")
 	SET(CMAKE_INSTALL_PREFIX "${SUITESPARSE_INSTALL_PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
+	message(STATUS "Setting CMAKE_INSTALL_PREFIX to: ${CMAKE_INSTALL_PREFIX}")
 ENDIF()
 
 # Fix GKlib path:
