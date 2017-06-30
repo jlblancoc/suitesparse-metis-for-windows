@@ -32,3 +32,13 @@ else()
 	set(SuiteSparse_FOUND OFF)
 	set(SUITESPARSE_FOUND OFF)
 endif()
+
+set(SuiteSparse_VERSION       "@SuiteSparse_VERSION@")
+set(SuiteSparse_VERSION_MAJOR "@SuiteSparse_VERSION_MAJOR@")
+set(SuiteSparse_VERSION_MINOR "@SuiteSparse_VERSION_MINOR@")
+set(SuiteSparse_VERSION_PATCH "@SuiteSparse_VERSION_PATCH@")
+set(SUITESPARSE_VERSION       "${SuiteSparse_VERSION}")
+set(SUITESPARSE_VERSION_MAJOR "${SuiteSparse_VERSION_MAJOR}")
+set(SUITESPARSE_VERSION_MINOR "${SuiteSparse_VERSION_MINOR}")
+set(SUITESPARSE_VERSION_PATCH "${SuiteSparse_VERSION_PATCH}")
+

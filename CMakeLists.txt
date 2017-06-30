@@ -240,8 +240,58 @@ ENDIF()
 
 add_subdirectory(SuiteSparse)
 
+macro(get_SuiteSparse_Version)
+  set(_SuiteSparse_VERSION_FILE
+	  "${CMAKE_SOURCE_DIR}/SuiteSparse/SuiteSparse_config/SuiteSparse_config.h")
+  if(NOT EXISTS ${_SuiteSparse_VERSION_FILE})
+    message(FATAL_ERROR
+      "Could not find file: ${_SuiteSparse_VERSION_FILE} containing version "
+      "information for >= v4 SuiteSparse installs.")
+  endif()
+
+  file(READ ${_SuiteSparse_VERSION_FILE} SUITESPARSE_CONFIG_CONTENTS)
+
+  string(REGEX MATCH "#define SUITESPARSE_MAIN_VERSION [0-9]+"
+    SuiteSparse_VERSION_MAJOR "${SUITESPARSE_CONFIG_CONTENTS}")
+  string(REGEX REPLACE "#define SUITESPARSE_MAIN_VERSION ([0-9]+)" "\\1"
+    SuiteSparse_VERSION_MAJOR "${SuiteSparse_VERSION_MAJOR}")
+
+  string(REGEX MATCH "#define SUITESPARSE_SUB_VERSION [0-9]+"
+    SuiteSparse_VERSION_MINOR "${SUITESPARSE_CONFIG_CONTENTS}")
+  string(REGEX REPLACE "#define SUITESPARSE_SUB_VERSION ([0-9]+)" "\\1"
+    SuiteSparse_VERSION_MINOR "${SuiteSparse_VERSION_MINOR}")
+
+  string(REGEX MATCH "#define SUITESPARSE_SUBSUB_VERSION [0-9]+"
+    SuiteSparse_VERSION_PATCH "${SUITESPARSE_CONFIG_CONTENTS}")
+  string(REGEX REPLACE "#define SUITESPARSE_SUBSUB_VERSION ([0-9]+)" "\\1"
+    SuiteSparse_VERSION_PATCH "${SuiteSparse_VERSION_PATCH}")
+
+  # set version string
+  set(SuiteSparse_VERSION
+    "${SuiteSparse_VERSION_MAJOR}.${SuiteSparse_VERSION_MINOR}.${SuiteSparse_VERSION_PATCH}")
+endmacro()
+
+# get SuiteSparse version
+get_SuiteSparse_Version()
+
+# write config-version file
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  "${CMAKE_BINARY_DIR}/SuiteSparse-config-version.cmake"
+  VERSION ${SuiteSparse_VERSION}
+  COMPATIBILITY SameMajorVersion
+  )
+# install config-version file
+install(FILES
+  "${CMAKE_BINARY_DIR}/SuiteSparse-config-version.cmake"
+  DESTINATION .
+  RENAME      SuiteSparseConfigVersion.cmake
+)
+
+
 ## For find SuiteSparse from the install dir
-install(FILES 		SuiteSparseConfigForInstall.cmake
+configure_file(SuiteSparseConfigForInstall.cmake.in SuiteSparseConfigForInstall.cmake @ONLY)
+install(FILES 		"${CMAKE_BINARY_DIR}/SuiteSparseConfigForInstall.cmake"
 		DESTINATION	.
 		RENAME 		SuiteSparseConfig.cmake ## This one will be the entry point for finding suitesparse from aother project using find_package()
 )
