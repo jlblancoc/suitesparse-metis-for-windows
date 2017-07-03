@@ -8,9 +8,7 @@ get_filename_component(_SuiteSparse_PREFIX "${_SuiteSparse_PREFIX}" PATH)
 find_package(LAPACK CONFIG)
 
 # Load targets from the install tree.
-if(NOT TARGET SuiteSparse::suitesparseconfig)
-  include(${_SuiteSparse_SELF_DIR}/SuiteSparse-targets.cmake)
-endif()
+include(${_SuiteSparse_SELF_DIR}/SuiteSparse-targets.cmake)
 
 # Report SuiteSparse header search locations.
 set(SuiteSparse_INCLUDE_DIRS ${_SuiteSparse_PREFIX}/include)
