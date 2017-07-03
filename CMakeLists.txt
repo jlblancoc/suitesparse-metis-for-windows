@@ -96,6 +96,8 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" GREATE
 	endif()
 endif()
 
+## get CMAKE_INSTALL_BINDIR and CMAKE_INSTALL_LIBDIR
+include(GNUInstallDirs)
 
 ## install_suitesparse_project(targetName headersList)
 ## factorise the way we will install all projects (part of the suitesparse project)
@@ -114,12 +116,17 @@ macro(install_suitesparse_project targetName headersList)
 		endif()
 	endif()
 
+	## set include dir for install target
+	target_include_directories(${targetName} PUBLIC
+		$<INSTALL_INTERFACE:include>
+	)
+
 	set_target_properties(${targetName} PROPERTIES PUBLIC_HEADER "${headersList}")
 	install(TARGETS	${targetName}
-			EXPORT 	SuiteSparse
-			RUNTIME DESTINATION bin
-			LIBRARY DESTINATION lib${LIB_POSTFIX}
-			ARCHIVE DESTINATION lib${LIB_POSTFIX}
+			EXPORT 	SuiteSparseTargets
+			RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+			LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 			PUBLIC_HEADER DESTINATION include/suitesparse
 	)
 endmacro()
@@ -242,8 +249,11 @@ ENDIF() # LAPACK found
 
 IF(BUILD_METIS)
 	set(SuiteSparse_LINKER_METIS_LIBS "metis")
+	## namespaced library target for config
+	set(SuiteSparse_EXPORTED_METIS_LIBS "SuiteSparse::metis")
 else()
 	set(SuiteSparse_LINKER_METIS_LIBS "")
+	set(SuiteSparse_EXPORTED_METIS_LIBS "")
 ENDIF()
 
 add_subdirectory(SuiteSparse)
@@ -282,35 +292,38 @@ endmacro()
 # get SuiteSparse version
 get_SuiteSparse_Version()
 
-# write config-version file
+set(ConfigPackageLocation ${CMAKE_INSTALL_LIBDIR}/cmake/suitesparse-${SuiteSparse_VERSION})
+## create targets file
+export(EXPORT SuiteSparseTargets
+	FILE "${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse/SuiteSparse-targets.cmake"
+	NAMESPACE SuiteSparse::
+)
+## create config file
+configure_file(cmake/SuiteSparse-config-install.cmake.in
+	"${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse/SuiteSparse-config.cmake"
+	@ONLY
+)
+## do the EXPORT for allowing other project to easily use suitesparse with cmake
+install(EXPORT SuiteSparseTargets
+	FILE
+		SuiteSparse-targets.cmake
+	NAMESPACE
+		SuiteSparse::
+	DESTINATION
+		${ConfigPackageLocation}
+)
+## write config-version file
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-  "${CMAKE_BINARY_DIR}/SuiteSparse-config-version.cmake"
-  VERSION ${SuiteSparse_VERSION}
-  COMPATIBILITY SameMajorVersion
-  )
-# install config-version file
-install(FILES
-  "${CMAKE_BINARY_DIR}/SuiteSparse-config-version.cmake"
-  DESTINATION .
-  RENAME      SuiteSparseConfigVersion.cmake
+	"${CMAKE_BINARY_DIR}/SuiteSparse/SuiteSparse-config-version.cmake"
+	VERSION ${SuiteSparse_VERSION}
+	COMPATIBILITY SameMajorVersion
 )
-
-
-## For find SuiteSparse from the install dir
-configure_file(SuiteSparseConfigForInstall.cmake.in SuiteSparseConfigForInstall.cmake @ONLY)
-install(FILES 		"${CMAKE_BINARY_DIR}/SuiteSparseConfigForInstall.cmake"
-		DESTINATION	.
-		RENAME 		SuiteSparseConfig.cmake ## This one will be the entry point for finding suitesparse from aother project using find_package()
-)
-configure_file(UseSuiteSparseForInstall.cmake.in UseSuiteSparseForInstall.cmake @ONLY)
-install(FILES 		"${CMAKE_BINARY_DIR}/UseSuiteSparseForInstall.cmake"
-		DESTINATION	.
-		RENAME 		UseSuiteSparse${SUITESPARSE_LIB_POSTFIX}.cmake
-)
-
-## do the EXPORT for allowing other project to easily use suitesparse with cmake
-install(EXPORT  	SuiteSparse
-        DESTINATION cmake
-        FILE        SuiteSparse-config${LIB_POSTFIX}.cmake
+## install config and config-version file
+install(
+	FILES
+		"${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse/SuiteSparse-config.cmake"
+		"${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse/SuiteSparse-config-version.cmake"
+	DESTINATION
+		${ConfigPackageLocation}
 )
