@@ -119,6 +119,7 @@ macro(install_suitesparse_project targetName headersList)
 	## set include dir for install target
 	target_include_directories(${targetName} PUBLIC
 		$<INSTALL_INTERFACE:include>
+		$<INSTALL_INTERFACE:include/suitesparse>
 	)
 
 	set_target_properties(${targetName} PROPERTIES PUBLIC_HEADER "${headersList}")
