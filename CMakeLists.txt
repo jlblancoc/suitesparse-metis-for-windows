@@ -295,12 +295,12 @@ get_SuiteSparse_Version()
 set(ConfigPackageLocation ${CMAKE_INSTALL_LIBDIR}/cmake/suitesparse-${SuiteSparse_VERSION})
 ## create targets file
 export(EXPORT SuiteSparseTargets
-	FILE "${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse/SuiteSparse-targets.cmake"
+	FILE "${CMAKE_CURRENT_BINARY_DIR}/suitesparse/suitesparse-targets.cmake"
 	NAMESPACE SuiteSparse::
 )
 ## create config file
 configure_file(cmake/SuiteSparse-config-install.cmake.in
-	"${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse/SuiteSparse-config.cmake"
+	"${CMAKE_CURRENT_BINARY_DIR}/suitesparse/suitesparse-config.cmake"
 	@ONLY
 )
 ## do the EXPORT for allowing other project to easily use suitesparse with cmake
@@ -315,15 +315,15 @@ install(EXPORT SuiteSparseTargets
 ## write config-version file
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-	"${CMAKE_BINARY_DIR}/SuiteSparse/SuiteSparse-config-version.cmake"
+	"${CMAKE_BINARY_DIR}/suitesparse/suitesparse-config-version.cmake"
 	VERSION ${SuiteSparse_VERSION}
 	COMPATIBILITY SameMajorVersion
 )
 ## install config and config-version file
 install(
 	FILES
-		"${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse/SuiteSparse-config.cmake"
-		"${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse/SuiteSparse-config-version.cmake"
+		"${CMAKE_CURRENT_BINARY_DIR}/suitesparse/suitesparse-config.cmake"
+		"${CMAKE_CURRENT_BINARY_DIR}/suitesparse/suitesparse-config-version.cmake"
 	DESTINATION
 		${ConfigPackageLocation}
 )
