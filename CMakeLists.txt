@@ -43,8 +43,8 @@ IF(MSVC)
 	set(SP_LIB_PREFIX "lib")  # Libs are: "libXXX"
 ENDIF(MSVC)
 
-## check if we can build metis	
-SET(BUILD_METIS_DEFAULT ON)	
+## check if we can build metis
+SET(BUILD_METIS_DEFAULT ON)
 IF(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/metis/CMakeLists.txt")
 	SET(BUILD_METIS_DEFAULT OFF)
 ENDIF(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/metis/CMakeLists.txt")
@@ -57,7 +57,7 @@ SET(METIS_DIR ${${PROJECT_NAME}_SOURCE_DIR}/metis CACHE PATH "Source directory o
 if(BUILD_METIS)
 	## prepare the installation :
 	## using metis target here is not possible because this target is added in another branch of the CMake structure
-	## TRICK: need to dynamically modify the metis CMakeLists.txt file before it going to parsed... 
+	## TRICK: need to dynamically modify the metis CMakeLists.txt file before it going to parsed...
 	## (very ugly/poor for a metis project get from SCM (git/svn/cvs) but it's works ;) and it doesn't matter if metis was get from .zip)
 	if(EXISTS "${METIS_DIR}/libmetis/CMakeLists.txt")
 		file(READ "${METIS_DIR}/libmetis/CMakeLists.txt" contentFile)
@@ -97,7 +97,7 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" GREATE
 endif()
 
 
-## install_suitesparse_project(targetName headersList)  
+## install_suitesparse_project(targetName headersList)
 ## factorise the way we will install all projects (part of the suitesparse project)
 ## <targetName> is the target of the current project you build
 ## <headersList> is the list of all public headers the project use and have to be known by other projects
@@ -123,7 +123,7 @@ macro(install_suitesparse_project targetName headersList)
 			PUBLIC_HEADER DESTINATION include/suitesparse
 	)
 endmacro()
-	
+
 ## declare_suitesparse_library(targetName srcsList headersList)
 ## 	Example of use: See SuiteSparse/*/CMakeLists.txt
 macro(declare_suitesparse_library targetName srcsList headersList)
@@ -149,11 +149,11 @@ macro(declare_suitesparse_library targetName srcsList headersList)
 	ELSE(${CUDA_FOUND})
 		ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
 	ENDIF(${CUDA_FOUND})
-	SET_TARGET_PROPERTIES(${targetName} PROPERTIES 
+	SET_TARGET_PROPERTIES(${targetName} PROPERTIES
 		OUTPUT_NAME ${SP_LIB_PREFIX}${targetName}
 	)
-	
-	target_link_libraries(${targetName} 
+
+	target_link_libraries(${targetName}
 			 ${dsl_TARGET_PUBLIC_LINK} suitesparseconfig ## suitesparseconfig is used for every projects (embedded into cmake build)
 		 ${dsl_TARGET_PRIVATE_LINK}	## external required libs
 	)
@@ -161,7 +161,7 @@ macro(declare_suitesparse_library targetName srcsList headersList)
 	install_suitesparse_project(${targetName} "${headersList}")
 endmacro()
 
-# Example of usage: 
+# Example of usage:
 #  REMOVE_MATCHING_FILES_FROM_LIST(".*_LIN.cpp" my_srcs)
 MACRO(REMOVE_MATCHING_FILES_FROM_LIST match_expr lst_files)
 	SET(lst_files_aux "")
@@ -176,7 +176,7 @@ ENDMACRO(REMOVE_MATCHING_FILES_FROM_LIST)
 
 ## check if the SHARED variable has already been defined (by the metis project) and use it for our projects
 ## BUILD_SHARED_LIBS specific variable allow cmake to know what kind of lib (STATIC or SHARED) it have to build
-if(DEFINED SHARED) 
+if(DEFINED SHARED)
 	set(BUILD_SHARED_LIBS ${SHARED})
 else()
 	set(SHARED FALSE CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
@@ -219,19 +219,19 @@ ELSE()
 		add_library(blas SHARED IMPORTED)
 		set_property(TARGET blas PROPERTY IMPORTED_LOCATION ${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.dll)
 		set_property(TARGET blas PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.lib)
-		
+
 		add_library(lapack SHARED IMPORTED)
 		set_property(TARGET lapack PROPERTY IMPORTED_LOCATION 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.dll)
 		set_property(TARGET lapack PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.lib)
-	 
+
 		SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS blas lapack)
-		
+
 		## install lapack and blas dependencies
 		file(GLOB lapack_blas_windows_libs 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.lib")
 		file(GLOB lapack_blas_windows_dll 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.dll")
 		if(lapack_blas_windows_dll AND lapack_blas_windows_libs)
 			set(SuiteSparse_LAPACK_BLAS_LIB_DIR "lib${LIB_POSTFIX}/lapack_blas_windows") ## used in UseSuiteSparse*.cmake
-			install(FILES 		${lapack_blas_windows_libs} 
+			install(FILES 		${lapack_blas_windows_libs}
 								${lapack_blas_windows_dll}
 					DESTINATION ${SuiteSparse_LAPACK_BLAS_LIB_DIR}
 			)
