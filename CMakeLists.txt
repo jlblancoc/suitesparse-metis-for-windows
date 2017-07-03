@@ -26,6 +26,9 @@ IF(NOT WIN32)
 	SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/metis/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
 ENDIF()
 
+## get CMAKE_INSTALL_BINDIR and CMAKE_INSTALL_LIBDIR
+include(GNUInstallDirs)
+
 if(CMAKE_SIZEOF_VOID_P MATCHES "8")
   set(SUITESPARSE_LIB_POSTFIX "64")
 else()
@@ -61,16 +64,16 @@ if(BUILD_METIS)
 	## (very ugly/poor for a metis project get from SCM (git/svn/cvs) but it's works ;) and it doesn't matter if metis was get from .zip)
 	if(EXISTS "${METIS_DIR}/libmetis/CMakeLists.txt")
 		file(READ "${METIS_DIR}/libmetis/CMakeLists.txt" contentFile)
-		string(REGEX MATCH "EXPORT 	SuiteSparse" alreadyModified ${contentFile}) ## use a string pattern to check if we have to do the modif
+		string(REGEX MATCH "EXPORT 	SuiteSparseTargets" alreadyModified ${contentFile}) ## use a string pattern to check if we have to do the modif
 		if(NOT alreadyModified)
 			file(APPEND "${METIS_DIR}/libmetis/CMakeLists.txt"
 			"
 				set_target_properties(metis PROPERTIES PUBLIC_HEADER \"../include/metis.h\")
 				install(TARGETS metis ## this line is also the string pattern to check if the modification had already done
-						EXPORT 	SuiteSparse
-						RUNTIME DESTINATION bin
-						LIBRARY DESTINATION lib${LIB_POSTFIX}
-						ARCHIVE DESTINATION lib${LIB_POSTFIX}
+						EXPORT 	SuiteSparseTargets
+						RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+						LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+						ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 						PUBLIC_HEADER DESTINATION include
 				)
 			"
@@ -95,9 +98,6 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" GREATE
 		## Here, next version of cmake 2.8.12 auto take into account the link interface dependencies (see generated cmake/SuiteSparse-config*.cmake into your install dir)
 	endif()
 endif()
-
-## get CMAKE_INSTALL_BINDIR and CMAKE_INSTALL_LIBDIR
-include(GNUInstallDirs)
 
 ## install_suitesparse_project(targetName headersList)
 ## factorise the way we will install all projects (part of the suitesparse project)

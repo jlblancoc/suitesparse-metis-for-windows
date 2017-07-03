@@ -15,15 +15,14 @@ if(METIS_INSTALL)
     ARCHIVE DESTINATION lib)
 endif()
 
-## get CMAKE_INSTALL_BINDIR and CMAKE_INSTALL_LIBDIR
-include(GNUInstallDirs)
+
 
 				set_target_properties(metis PROPERTIES PUBLIC_HEADER "../include/metis.h")
 				install(TARGETS metis ## this line is also the string pattern to check if the modification had already done
 						EXPORT 	SuiteSparseTargets
-						RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-						LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-						ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+						RUNTIME DESTINATION bin
+						LIBRARY DESTINATION lib
+						ARCHIVE DESTINATION lib
 						PUBLIC_HEADER DESTINATION include
 				)
-
+			
