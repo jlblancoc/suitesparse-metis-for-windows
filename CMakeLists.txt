@@ -107,9 +107,9 @@ endif()
 ## 		install_suitesparse_project(<myTarget> "${LIBHDRS}")
 macro(install_suitesparse_project targetName headersList)
 
-	## set position independend code for GCC, Clang, Mingw static libs
+	## set position independend code for GCC, Clang static libs
 	if(NOT BUILD_SHARED_LIBS)
-		if (NOT MSVC)
+		if (NOT MINGW AND NOT MSVC)
 			target_compile_options(${targetName} PRIVATE "-fPIC")
 		endif()
 	endif()
