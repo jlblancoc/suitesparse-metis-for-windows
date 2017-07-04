@@ -106,6 +106,14 @@ endif()
 ## 		add_library(<myTarget> ...)
 ## 		install_suitesparse_project(<myTarget> "${LIBHDRS}")
 macro(install_suitesparse_project targetName headersList)
+
+	## set position independend code for GCC, Clang static libs
+	if(NOT BUILD_SHARED_LIBS)
+		if (NOT MINGW AND NOT MSVC)
+			target_compile_options(${targetName} PRIVATE "-fPIC")
+		endif()
+	endif()
+
 	set_target_properties(${targetName} PROPERTIES PUBLIC_HEADER "${headersList}")
 	install(TARGETS	${targetName}
 			EXPORT 	SuiteSparse
