@@ -15,12 +15,14 @@ if(METIS_INSTALL)
     ARCHIVE DESTINATION lib)
 endif()
 
+
+
 				set_target_properties(metis PROPERTIES PUBLIC_HEADER "../include/metis.h")
 				install(TARGETS metis ## this line is also the string pattern to check if the modification had already done
-						EXPORT 	SuiteSparse
+						EXPORT 	SuiteSparseTargets
 						RUNTIME DESTINATION bin
-						LIBRARY DESTINATION lib64
-						ARCHIVE DESTINATION lib64
+						LIBRARY DESTINATION lib
+						ARCHIVE DESTINATION lib
 						PUBLIC_HEADER DESTINATION include
 				)
 			
