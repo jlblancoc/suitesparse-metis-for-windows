@@ -90,6 +90,8 @@ if(SuiteSparse_SEARCH_LIB_POSTFIX)
 	endif()
 endif()
 
+## get CMAKE_INSTALL_BINDIR and CMAKE_INSTALL_LIBDIR
+include(GNUInstallDirs)
 
 ## This utility macro is used to find all suitesparse projects by giving its name
 ## Since the name structure is the same for lib name and include dir name,
@@ -176,6 +178,11 @@ macro(SuiteSparse_FIND_COMPONENTS )
 							${SuiteSparse_DIR}/lib${SuiteSparse_SEARCH_LIB_POSTFIX}
 							${${suitesparseCompUC}_DIR}/lib${SuiteSparse_SEARCH_LIB_POSTFIX}
 							${${suitesparseCompUC}_DIR}
+							/opt/local/${CMAKE_INSTALL_LIBDIR}
+							/usr/${CMAKE_INSTALL_LIBDIR}
+							/usr/local/${CMAKE_INSTALL_LIBDIR}
+							${SuiteSparse_DIR}/${CMAKE_INSTALL_LIBDIR}
+							${${suitesparseCompUC}_DIR}/${CMAKE_INSTALL_LIBDIR}
 			PATH_SUFFIXES	Release
 		)
 		find_library(SuiteSparse_${suitesparseCompUC}_LIBRARY_DEBUG 
@@ -187,6 +194,11 @@ macro(SuiteSparse_FIND_COMPONENTS )
 							${SuiteSparse_DIR}/lib${SuiteSparse_SEARCH_LIB_POSTFIX}
 							${${suitesparseCompUC}_DIR}/lib${SuiteSparse_SEARCH_LIB_POSTFIX}
 							${${suitesparseCompUC}_DIR}
+							/opt/local/${CMAKE_INSTALL_LIBDIR}
+							/usr/${CMAKE_INSTALL_LIBDIR}
+							/usr/local/${CMAKE_INSTALL_LIBDIR}
+							${SuiteSparse_DIR}/${CMAKE_INSTALL_LIBDIR}
+							${${suitesparseCompUC}_DIR}/${CMAKE_INSTALL_LIBDIR}
 			PATH_SUFFIXES	Debug
 		)
 		
@@ -290,6 +302,13 @@ if(SuiteSparse_USE_LAPACK_BLAS)
 		${SuiteSparse_DIR}/lib${SuiteSparse_SEARCH_LIB_POSTFIX}/lapack_blas_windows
 		${SuiteSparse_DIR}/lapack_blas_windows
 		${SuiteSparse_DIR}/lapack_blas_windows/lib${SuiteSparse_SEARCH_LIB_POSTFIX}
+		${SuiteSparse_DIR}/${CMAKE_INSTALL_LIBDIR}
+		${SuiteSparse_DIR}/lapack_windows/${CMAKE_INSTALL_LIBDIR}
+		${SuiteSparse_DIR}/blas_windows/${CMAKE_INSTALL_LIBDIR}
+		${SuiteSparse_DIR}/${CMAKE_INSTALL_LIBDIR}/lapack_windows
+		${SuiteSparse_DIR}/${CMAKE_INSTALL_LIBDIR}/blas_windows
+		${SuiteSparse_DIR}/${CMAKE_INSTALL_LIBDIR}/lapack_blas_windows
+		${SuiteSparse_DIR}/lapack_blas_windows/${CMAKE_INSTALL_LIBDIR}
 	)
 
 	## try to find blas lib
@@ -301,6 +320,11 @@ if(SuiteSparse_USE_LAPACK_BLAS)
 						${SuiteSparse_BLAS_DIR}/lib${SuiteSparse_SEARCH_LIB_POSTFIX}
 						${SuiteSparse_BLAS_DIR}
 						${ADDITIONAL_SEARCH_DIRS}
+						/opt/local/${CMAKE_INSTALL_LIBDIR}
+						/usr/${CMAKE_INSTALL_LIBDIR}
+						/usr/local/${CMAKE_INSTALL_LIBDIR}
+						${SuiteSparse_BLAS_DIR}/${CMAKE_INSTALL_LIBDIR}
+						$
 		PATH_SUFFIXES	Release Debug
 	)
 	if(NOT SuiteSparse_BLAS_LIBRARY)
@@ -325,6 +349,10 @@ if(SuiteSparse_USE_LAPACK_BLAS)
 						${SuiteSparse_LAPACK_DIR}/lib${SuiteSparse_SEARCH_LIB_POSTFIX}
 						${SuiteSparse_LAPACK_DIR}
 						${ADDITIONAL_SEARCH_DIRS}
+						/opt/local/${CMAKE_INSTALL_LIBDIR}
+						/usr/${CMAKE_INSTALL_LIBDIR}
+						/usr/local/${CMAKE_INSTALL_LIBDIR}
+						${SuiteSparse_LAPACK_DIR}/${CMAKE_INSTALL_LIBDIR}
 		PATH_SUFFIXES	Release Debug
 	)
 	if(NOT SuiteSparse_LAPACK_LIBRARY)
@@ -370,7 +398,7 @@ if(SuiteSparse_USE_LAPACK_BLAS)
 			${SuiteSparse_LAPACK_DIR}/bin/${SuiteSparse_SEARCH_BIN_POSTFIX_2}
 			${SuiteSparse_LAPACK_DIR}/bin/Release/${SuiteSparse_SEARCH_BIN_POSTFIX_1}
 			${SuiteSparse_LAPACK_DIR}/bin/Debug/${SuiteSparse_SEARCH_BIN_POSTFIX_2}
-			${SuiteSparse_LAPACK_DIR}/lib${SuiteSparse_SEARCH_LIB_POSTFIX}
+			${SuiteSparse_LAPACK_DIR}/${CMAKE_INSTALL_LIBDIR}
 			${SuiteSparse_BLAS_DIR}
 			${SuiteSparse_BLAS_DIR}/bin
 			${SuiteSparse_BLAS_DIR}/bin/${SuiteSparse_SEARCH_BIN_POSTFIX_1}
