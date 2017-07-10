@@ -140,6 +140,11 @@ macro(SuiteSparse_FIND_COMPONENTS )
 			SET(suitesparseComp_ALT "cs") # Alternative name of CXSparse
 		endif()
 
+		## Special case: suitesparseconfig library is named "libsuitesparseconfig.*" but headers are "SuiteSparse_config.h":
+		if("${suitesparseCompUC}" STREQUAL "SUITESPARSECONFIG")
+			SET(suitesparseComp_ALT "SuiteSparse_config") # Alternative name of suitesparseconfig
+		endif()
+
 		## try to find include dir (looking for very important header file)
 		find_path(SuiteSparse_${suitesparseCompUC}_INCLUDE_DIR	
 			NAMES 			${suitesparseComp}.h ${suitesparseCompLC}.h ${suitesparseCompUC}.h ${suitesparseComp_ALT}.h
