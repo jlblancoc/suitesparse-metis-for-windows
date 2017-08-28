@@ -2,8 +2,13 @@ PROJECT(SuiteSparse)
 
 # Set optimized building:
 IF(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
-	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -mtune=native")
-	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -mtune=native")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+	# only optimize for native processer when NOT cross compiling
+	if(NOT CMAKE_CROSSCOMPILING)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native")
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=native")
+	endif(NOT CMAKE_CROSSCOMPILING)
 ENDIF(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
 
 # Global flags:
