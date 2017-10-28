@@ -30,12 +30,9 @@
 #include <macros.h>
 #include <proto.h>
 
-
-#if defined(COMPILER_MSC)
-#if defined(rint)
-  #undef rint
-#endif
-#define rint(x) ((idx_t)((x)+0.5))  /* MSC does not have rint() function */
+#include <math.h>  // rint()
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define rint(x) ((int)((x)+0.5))  
 #endif
 
 #endif
