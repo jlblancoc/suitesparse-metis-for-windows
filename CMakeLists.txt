@@ -198,7 +198,7 @@ if(WITH_CUDA)
 	ENDIF(${CUDA_FOUND})
 endif()
 
-find_package(LAPACK CONFIG)
+find_package(LAPACK)
 if (LAPACK_FOUND)
 	message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
 	set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas)
