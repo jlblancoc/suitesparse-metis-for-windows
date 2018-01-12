@@ -26,6 +26,10 @@ IF(NOT WIN32)
 	SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/metis/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
 ENDIF()
 
+IF(WIN32)
+	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+ENDIF()
+
 ## get CMAKE_INSTALL_BINDIR and CMAKE_INSTALL_LIBDIR
 include(GNUInstallDirs)
 
@@ -191,7 +195,7 @@ endif()
 find_package(LAPACK)
 if (LAPACK_FOUND)
 	message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
-	set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas)
+	set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${LAPACK_LIBRARIES})
 else () # LAPACK is not found
 
 ## Need to use SuiteSparse_LINKER_LAPACK_BLAS_LIBS in our subproject in case of SHARED flag is set to ON
