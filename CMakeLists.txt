@@ -192,10 +192,11 @@ if(WITH_CUDA)
 	ENDIF(${CUDA_FOUND})
 endif()
 
+find_package(BLAS)
 find_package(LAPACK)
-if (LAPACK_FOUND)
+if (LAPACK_FOUND AND BLAS_FOUND)
 	message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
-	set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${LAPACK_LIBRARIES})
+	set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
 else () # LAPACK is not found
 
 ## Need to use SuiteSparse_LINKER_LAPACK_BLAS_LIBS in our subproject in case of SHARED flag is set to ON
