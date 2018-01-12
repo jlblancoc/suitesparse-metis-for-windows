@@ -26,6 +26,10 @@ IF(NOT WIN32)
 	SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/metis/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
 ENDIF()
 
+IF(WIN32)
+	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+ENDIF()
+
 ## get CMAKE_INSTALL_BINDIR and CMAKE_INSTALL_LIBDIR
 include(GNUInstallDirs)
 
@@ -181,16 +185,6 @@ MACRO(REMOVE_MATCHING_FILES_FROM_LIST match_expr lst_files)
 	SET(${lst_files} ${lst_files_aux})
 ENDMACRO(REMOVE_MATCHING_FILES_FROM_LIST)
 
-
-## check if the SHARED variable has already been defined (by the metis project) and use it for our projects
-## BUILD_SHARED_LIBS specific variable allow cmake to know what kind of lib (STATIC or SHARED) it have to build
-if(DEFINED SHARED)
-	set(BUILD_SHARED_LIBS ${SHARED})
-else()
-	set(SHARED FALSE CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
-	set(BUILD_SHARED_LIBS OFF)
-endif()
-
 if(WITH_CUDA)
 	FIND_PACKAGE(cuda)
 	IF(${CUDA_FOUND})
@@ -198,10 +192,11 @@ if(WITH_CUDA)
 	ENDIF(${CUDA_FOUND})
 endif()
 
+find_package(BLAS)
 find_package(LAPACK)
-if (LAPACK_FOUND)
+if (LAPACK_FOUND AND BLAS_FOUND)
 	message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
-	set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas)
+	set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
 else () # LAPACK is not found
 
 ## Need to use SuiteSparse_LINKER_LAPACK_BLAS_LIBS in our subproject in case of SHARED flag is set to ON
