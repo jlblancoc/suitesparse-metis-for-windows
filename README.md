@@ -2,6 +2,8 @@ CMake scripts for painless usage of Tim Davis' [SuiteSparse](http://www.cise.ufl
 
 The goal is using one single CMake code to build against *SuiteSparse* in standard Linux package systems (e.g. `libsuitesparse-dev`) and in manual compilations under Windows. 
 
+This fork was done to simplify buidling SuiteSparse with MKL as the blas implementation.
+
 **Credits:** Jose Luis Blanco (Universidad de Almeria); Jerome Esnault (INRIA).
 
 ![logo](https://raw.githubusercontent.com/jlblancoc/suitesparse-metis-for-windows/master/docs/logo.png)
