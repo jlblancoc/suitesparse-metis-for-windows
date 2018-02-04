@@ -9,6 +9,11 @@ PROJECT(SuiteSparseProject)
 
 cmake_minimum_required(VERSION 2.8.10)
 
+# allow creating DLLs in Windows without touching the source code:
+if(NOT ${CMAKE_VERSION} VERSION_LESS "3.4.0")
+	SET(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
+
 include(checkGetSuiteSparse.cmake)
 
 SET(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
@@ -113,11 +118,9 @@ endif()
 ## 		install_suitesparse_project(<myTarget> "${LIBHDRS}")
 macro(install_suitesparse_project targetName headersList)
 
-	## set position independend code for GCC, Clang static libs
-	if(NOT BUILD_SHARED_LIBS)
-		if (NOT MINGW AND NOT MSVC)
-			target_compile_options(${targetName} PRIVATE "-fPIC")
-		endif()
+	## set position independend code for GCC, Clang static (and shared?) libs
+	if (NOT MINGW AND NOT MSVC)
+		target_compile_options(${targetName} PRIVATE "-fPIC")
 	endif()
 
 	## set include dir for install target
