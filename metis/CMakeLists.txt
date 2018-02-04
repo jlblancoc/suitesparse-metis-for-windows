@@ -15,7 +15,7 @@ if(BUILD_SHARED_LIBS)
   set(METIS_LIBRARY_TYPE SHARED)
 else()
   set(METIS_LIBRARY_TYPE STATIC)
-endif(SHARED)
+endif()
 
 include(${GKLIB_PATH}/GKlibSystem.cmake)
 # Add include directories.

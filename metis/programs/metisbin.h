@@ -38,14 +38,15 @@
 #include "struct.h"
 #include "proto.h"
 
+
 #if defined(COMPILER_GCC)
 extern char* strdup (const char *);
 #endif
 
 #if defined(COMPILER_MSC)
-#if (_MSC_VER < 1800)
-#define rint(x) ((int)((x)+0.5))  
+#if defined(rint)
+  #undef rint
 #endif
-
+#define rint(x) ((idx_t)((x)+0.5))  /* MSC does not have rint() function */
 #define __func__ "dummy-function"
 #endif

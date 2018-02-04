@@ -4,9 +4,6 @@
 
 /* -----------------------------------------------------------------------------
  * CHOLMOD/GPU Module.  Copyright (C) 2014, Timothy A. Davis.
- * The CHOLMOD/GPU Module is licensed under Version 2.0 of the GNU
- * General Public License.  See gpl.txt for a text of the license.
- * CHOLMOD is also available under other licenses; contact authors for details.
  * http://www.suitesparse.com
  * -------------------------------------------------------------------------- */
 
@@ -25,6 +22,8 @@
 #ifdef GPU_BLAS
 #include <cuda_runtime.h>
 #endif
+
+// #define HACK
 
 #define MINSIZE (64 * 1024 * 1024)
 
@@ -111,6 +110,10 @@ int CHOLMOD(gpu_memorysize)      /* returns 1 on error, 0 otherwise */
     {
         /* printf ("quick %lu\n", s) ; */
         *available_mem = s;
+#ifdef HACK
+        *total_mem     /= 2;
+        *available_mem /= 2;
+#endif
         return (0) ;  /* no error */
     }
 
@@ -141,6 +144,10 @@ int CHOLMOD(gpu_memorysize)      /* returns 1 on error, 0 otherwise */
 
 #endif
 
+#ifdef HACK
+        *total_mem     /= 2;
+        *available_mem /= 2;
+#endif
     return (0) ; /* no error */
 }
 

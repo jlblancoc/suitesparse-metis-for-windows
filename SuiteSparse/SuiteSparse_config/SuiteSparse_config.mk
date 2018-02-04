@@ -5,7 +5,7 @@
 # This file contains all configuration settings for all packages in SuiteSparse,
 # except for CSparse (which is stand-alone) and the packages in MATLAB_Tools.
 
-SUITESPARSE_VERSION = 4.5.1
+SUITESPARSE_VERSION = 5.1.0
 
 #===============================================================================
 # Options you can change without editing this file:
@@ -115,6 +115,8 @@ SUITESPARSE_VERSION = 4.5.1
             CC = icc -D_GNU_SOURCE
             CXX = $(CC)
             CFOPENMP = -qopenmp -I$(MKLROOT)/include
+	    LDFLAGS += -openmp
+            LDLIBS += -lm -lirc
         endif
         ifneq ($(shell which ifort 2>/dev/null),)
             # use the Intel ifort compiler for Fortran codes
@@ -123,7 +125,7 @@ SUITESPARSE_VERSION = 4.5.1
     endif
 
     #---------------------------------------------------------------------------
-    # code formatting (for Tcov only)
+    # code formatting (for Tcov on Linux only)
     #---------------------------------------------------------------------------
 
     PRETTY ?= grep -v "^\#" | indent -bl -nce -bli0 -i4 -sob -l120
@@ -222,13 +224,16 @@ SUITESPARSE_VERSION = 4.5.1
         CUBLAS_LIB    = $(CUDA_PATH)/lib64/libcublas.so
         CUDA_INC_PATH = $(CUDA_PATH)/include/
         CUDA_INC      = -I$(CUDA_INC_PATH)
+		MAGMA_INC     = -I/opt/magma-2.2.0/include/
+		MAGMA_LIB     = -L/opt/magma-2.2.0/lib/ -lmagma
         NVCC          = $(CUDA_PATH)/bin/nvcc
         NVCCFLAGS     = -Xcompiler -fPIC -O3 \
-                            -gencode=arch=compute_20,code=sm_20 \
                             -gencode=arch=compute_30,code=sm_30 \
                             -gencode=arch=compute_35,code=sm_35 \
                             -gencode=arch=compute_50,code=sm_50 \
-                            -gencode=arch=compute_50,code=compute_50
+                            -gencode=arch=compute_53,code=sm_53 \
+                            -gencode=arch=compute_53,code=sm_53 \
+                            -gencode=arch=compute_60,code=compute_60
     endif
 
     #---------------------------------------------------------------------------
@@ -274,15 +279,14 @@ SUITESPARSE_VERSION = 4.5.1
     #            optional: Partition
     #
     # Configuration flags:
-    # -DNCHECK      do not include the Check module.       License GNU LGPL
-    # -DNCHOLESKY   do not include the Cholesky module.    License GNU LGPL
-    # -DNPARTITION  do not include the Partition module.   License GNU LGPL
+    # -DNCHECK      do not include the Check module.
+    # -DNCHOLESKY   do not include the Cholesky module.
+    # -DNPARTITION  do not include the Partition module.
     #               also do not include METIS.
-    # -DNCAMD       do not use CAMD & CCOLAMD in Parition Modulel  GNU LGPL
-    # -DNGPL        do not include any GNU GPL Modules in the CHOLMOD library:
-    # -DNMATRIXOPS  do not include the MatrixOps module.   License GNU GPL
-    # -DNMODIFY     do not include the Modify module.      License GNU GPL
-    # -DNSUPERNODAL do not include the Supernodal module.  License GNU GPL
+    # -DNCAMD       do not use CAMD & CCOLAMD in Parition Module.
+    # -DNMATRIXOPS  do not include the MatrixOps module.
+    # -DNMODIFY     do not include the Modify module.
+    # -DNSUPERNODAL do not include the Supernodal module.
     #
     # -DNPRINT      do not print anything.
     # -D'LONGBLAS=long' or -DLONGBLAS='long long' defines the integers used by
@@ -306,8 +310,9 @@ SUITESPARSE_VERSION = 4.5.1
 
     SPQR_CONFIG ?= $(GPU_CONFIG)
 
-    # to compile with Intel's TBB, use TBB=-ltbb SPQR_CONFIG=-DHAVE_TBB
+    # to compile with Intel's TBB, use TBB=-ltbb -DSPQR_CONFIG=-DHAVE_TBB
     TBB ?=
+    # TBB = -ltbb -DSPQR_CONFIG=-DHAVE_TBB
 
     # TODO: this *mk file should auto-detect the presence of Intel's TBB,
     # and set the compiler flags accordingly.

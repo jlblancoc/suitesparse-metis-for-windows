@@ -6,7 +6,7 @@ default: all
 
 include ../../SuiteSparse_config/SuiteSparse_config.mk
 
-CLIB = ../Lib/librbio.a ../../SuiteSparse_config/libsuitesparseconfig.a $(LIB)
+CLIB = $(LDFLAGS) -L../../lib -lrbio -lsuitesparseconfig $(LDLIBS)
 
 C = $(CC) $(CF)
 
@@ -15,14 +15,13 @@ all: library RBdemo
 
 code: library
 
-distclean:nnz,  purge
+distclean: purge
 
 purge: clean
-	- $(RM) RBdemo
-	- $(RM) -r *.dSYM
+	- $(RM) -r $(PURGE) RBdemo
 
 clean:
-	- $(RM) $(CLEAN) temp.rb
+	- $(RM) -r $(CLEAN) temp.rb
 
 #-------------------------------------------------------------------------------
 library:
@@ -30,8 +29,8 @@ library:
 	( cd ../Lib ; $(MAKE) )
 #-------------------------------------------------------------------------------
 
-I = -I../Include -I../../SuiteSparse_config
+I = -I../../include
 
-RBdemo: library RBdemo.c
+RBdemo: RBdemo.c
 	$(C) -o RBdemo $(I) RBdemo.c $(CLIB)
 
