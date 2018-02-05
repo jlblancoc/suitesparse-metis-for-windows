@@ -9,11 +9,6 @@ PROJECT(SuiteSparseProject)
 
 cmake_minimum_required(VERSION 2.8.10)
 
-# allow creating DLLs in Windows without touching the source code:
-if(NOT ${CMAKE_VERSION} VERSION_LESS "3.4.0")
-	SET(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
-
 include(checkGetSuiteSparse.cmake)
 
 SET(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
@@ -31,7 +26,8 @@ IF(NOT WIN32)
 	SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/metis/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
 ENDIF()
 
-IF(WIN32)
+# allow creating DLLs in Windows without touching the source code:
+IF(NOT ${CMAKE_VERSION} VERSION_LESS "3.4.0" AND WIN32)
 	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 ENDIF()
 
