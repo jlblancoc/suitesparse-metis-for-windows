@@ -10,7 +10,7 @@ PROJECT(SuiteSparseProject)
 cmake_minimum_required(VERSION 2.8.10)
 
 include(checkGetSuiteSparse.cmake)
-
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmakemodule" ${CMAKE_MODULE_PATH})
 SET(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
 SET(EXECUTABLE_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/bin CACHE PATH "Output directory for applications" )
 
@@ -113,12 +113,12 @@ endif()
 ## 		install_suitesparse_project(<myTarget> "${LIBHDRS}")
 macro(install_suitesparse_project targetName headersList)
 
-	## set position independend code for GCC, Clang static libs
-	if(NOT BUILD_SHARED_LIBS)
+	## set position independend code for GCC, Clang static and shared libs
+	
 		if (NOT MINGW AND NOT MSVC)
 			target_compile_options(${targetName} PRIVATE "-fPIC")
 		endif()
-	endif()
+	
 
 	## set include dir for install target
 	target_include_directories(${targetName} PUBLIC
