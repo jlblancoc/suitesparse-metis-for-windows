@@ -17,6 +17,12 @@ else()
   set(METIS_LIBRARY_TYPE STATIC)
 endif()
 
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists(rint math.h HAVE_RINT)
+if (HAVE_RINT)
+	add_definitions(-DHAVE_RINT)
+endif()
+
 include(${GKLIB_PATH}/GKlibSystem.cmake)
 # Add include directories.
 include_directories(${GKLIB_PATH})
