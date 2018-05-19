@@ -3,7 +3,7 @@
 #===============================================================================
 
 LIBRARY = libspqr
-VERSION = 2.0.5
+VERSION = 2.0.8
 SO_VERSION = 2
 
 default: library
@@ -13,7 +13,7 @@ ccode: all
 include ../../SuiteSparse_config/SuiteSparse_config.mk
 
 # SPQR depends on CHOLMOD, AMD, COLAMD, LAPACK, the BLAS and SuiteSparse_config
-LDLIBS += -lamd -lcolamd -lcholmod -lsuitesparseconfig $(LAPACK) $(BLAS)
+LDLIBS += -lamd -lcolamd -lcholmod -lsuitesparseconfig $(LAPACK) $(BLAS) $(TBB)
 
 # compile and install in SuiteSparse/lib
 library:
@@ -101,6 +101,8 @@ ifneq ($(GPU_CONFIG),)
 endif
 
 #-------------------------------------------------------------------------------
+
+static: $(AR_TARGET)
 
 $(AR_TARGET): $(OBJ)
 	$(ARCHIVE) $@ $^
@@ -246,7 +248,7 @@ $(INSTALL_LIB)/$(SO_TARGET): $(OBJ)
 	@mkdir -p $(INSTALL_LIB)
 	@mkdir -p $(INSTALL_INCLUDE)
 	@mkdir -p $(INSTALL_DOC)
-	$(CC) $(SO_OPTS) $^ -o $@ $(LDLIBS)
+	$(CXX) $(SO_OPTS) $^ -o $@ $(LDLIBS)
 	( cd $(INSTALL_LIB) ; ln -sf $(SO_TARGET) $(SO_PLAIN) )
 	( cd $(INSTALL_LIB) ; ln -sf $(SO_TARGET) $(SO_MAIN) )
 	$(CP) ../Include/SuiteSparseQR.hpp $(INSTALL_INCLUDE)

@@ -2,6 +2,8 @@
 # RBio/Tcov/Makefile
 #===============================================================================
 
+default: all
+
 include ../../SuiteSparse_config/SuiteSparse_config.mk
 
 # valgrind is not used
@@ -72,10 +74,10 @@ SuiteSparse_config.h:
 	ln -s ../../SuiteSparse_config/SuiteSparse_config.h
 
 RBdemo: RBdemo.c $(OBJ) $(INC) Makefile
-	$(C) -o RBdemo RBdemo.c $(OBJ) $(LIB)
+	$(C) -o RBdemo RBdemo.c $(OBJ) $(LDLIBS)
 
 RBtest: RBtest.c $(OBJ) $(INC) Makefile
-	$(C) -o RBtest RBtest.c $(OBJ) $(LIB)
+	$(C) -o RBtest RBtest.c $(OBJ) $(LDLIBS)
 
 RBio.o: RBio.c $(INC)
 	$(C) -c RBio.c
@@ -86,9 +88,12 @@ SuiteSparse_config.o: SuiteSparse_config.c $(INC)
 code: RBdemo RBtest
 
 clean:
-	- $(RM) *.gcov *.gcda *.gcno temp*.rb *.o
+	- $(RM) temp*.rb
+	- $(RM) -r $(CLEAN)
+
+distclean: purge
 
 purge: clean
-	- $(RM) $(SRC) $(INC) RBdemo *.gcov gcov.out RBtest RBdemo.c
-	- $(RM) -r RBdemo.dSYM RBtest.dSYM
+	- $(RM) $(SRC) $(INC) RBdemo gcov.out RBtest RBdemo.c
+	- $(RM) -r $(PURGE)
 

@@ -1,4 +1,4 @@
-SuiteSparse_config, 2016, Timothy A. Davis, http://www.suitesparse.com
+SuiteSparse_config, 2017, Timothy A. Davis, http://www.suitesparse.com
 (formerly the UFconfig package)
 
 This directory contains a default SuiteSparse_config.mk file.  It tries to
@@ -7,6 +7,9 @@ which BLAS and LAPACK library to use (OpenBLAS or MKL), and whether or not to
 compile with CUDA.
 
 For alternatives, see the comments in the SuiteSparse_config.mk file.
+
+License: No licensing restrictions apply to this file or to the
+SuiteSparse_config directory.
 
 --------------------------------------------------------------------------------
 

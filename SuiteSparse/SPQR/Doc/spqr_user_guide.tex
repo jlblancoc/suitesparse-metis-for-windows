@@ -27,9 +27,9 @@ email: DrTimothyAldenDavis@gmail.com.
 http://www.suitesparse.com.
 Portions of this work were supported by the National
 Science Foundation, under grants 0203270, 0620286, and 0619080.},
-Sencer Nuri Yeralan, and Sanjay Ranka}
+Sencer Nuri Yeralan, Sanjay Ranka, Wissam Sid-Lakhdar}
 
-\date{VERSION 2.0.5, Feb 1, 2016}
+\date{VERSION 2.0.8, Dec 8, 2016}
 
 %-------------------------------------------------------------------------------
 \begin{document}
@@ -762,8 +762,9 @@ can do:
     \verb"x=R'\b", or \verb"x=R'\(P'*b)".
 
     \item \verb'SuiteSparseQR_qmult': provides the same function as
-    \verb'spqr_qmult' in the MATLAB interface, computing \verb"Q*x",
-    \verb"Q'*x", \verb"x*Q", or \verb"x*Q'".  It uses either a QR factorization
+    \verb'spqr_qmult' in the MATLAB interface, computing
+    \verb"Q'*x", \verb"Q*x", \verb"x*Q'", or \verb"x*Q".
+    It uses either a QR factorization
     in MATLAB-style sparse matrix format, or the QR factorization object
     returned by \newline \verb'SuiteSparseQR_factorize' or
     \verb'SuiteSparseQR_numeric'.
@@ -939,7 +940,8 @@ and at MATLAB Central
 in the user-contributed File Exchange (
 \htmladdnormallink{http://www.mathworks.com/matlabcentral}{http://www.mathworks.com/matlabcentral}
 ).
-SuiteSparseQR is licensed under the GNU GPL.  Commercial licenses are also
+See SPQR/Doc/License.txt for the license.
+Alternative licenses are also
 available; contact the author for details.
 
 %-------------------------------------------------------------------------------

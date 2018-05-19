@@ -4,6 +4,8 @@ function SuiteSparse_install (do_demo)
 %
 % Packages in SuiteSparse:
 %
+% GraphBLAS      graph algorithms via sparse linear algebra (graphblas.org)
+%                (does not yet have a MATLAB interface)
 % UMFPACK        sparse LU factorization (multifrontal)
 % CHOLMOD        sparse Cholesky factorization, and many other operations
 % AMD            sparse symmetric approximate minimum degree ordering
@@ -12,7 +14,7 @@ function SuiteSparse_install (do_demo)
 % CCOLAMD        constrained COLAMD
 % CSparse        a Concise Sparse matrix package (32-bit or 64-bit, real only)
 % CXSparse       extended version of CSparse (32-bit/64-bit/real/complex)
-% UFget          interface to UF Sparse Matrix Collection (MATLAB 7.0 or later)
+% ssget          interface to SuiteSparse Matrix Collection
 % KLU            sparse LU factorization (left-looking)
 % BTF            permutation to block triangular form (like dmperm)
 % LDL            sparse LDL' factorization
@@ -24,6 +26,7 @@ function SuiteSparse_install (do_demo)
 % SPARSEINV      sparse inverse subset; computes entries of inv(sparse(A))
 % MATLAB_Tools   various simple m-files and demos
 % SuiteSparseQR  sparse QR factorization
+% PIRO_BAND      pipelined rotations for SVD of a band matrix
 % spqr_rank      MATLAB toolbox for sparse rank deficient matrices
 %
 % Example:
@@ -33,15 +36,16 @@ function SuiteSparse_install (do_demo)
 %    help SuiteSparse           % for more details
 %
 % See also AMD, COLAMD, CAMD, CCOLAMD, CHOLMOD, UMFPACK, CSPARSE, CXSPARSE,
-%      UFget, RBio, UFcollection, KLU, BTF, MESHND, SSMULT, LINFACTOR, SPOK,
+%      ssget, RBio, UFcollection, KLU, BTF, MESHND, SSMULT, LINFACTOR, SPOK,
 %      SPQR_RANK, SuiteSparse, SPQR, PATHTOOL, PATH, FACTORIZE, SPARSEINV.
 %
 % This script installs the full-featured CXSparse rather than CSparse.
 %
-% Copyright 1990-2015, Timothy A. Davis, http://www.suitesparse.com.
+% Copyright 1990-2017, Timothy A. Davis, http://www.suitesparse.com.
 % In collaboration with Patrick Amestoy, Yanqing Chen, Iain Duff, John Gilbert,
 % Steve Hadfield, William Hager, Stefan Larimore, Leslie Foster, Eka Palamadai
-% Natarajan, Esmond Ng, Siva Rajamanickam, Nuri Yeralan, and Sanjay Ranka.
+% Natarajan, Esmond Ng, Siva Rajamanickam, Nuri Yeralan, Sanjay Ranka,
+% and Wissam Sid-Lakhdar.
 
 %-------------------------------------------------------------------------------
 % initializations
@@ -120,23 +124,23 @@ catch me
     fprintf ('CAMD not installed\n') ;
 end
 
-% install UFget, unless it's already in the path
+% install ssget, unless it's already in the path
 try
-    % if this fails, then UFget is not yet installed
-    index = UFget ;
-    fprintf ('UFget already installed:\n') ;
-    which UFget
+    % if this fails, then ssget is not yet installed
+    index = ssget ;
+    fprintf ('ssget already installed:\n') ;
+    which ssget
 catch
     index = [ ] ;
 end
 if (isempty (index))
-    % UFget is not installed.  Use SuiteSparse/UFget
-    fprintf ('Installing SuiteSparse/UFget\n') ;
+    % ssget is not installed.  Use SuiteSparse/ssget
+    fprintf ('Installing SuiteSparse/ssget\n') ;
     try
-        paths = add_to_path (paths, [SuiteSparse '/UFget']) ;
+        paths = add_to_path (paths, [SuiteSparse '/ssget']) ;
     catch me
         disp (me.message) ;
-        fprintf ('UFget not installed\n') ;
+        fprintf ('ssget not installed\n') ;
     end
 end
 
@@ -260,6 +264,17 @@ catch me
     fprintf ('MATLAB_Tools/spok not installed\n') ;
 end
 
+%{
+% compile and install PIRO_BAND
+try
+    paths = add_to_path (paths, [SuiteSparse '/PIRO_BAND/MATLAB']) ;
+    piro_band_make ;
+catch me
+    disp (me.message) ;
+    fprintf ('PIRO_BAND not installed\n') ;
+end
+%}
+
 % compile and install sparsinv
 try
     paths = add_to_path (paths, [SuiteSparse '/MATLAB_Tools/sparseinv']) ;
@@ -316,4 +331,4 @@ function paths = add_to_path (paths, newpath)
 % add a path
 cd (newpath) ;
 addpath (newpath) ;
-paths = [paths { newpath } ] ;						    %#ok
+paths = [paths { newpath } ] ;

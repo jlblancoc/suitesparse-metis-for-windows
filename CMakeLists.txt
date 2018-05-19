@@ -26,7 +26,8 @@ IF(NOT WIN32)
 	SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/metis/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
 ENDIF()
 
-IF(WIN32)
+# allow creating DLLs in Windows without touching the source code:
+IF(NOT ${CMAKE_VERSION} VERSION_LESS "3.4.0" AND WIN32)
 	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 ENDIF()
 
@@ -113,12 +114,10 @@ endif()
 ## 		install_suitesparse_project(<myTarget> "${LIBHDRS}")
 macro(install_suitesparse_project targetName headersList)
 
-	## set position independend code for GCC, Clang static and shared libs
-	
-		if (NOT MINGW AND NOT MSVC)
-			target_compile_options(${targetName} PRIVATE "-fPIC")
-		endif()
-	
+	## set position independend code for GCC, Clang static (and shared?) libs
+	if (NOT MINGW AND NOT MSVC)
+		target_compile_options(${targetName} PRIVATE "-fPIC")
+	endif()
 
 	## set include dir for install target
 	target_include_directories(${targetName} PUBLIC
