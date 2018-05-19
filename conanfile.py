@@ -1,9 +1,20 @@
 from conans import ConanFile, CMake, tools
+from conans.tools import load
+import re, os
+def get_version():
+    try:
+        content = load("SuiteSparse/SuiteSparse_config/SuiteSparse_config.h")
+        version_major = re.search(r"#define SUITESPARSE_MAIN_VERSION (.*)", content).group(1)
+        version_minor = re.search(r"#define SUITESPARSE_SUB_VERSION (.*)", content).group(1)
+        version_update = re.search(r"#define SUITESPARSE_SUBSUB_VERSION (.*)", content).group(1)
+        return version_major.strip() + "." + version_minor.strip() + "." + version_update.strip()
+    except Exception as e:
+        return None
 
 class SuiteSparseConan(ConanFile):
     name = "SuiteSparse"
-    version = "0.1"
-    license = "LGPL"
+    version = get_version()
+    license = "LGPL and GPL"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of SuiteSparse here>"
     settings = "os", "compiler", "build_type", "arch"
