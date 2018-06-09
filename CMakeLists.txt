@@ -232,7 +232,7 @@ ELSE()
 		file(GLOB lapack_blas_windows_libs 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.lib")
 		file(GLOB lapack_blas_windows_dll 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.dll")
 		if(lapack_blas_windows_dll AND lapack_blas_windows_libs)
-			set(SuiteSparse_LAPACK_BLAS_LIB_DIR "lib${LIB_POSTFIX}/lapack_blas_windows") ## used in UseSuiteSparse*.cmake
+			set(SuiteSparse_LAPACK_BLAS_LIB_DIR "lib${LIB_POSTFIX}/lapack_blas_windows")
 			install(FILES 		${lapack_blas_windows_libs}
 								${lapack_blas_windows_dll}
 					DESTINATION ${SuiteSparse_LAPACK_BLAS_LIB_DIR}
@@ -241,6 +241,16 @@ ELSE()
 	ENDIF()
 ENDIF()
 ENDIF() # LAPACK found
+
+if(SuiteSparse_LAPACK_BLAS_LIB_DIR) # "Export" the imported targets in config.cmake manually
+	set(ExternConfig "add_library(blas SHARED IMPORTED)
+	set_property(TARGET blas PROPERTY IMPORTED_LOCATION \${_SuiteSparse_PREFIX}/${SuiteSparse_LAPACK_BLAS_LIB_DIR}/libblas.dll)
+	set_property(TARGET blas PROPERTY IMPORTED_IMPLIB 	\${_SuiteSparse_PREFIX}/${SuiteSparse_LAPACK_BLAS_LIB_DIR}/libblas.lib)
+
+	add_library(lapack SHARED IMPORTED)
+	set_property(TARGET lapack PROPERTY IMPORTED_LOCATION 	\${_SuiteSparse_PREFIX}/${SuiteSparse_LAPACK_BLAS_LIB_DIR}/liblapack.dll)
+	set_property(TARGET lapack PROPERTY IMPORTED_IMPLIB 	\${_SuiteSparse_PREFIX}/${SuiteSparse_LAPACK_BLAS_LIB_DIR}/liblapack.lib)")
+endif()
 
 IF(BUILD_METIS)
 	set(SuiteSparse_LINKER_METIS_LIBS "metis")
