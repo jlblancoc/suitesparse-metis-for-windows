@@ -4,8 +4,10 @@ get_filename_component(_SuiteSparse_PREFIX "${_SuiteSparse_SELF_DIR}" PATH)
 get_filename_component(_SuiteSparse_PREFIX "${_SuiteSparse_PREFIX}" PATH)
 get_filename_component(_SuiteSparse_PREFIX "${_SuiteSparse_PREFIX}" PATH)
 
-# Load the LAPACK package with which we were built.
 find_package(LAPACK CONFIG)
+if (NOT LAPACK_FOUND) # Load the LAPACK package with which we were built.
+	@ExternConfig@
+endif ()
 
 # Load targets from the install tree.
 include(${_SuiteSparse_SELF_DIR}/SuiteSparse-targets.cmake)
