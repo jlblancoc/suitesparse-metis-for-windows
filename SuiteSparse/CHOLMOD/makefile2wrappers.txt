@@ -96,3 +96,7 @@ $(C) -c ../Supernodal/cholmod_super_solve.c -o cholmod_super_solve.o
 $(C) -DDLONG -c ../Supernodal/cholmod_super_numeric.c -o cholmod_l_super_numeric.o
 $(C) -DDLONG -c ../Supernodal/cholmod_super_symbolic.c -o cholmod_l_super_symbolic.o
 $(C) -DDLONG -c ../Supernodal/cholmod_super_solve.c -o cholmod_l_super_solve.o
+$(C) -c ../GPU/cholmod_gpu.c -o cholmod_gpu.o
+$(C) -c ../GPU/cholmod_gpu_kernels.c -o cholmod_gpu_kernels.o
+$(C) -DDLONG -c ../GPU/cholmod_gpu.c -o cholmod_l_gpu.o
+$(C) -DDLONG -c ../GPU/cholmod_gpu_kernels.c -o cholmod_l_gpu_kernels.o
