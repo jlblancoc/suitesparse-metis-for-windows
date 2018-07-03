@@ -11,6 +11,13 @@
 // include files
 // -----------------------------------------------------------------------------
 
+/* Define buffering parameters for GPU processing */
+// A temporary workaround for bypassing the issue of CUDA handling C++ 
+// compilers independently.
+#ifdef GPU_BLAS
+#include <cublas_v2.h>
+#endif
+
 extern "C"
 {
 #include "SuiteSparseQR_definitions.h"
