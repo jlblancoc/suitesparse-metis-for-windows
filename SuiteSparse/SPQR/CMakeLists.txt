@@ -52,6 +52,10 @@ SET(LIBSRCS
 	Source/spqr_type.cpp
 	Source/spqr_tol.cpp
 	)
+
+if(WITH_CUDA)
+	FILE(GLOB LIBSRCS ${LIBSRCS} "SPQRGPU/*.cpp")
+endif(WITH_CUDA)
 	
 declare_suitesparse_library(spqr "${LIBSRCS}" "${LIBHDRS}"
 	TARGET_PRIVATE_LINK	${SuiteSparse_LINKER_LAPACK_BLAS_LIBS}
