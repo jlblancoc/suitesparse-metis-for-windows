@@ -88,7 +88,13 @@ int TEMPLATE2 (CHOLMOD (gpu_init))
     cudaError_t cudaErr ;
     size_t maxBytesSize, HostPinnedSize ;
 
-    feenableexcept (FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW );
+// Code provided by Andrew Mac (http://andrewmac.ca)
+#ifdef _WIN32
+    _clearfp();
+    _controlfp(_controlfp(0, 0) & ~(_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW), _MCW_EM);
+#else
+    feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+#endif
 
     maxSize = L->maxcsize;
 
@@ -112,13 +118,13 @@ int TEMPLATE2 (CHOLMOD (gpu_init))
 
     /* divvy up the memory in dev_mempool */
     gpu_p->d_Lx[0] = Common->dev_mempool;
-    gpu_p->d_Lx[1] = (double*)Common->dev_mempool + Common->devBuffSize;
-    gpu_p->d_C = (double*)Common->dev_mempool + 2*Common->devBuffSize;
-    gpu_p->d_A[0] = (double*)Common->dev_mempool + 3*Common->devBuffSize;
-    gpu_p->d_A[1] = (double*)Common->dev_mempool + 4*Common->devBuffSize;
-    gpu_p->d_Ls = (double*)Common->dev_mempool + 5*Common->devBuffSize;
-    gpu_p->d_Map = (double*)gpu_p->d_Ls + (nls+1)*sizeof(Int) ;
-    gpu_p->d_RelativeMap = (double*)gpu_p->d_Map + (n+1)*sizeof(Int) ;
+    gpu_p->d_Lx[1] = (char*)Common->dev_mempool + Common->devBuffSize;
+    gpu_p->d_C = (char*)Common->dev_mempool + 2*Common->devBuffSize;
+    gpu_p->d_A[0] = (char*)Common->dev_mempool + 3*Common->devBuffSize;
+    gpu_p->d_A[1] = (char*)Common->dev_mempool + 4*Common->devBuffSize;
+    gpu_p->d_Ls = (char*)Common->dev_mempool + 5*Common->devBuffSize;
+    gpu_p->d_Map = (char*)gpu_p->d_Ls + (nls+1)*sizeof(Int) ;
+    gpu_p->d_RelativeMap = (char*)gpu_p->d_Map + (n+1)*sizeof(Int) ;
 
     /* Copy all of the Ls and Lpi data to the device.  If any supernodes are
      * to be computed on the device then this will be needed, so might as
