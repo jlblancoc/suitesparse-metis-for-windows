@@ -55,4 +55,7 @@ class SuiteSparseConan(ConanFile):
         self.copy("FindSuiteSparse.cmake", ".", ".")
 
     def package_info(self):
-        self.cpp_info.libs = ['amd', 'btf', 'camd', 'ccolamd', 'colamd', 'cholmod', 'cxsparse', 'klu', 'spqr', 'suitesparseconfig', 'umfpack']
+        if self.settings.os == "Windows":
+            self.cpp_info.libs = ['libamd', 'libbtf', 'libcamd', 'libccolamd', 'libcolamd', 'libcholmod', 'libcxsparse', 'libklu', 'libspqr', 'suitesparseconfig', 'libumfpack']
+        else:
+            self.cpp_info.libs = ['amd', 'btf', 'camd', 'ccolamd', 'colamd', 'cholmod', 'cxsparse', 'klu', 'spqr', 'suitesparseconfig', 'umfpack']
