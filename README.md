@@ -47,6 +47,8 @@ The goal is using one single CMake code to build against *SuiteSparse* in standa
 
 Example CMake programs are provided for testing, based on Tim Davis' code in his manual:
   * [example-projects](https://github.com/jlblancoc/suitesparse-metis-for-windows/tree/master/example-projects)
+  
+An example to test CUDA support can be found [here](https://gist.github.com/andr3wmac/78d294844484cb48342f88ef03e2776a).
 
 
 3. Integration in your code (unique code for Windows/Linux)
