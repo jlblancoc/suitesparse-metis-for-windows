@@ -6,8 +6,7 @@ The goal is using one single CMake code to build against *SuiteSparse* in standa
 
 ![logo](https://raw.githubusercontent.com/jlblancoc/suitesparse-metis-for-windows/master/docs/logo.png)
 
-1. Instructions
--------------------------------------------------------
+## 1. Instructions
 
   * (1) Install [CMake](http://www.cmake.org/).
   * (2) Only for Linux/Mac: Install LAPACK & BLAS. In Debian/Ubuntu: `sudo apt-get install liblapack-dev libblas-dev`
@@ -42,8 +41,7 @@ The goal is using one single CMake code to build against *SuiteSparse* in standa
   * (7) Only for Windows: You will have to append `CMAKE_INSTALL_PREFIX\lib*\lapack_blas_windows\` and `CMAKE_INSTALL_PREFIX\lib*` to the environment variable `PATH` before executing any program, for Windows to localize the required BLAS/Fortran libraries (`.DLL`s).
 
 
-2. Test program
--------------------------------------------------------
+## 2. Test program
 
 Example CMake programs are provided for testing, based on Tim Davis' code in his manual:
   * [example-projects](https://github.com/jlblancoc/suitesparse-metis-for-windows/tree/master/example-projects)
@@ -51,8 +49,8 @@ Example CMake programs are provided for testing, based on Tim Davis' code in his
 An example to test CUDA support can be found [here](https://gist.github.com/andr3wmac/78d294844484cb48342f88ef03e2776a).
 
 
-3. Integration in your code (unique code for Windows/Linux)
--------------------------------------------------------
+## 3. Integration in your code (unique code for Windows/Linux)
+
 
   * Copy this **[FindSuiteSparse.cmake](https://github.com/jlblancoc/suitesparse-metis-for-windows/blob/master/cmakemodule/FindSuiteSparse.cmake)** file.
   * Add a block like this to your CMake code (see complete [example](https://github.com/jlblancoc/suitesparse-metis-for-windows/blob/master/example-projects/cholmod/CMakeLists.txt)):
@@ -93,9 +91,7 @@ Remember to set **`SuiteSparse_DIR` to the install directory**, if CMake does no
 
 
 
-4. Why did you create this project?
--------------------------------------------------------
-
+## 4. Why did you create this project?
 
 Porting `SuiteSparse` to CMake wasn't trivial because this package makes extensive usage of a _one-source-multiple-objects_ philosophy by compiling the same sources with different compiler flags, and this ain't directly possible to CMake's design.
 
