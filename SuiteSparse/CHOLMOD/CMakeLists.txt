@@ -17,3 +17,6 @@ declare_suitesparse_library(cholmod "${LIBSRCS}" "${LIBHDRS}"
 	TARGET_PUBLIC_LINK 	${SuiteSparse_LINKER_METIS_LIBS} amd camd colamd ccolamd
 )
 
+if(WITH_CUDA)
+	target_link_libraries(cholmod ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES})
+endif(WITH_CUDA)

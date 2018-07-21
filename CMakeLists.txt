@@ -11,6 +11,11 @@ cmake_minimum_required(VERSION 2.8.10)
 
 include(checkGetSuiteSparse.cmake)
 
+if(BUILD_SHARED_LIBS)
+	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif(BUILD_SHARED_LIBS)
+
+
 SET(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
 SET(EXECUTABLE_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/bin CACHE PATH "Output directory for applications" )
 
