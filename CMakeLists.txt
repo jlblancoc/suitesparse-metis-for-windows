@@ -7,7 +7,18 @@
 
 PROJECT(SuiteSparseProject)
 
-cmake_minimum_required(VERSION 2.8.10)
+cmake_minimum_required(VERSION 3.1)
+
+# https://cmake.org/cmake/help/latest/prop_tgt/CXX_STANDARD.html
+string(COMPARE EQUAL "${CMAKE_CXX_STANDARD}" "" no_cmake_cxx_standard_set)
+if(no_cmake_cxx_standard_set)
+  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+  message(STATUS "Using default C++ standard ${CMAKE_CXX_STANDARD}")
+else()
+  message(STATUS "Using user specified C++ standard ${CMAKE_CXX_STANDARD}")
+endif()
 
 include(checkGetSuiteSparse.cmake)
 
