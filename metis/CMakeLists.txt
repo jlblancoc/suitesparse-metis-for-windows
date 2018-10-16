@@ -18,7 +18,7 @@ else()
 endif()
 
 include(CheckCXXSymbolExists)
-check_cxx_symbol_exists(rint math.h HAVE_RINT)
+check_cxx_symbol_exists(rint cmath HAVE_RINT)
 if (HAVE_RINT)
 	add_definitions(-DHAVE_RINT)
 endif()
