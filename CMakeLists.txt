@@ -39,13 +39,11 @@ SET(EXECUTABLE_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/bin CACHE PATH "Output 
 
 # Override "CMAKE_INSTALL_PREFIX", on Windows if not set:
 if(WIN32 AND (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT))
-	SET(SUITESPARSE_INSTALL_PREFIX "${${PROJECT_NAME}_BINARY_DIR}/install" CACHE PATH "Prefix prepended to install directories")
-	SET(CMAKE_INSTALL_PREFIX "${SUITESPARSE_INSTALL_PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
-	message(STATUS "Setting CMAKE_INSTALL_PREFIX to: ${CMAKE_INSTALL_PREFIX}")
+	set(CMAKE_INSTALL_PREFIX "${${PROJECT_NAME}_BINARY_DIR}/install" CACHE PATH "Prefix prepended to install directories" FORCE)
+	message(STATUS "Setting default CMAKE_INSTALL_PREFIX to: ${CMAKE_INSTALL_PREFIX}")
 else()
     # pass user defined install prefix to SuiteSparse
-    message(STATUS "Setting SUITESPARSE_INSTALL_PREFIX to user defined CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
-    set(SUITESPARSE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" CACHE PATH "Prefix prepended to install directories")
+    message(STATUS "Using user defined CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
 endif()
 
 # Fix GKlib path:
