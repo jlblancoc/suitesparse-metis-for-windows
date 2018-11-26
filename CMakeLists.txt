@@ -348,7 +348,7 @@ endmacro()
 # get SuiteSparse version
 get_SuiteSparse_Version()
 
-set(ConfigPackageLocation ${CMAKE_INSTALL_LIBDIR}/../cmake)
+set(ConfigPackageLocation ${CMAKE_INSTALL_LIBDIR}/cmake/suitesparse-${SuiteSparse_VERSION})
 ## create targets file
 export(EXPORT SuiteSparseTargets
 	FILE "${CMAKE_CURRENT_BINARY_DIR}/suitesparse/suitesparse-targets.cmake"
