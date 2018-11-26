@@ -226,7 +226,6 @@ if (USE_MKL)
 	else()
 		set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${MKL_LIBRARIES})
 	endif()
-endif()
 else()
 
 	if (HUNTER_ENABLED)
