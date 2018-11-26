@@ -90,7 +90,7 @@ public:
     cudaStream_t memoryStreamD2H;
 
     /* Scheduler.cpp */
-    void *operator new(long unsigned int, Scheduler* p){ return p; }
+    void *operator new(size_t, Scheduler* p){ return p; }
     Scheduler(Front *fronts, Int numFronts, size_t gpuMemorySize);
     ~Scheduler();
 

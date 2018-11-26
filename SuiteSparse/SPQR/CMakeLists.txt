@@ -46,10 +46,16 @@ SET(LIBSRCS
 	Source/spqr_append.cpp
 	Source/spqr_type.cpp
 	Source/spqr_tol.cpp
-	)
-	
+	SPQRGPU/spqrgpu_buildAssemblyMaps.cpp
+	SPQRGPU/spqrgpu_computeFrontStaging.cpp
+	SPQRGPU/spqrgpu_kernel.cpp
+)
+
 declare_suitesparse_library(spqr "${LIBSRCS}" "${LIBHDRS}"
 	TARGET_PRIVATE_LINK	${SuiteSparse_LINKER_LAPACK_BLAS_LIBS}
 	TARGET_PUBLIC_LINK 	camd ccolamd cholmod ${SuiteSparse_LINKER_METIS_LIBS}
 )
 
+if(WITH_CUDA)
+	target_link_libraries(spqr GPUQREngine ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES})
+endif(WITH_CUDA)
