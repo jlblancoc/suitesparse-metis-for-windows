@@ -6,6 +6,7 @@
 # -----------------------------------------------------------------
 
 option(HUNTER_ENABLED "Enable Hunter package manager support" OFF)
+option(USE_MKL "Use Intel MKL for blas/lapack" OFF)
 if (HUNTER_ENABLED)
 	include("cmake/HunterGate.cmake")
 	HunterGate(
@@ -29,7 +30,6 @@ else()
 endif()
 
 include(checkGetSuiteSparse.cmake)
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 if(BUILD_SHARED_LIBS)
 	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -217,71 +217,83 @@ if(WITH_CUDA)
 	ENDIF(${CUDA_FOUND})
 endif()
 
-if (HUNTER_ENABLED)
-  hunter_add_package(LAPACK)
-  find_package(LAPACK CONFIG REQUIRED)
-  if (NOT TARGET lapack)
-    message(STATUS "found LAPACK config but missing link target 'lapack'")
-  endif()
-  if (NOT TARGET blas)
-    message(STATUS "found LAPACK config but missing link target 'blas'")
-  endif()
-  message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
-  set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas)
-else() # Hunter not enabled
 
-	find_package(BLAS)
-	find_package(LAPACK)
-	if (BLAS_FOUND AND LAPACK_FOUND)
-		message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
-		set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
-	else () # LAPACK is not found
+if (USE_MKL)
+	set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+	find_package(mkl)
+	if (NOT MKL_FOUND)
+		message(FATAL_ERROR "Could not find MKL libraries. Make sure MKLROOT environment variable is set correctly'")
+	else()
+		set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${MKL_LIBRARIES})
+	endif()
+endif()
+else()
 
-		## Need to use SuiteSparse_LINKER_LAPACK_BLAS_LIBS in our subproject in case of SHARED flag is set to ON
-		SET(SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS OFF CACHE BOOL "Check if you have custom LAPACK/BLAS libraries (AMD,...)")
-		IF (SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS)
-			SET(SUITESPARSE_CUSTOM_BLAS_LIB "" CACHE FILE "Path to custom library file for BLAS")
-			SET(SUITESPARSE_CUSTOM_LAPACK_LIB "" CACHE FILE "Path to custom library file for LAPACK")
-			IF (NOT EXISTS "${SUITESPARSE_CUSTOM_BLAS_LIB}" OR NOT EXISTS "${SUITESPARSE_CUSTOM_LAPACK_LIB}")
-				MESSAGE("*Error*: Correctly set SUITESPARSE_CUSTOM_BLAS_LIB and SUITESPARSE_CUSTOM_LAPACK_LIB or uncheck SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS")
+	if (HUNTER_ENABLED)
+	hunter_add_package(LAPACK)
+	find_package(LAPACK CONFIG REQUIRED)
+	if (NOT TARGET lapack)
+		message(STATUS "found LAPACK config but missing link target 'lapack'")
+	endif()
+	if (NOT TARGET blas)
+		message(STATUS "found LAPACK config but missing link target 'blas'")
+	endif()
+	message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
+	set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas)
+	else() # Hunter not enabled
+
+		find_package(BLAS)
+		find_package(LAPACK)
+		if (BLAS_FOUND AND LAPACK_FOUND)
+			message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
+			set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+		else () # LAPACK is not found
+
+			## Need to use SuiteSparse_LINKER_LAPACK_BLAS_LIBS in our subproject in case of SHARED flag is set to ON
+			SET(SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS OFF CACHE BOOL "Check if you have custom LAPACK/BLAS libraries (AMD,...)")
+			IF (SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS)
+				SET(SUITESPARSE_CUSTOM_BLAS_LIB "" CACHE FILE "Path to custom library file for BLAS")
+				SET(SUITESPARSE_CUSTOM_LAPACK_LIB "" CACHE FILE "Path to custom library file for LAPACK")
+				IF (NOT EXISTS "${SUITESPARSE_CUSTOM_BLAS_LIB}" OR NOT EXISTS "${SUITESPARSE_CUSTOM_LAPACK_LIB}")
+					MESSAGE("*Error*: Correctly set SUITESPARSE_CUSTOM_BLAS_LIB and SUITESPARSE_CUSTOM_LAPACK_LIB or uncheck SUITESPARSE_USE_CUSTOM_BLAS_LAPACK_LIBS")
+				ELSE()
+					SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${SUITESPARSE_CUSTOM_BLAS_LIB} ${SUITESPARSE_CUSTOM_LAPACK_LIB})
+				ENDIF()
 			ELSE()
-				SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${SUITESPARSE_CUSTOM_BLAS_LIB} ${SUITESPARSE_CUSTOM_LAPACK_LIB})
+				IF (UNIX)
+					SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas rt)
+				ELSE()
+					IF(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
+						set(PATH_WORD_SIZE "x64")
+					ELSE(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
+						set(PATH_WORD_SIZE "x32")
+					ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+
+					add_library(blas SHARED IMPORTED)
+					set_property(TARGET blas PROPERTY IMPORTED_LOCATION ${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.dll)
+					set_property(TARGET blas PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.lib)
+
+					add_library(lapack SHARED IMPORTED)
+					set_property(TARGET lapack PROPERTY IMPORTED_LOCATION 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.dll)
+					set_property(TARGET lapack PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.lib)
+
+					SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS blas lapack)
+
+					## install lapack and blas dependencies
+					file(GLOB lapack_blas_windows_libs 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.lib")
+					file(GLOB lapack_blas_windows_dll 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.dll")
+					if(lapack_blas_windows_dll AND lapack_blas_windows_libs)
+						set(SuiteSparse_LAPACK_BLAS_LIB_DIR "lib${LIB_POSTFIX}/lapack_blas_windows")
+						install(FILES 		${lapack_blas_windows_libs}
+											${lapack_blas_windows_dll}
+								DESTINATION ${SuiteSparse_LAPACK_BLAS_LIB_DIR}
+						)
+					endif()
+				ENDIF()
 			ENDIF()
-		ELSE()
-			IF (UNIX)
-				SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas rt)
-			ELSE()
-				IF(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
-					set(PATH_WORD_SIZE "x64")
-				ELSE(CMAKE_SIZEOF_VOID_P EQUAL 8)  # Size in bytes!
-					set(PATH_WORD_SIZE "x32")
-				ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
-
-				add_library(blas SHARED IMPORTED)
-				set_property(TARGET blas PROPERTY IMPORTED_LOCATION ${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.dll)
-				set_property(TARGET blas PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/libblas.lib)
-
-				add_library(lapack SHARED IMPORTED)
-				set_property(TARGET lapack PROPERTY IMPORTED_LOCATION 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.dll)
-				set_property(TARGET lapack PROPERTY IMPORTED_IMPLIB 	${SuiteSparseProject_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/liblapack.lib)
-
-				SET(SuiteSparse_LINKER_LAPACK_BLAS_LIBS blas lapack)
-
-				## install lapack and blas dependencies
-				file(GLOB lapack_blas_windows_libs 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.lib")
-				file(GLOB lapack_blas_windows_dll 	"${CMAKE_SOURCE_DIR}/lapack_windows/${PATH_WORD_SIZE}/*.dll")
-				if(lapack_blas_windows_dll AND lapack_blas_windows_libs)
-					set(SuiteSparse_LAPACK_BLAS_LIB_DIR "lib${LIB_POSTFIX}/lapack_blas_windows")
-					install(FILES 		${lapack_blas_windows_libs}
-										${lapack_blas_windows_dll}
-							DESTINATION ${SuiteSparse_LAPACK_BLAS_LIB_DIR}
-					)
-				endif()
-			ENDIF()
-		ENDIF()
-	ENDIF() # LAPACK found
-endif() # HUNTER_ENABLED
-
+		ENDIF() # LAPACK found
+	endif() # HUNTER_ENABLED
+endif (USE_MKL)
 if(SuiteSparse_LAPACK_BLAS_LIB_DIR) # "Export" the imported targets in config.cmake manually
 	set(ExternConfig "add_library(blas SHARED IMPORTED)
 	set_property(TARGET blas PROPERTY IMPORTED_LOCATION \${_SuiteSparse_PREFIX}/${SuiteSparse_LAPACK_BLAS_LIB_DIR}/libblas.dll)
