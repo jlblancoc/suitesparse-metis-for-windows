@@ -6,12 +6,13 @@
 # -----------------------------------------------------------------
 
 option(HUNTER_ENABLED "Enable Hunter package manager support" OFF)
-include("cmake/HunterGate.cmake")
-HunterGate(
-  URL "https://github.com/ruslo/hunter/archive/v0.23.34.tar.gz"
-  SHA1 "70287b1ffa810ee4e952052a9adff9b4856d0d54"
-)
-
+if (HUNTER_ENABLED)
+	include("cmake/HunterGate.cmake")
+	HunterGate(
+	URL "https://github.com/ruslo/hunter/archive/v0.23.34.tar.gz"
+	SHA1 "70287b1ffa810ee4e952052a9adff9b4856d0d54"
+	)
+endif(HUNTER_ENABLED)
 PROJECT(SuiteSparseProject)
 
 cmake_minimum_required(VERSION 3.1)
@@ -28,7 +29,7 @@ else()
 endif()
 
 include(checkGetSuiteSparse.cmake)
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmakemodule" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 if(BUILD_SHARED_LIBS)
 	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -291,7 +292,6 @@ if(SuiteSparse_LAPACK_BLAS_LIB_DIR) # "Export" the imported targets in config.cm
 	set_property(TARGET lapack PROPERTY IMPORTED_IMPLIB 	\${_SuiteSparse_PREFIX}/${SuiteSparse_LAPACK_BLAS_LIB_DIR}/liblapack.lib)")
 endif()
 
->>>>>>> upstream/master
 IF(BUILD_METIS)
 	set(SuiteSparse_LINKER_METIS_LIBS "metis")
 	## namespaced library target for config
