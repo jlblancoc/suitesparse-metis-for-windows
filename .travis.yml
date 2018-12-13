@@ -1,0 +1,77 @@
+sudo: required
+language: bash
+services:
+  - docker
+
+# define the build matrix
+env:
+  global:
+    - RUN_TESTS: false
+    - BUILD_METIS: ON
+
+matrix:
+  include:
+    # Linux {
+
+    #   Ubuntu 18.04
+    - os: linux
+      env: >
+        BUILD_FLAVOR=ubuntu
+        BUILD_RELEASE=bionic
+        BUILD_ARCH=amd64
+        TOOLCHAIN=gcc-cxx11
+    - os: linux
+      env: >
+        BUILD_FLAVOR=ubuntu
+        BUILD_RELEASE=bionic
+        BUILD_ARCH=amd64
+        TOOLCHAIN=gcc-cxx17
+    - os: linux
+      env: >
+        BUILD_FLAVOR=ubuntu
+        BUILD_RELEASE=bionic
+        BUILD_ARCH=amd64
+        TOOLCHAIN=clang-cxx17
+        BUILD_PACKAGES="clang"
+    # } // end Linux
+
+    # Windows build with mingw-w64 on Ubuntu 18.04
+    - os: linux
+      env: >
+        BUILD_FLAVOR=ubuntu
+        BUILD_RELEASE=bionic
+        BUILD_ARCH=amd64
+        TOOLCHAIN=linux-mingw-w64-cxx11
+        BUILD_PACKAGES="cmake mingw-w64 wine-stable"
+        BUILD_METIS=OFF
+    - os: linux
+      env: >
+        BUILD_FLAVOR=ubuntu
+        BUILD_RELEASE=bionic
+        BUILD_ARCH=amd64
+        TOOLCHAIN=linux-mingw-w64-cxx17
+        BUILD_PACKAGES="cmake mingw-w64 wine-stable"
+        BUILD_METIS=OFF
+
+before_install:
+  # use the Dockerfile.<distro>.template file for building the image with sed magic
+  - |
+    sed \
+    -e "s/@BUILD_FLAVOR@/${BUILD_FLAVOR}/g" \
+    -e "s/@BUILD_RELEASE@/${BUILD_RELEASE}/g" \
+    -e "s/@BUILD_ARCH@/${BUILD_ARCH}/g" \
+    -e "s/@BUILD_PACKAGES@/${BUILD_PACKAGES}/g" \
+    ci/Dockerfile.$BUILD_FLAVOR.template | tee ci/Dockerfile.$BUILD_FLAVOR.$BUILD_RELEASE.$BUILD_ARCH
+  - docker build -f ci/Dockerfile.$BUILD_FLAVOR.$BUILD_RELEASE.$BUILD_ARCH -t suitesparse-devel .
+
+script: |
+  # run the respective .travis.<distro>.sh script
+  docker run \
+  -e BUILD_FLAVOR="$BUILD_FLAVOR" \
+  -e BUILD_RELEASE="$BUILD_RELEASE" \
+  -e BUILD_ARCH="$BUILD_ARCH" \
+  -e TOOLCHAIN="$TOOLCHAIN" \
+  -e BUILD_METIS="$BUILD_METIS" \
+  -e RUN_TESTS="$RUN_TESTS" \
+  -it suitesparse-devel ci/travis.$BUILD_FLAVOR.sh
+
