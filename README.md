@@ -28,7 +28,7 @@ The goal is using one single CMake code to build against *SuiteSparse* in standa
       * Set the "Source code" directory to `SP_ROOT` 
 	  * Set the "Build" directory to any empty directory, typically `SP_ROOT/build`
 	  * Press "Configure", change anything (if needed)
-      * **Important**: I recommend setting the `CMAKE_INSTALL_PREFIX` or (in Windows) `SUITESPARSE_INSTALL_PREFIX` to some other directory different than "Program Files" or "/usr/local" so the INSTALL command does not require Admin privileges.
+      * **Important**: I recommend setting the `CMAKE_INSTALL_PREFIX` to some other directory different than "Program Files" or "/usr/local" so the INSTALL command does not require Admin privileges.
       * If you have an error like: "Cannot find source file: GKlib/conf/check_thread_storage.c", then manually adjust `GKLIB_PATH` to the correct path `SP_ROOT/metis/GKlib`.
 	  * Press "Generate".
       * `HAVE_COMPLEX` is OFF by default to avoid errors related to complex numbers in some compilers. 
