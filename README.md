@@ -1,3 +1,7 @@
+[![Build Status](https://img.shields.io/travis/jlblancoc/suitesparse-metis-for-windows/master.svg?label=Travis)](https://travis-ci.org/jlblancoc/suitesparse-metis-for-windows/builds)
+[![Grunt status](https://img.shields.io/appveyor/ci/jlblancoc/suitesparse-metis-for-windows/master.svg?label=Appveyor)](https://ci.appveyor.com/project/jlblancoc/suitesparse-metis-for-windows/history)
+
+
 CMake scripts for painless usage of Tim Davis' [SuiteSparse](http://www.cise.ufl.edu/research/sparse/SuiteSparse/) (CHOLMOD,UMFPACK,AMD,LDL,SPQR,...) and [METIS](http://glaros.dtc.umn.edu/gkhome/views/metis) from Visual Studio and the rest of Windows/Linux/OSX IDEs supported by CMake. The project includes precompiled BLAS/LAPACK DLLs for easy use with Visual C++. Licensed under BSD 3-Clause License.
 
 The goal is using one single CMake code to build against *SuiteSparse* in standard Linux package systems (e.g. `libsuitesparse-dev`) and in manual compilations under Windows. 
@@ -29,7 +33,7 @@ The goal is using one single CMake code to build against *SuiteSparse* in standa
       * Set the "Source code" directory to `SP_ROOT` 
 	  * Set the "Build" directory to any empty directory, typically `SP_ROOT/build`
 	  * Press "Configure", change anything (if needed)
-      * **Important**: I recommend setting the `CMAKE_INSTALL_PREFIX` or (in Windows) `SUITESPARSE_INSTALL_PREFIX` to some other directory different than "Program Files" or "/usr/local" so the INSTALL command does not require Admin privileges.
+      * **Important**: I recommend setting the `CMAKE_INSTALL_PREFIX` to some other directory different than "Program Files" or "/usr/local" so the INSTALL command does not require Admin privileges.
       * If you have an error like: "Cannot find source file: GKlib/conf/check_thread_storage.c", then manually adjust `GKLIB_PATH` to the correct path `SP_ROOT/metis/GKlib`.
 	  * Press "Generate".
       * `HAVE_COMPLEX` is OFF by default to avoid errors related to complex numbers in some compilers. 
