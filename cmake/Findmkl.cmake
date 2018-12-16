@@ -2,36 +2,36 @@ if (MKL_INCLUDE_DIRS AND MKL_LIBRARIES AND MKL_INTERFACE_LIBRARY AND
     MKL_SEQUENTIAL_LAYER_LIBRARY AND MKL_CORE_LIBRARY)
   set (MKL_FIND_QUIETLY TRUE)
 endif()
-if(NOT BUILD_SHARED_LIBS)
+if(NOT MKL_SHARED_LIBS)
   if(WIN32)
       if(CMAKE_SIZEOF_VOID_P EQUAL 8)
           set(SEQ_LIB "mkl_sequential.lib")
-          set(THR_LIB "mkl_intel_lp64.lib")
+          set(INT_LIB  "mkl_intel_lp64.lib")
           set(COR_LIB "mkl_core.lib")
       else()
           set(SEQ_LIB "mkl_sequential.lib")
-          set(THR_LIB "mkl_intel_c.lib")
+          set(INT_LIB  "mkl_intel_c.lib")
           set(COR_LIB "mkl_core.lib")
       endif()
   else()
       set(SEQ_LIB "libmkl_sequential.a")
-      set(THR_LIB "libmkl_intel_thread.a")
+      set(INT_LIB "libmkl_intel_lp64.a")
       set(COR_LIB "libmkl_core.a")
   endif()
 else()
    if(WIN32)
       if(CMAKE_SIZEOF_VOID_P EQUAL 8)
          set(SEQ_LIB "mkl_sequential_dll.lib")
-	 set(THR_LIB "mkl_intel_lp64_dll.lib")
-	 set(COR_LIB "mkl_core_dll.lib")
+         set(INT_LIB "mkl_intel_lp64_dll.lib")
+         set(COR_LIB "mkl_core_dll.lib")
       else()
          set(SEQ_LIB "mkl_sequential_dll.lib")
-	 set(THR_LIB "mkl_intel_c_dll.lib")
-	 set(COR_LIB "mkl_core_dll.lib")
+	     set(INT_LIB "mkl_intel_c_dll.lib")
+	     set(COR_LIB "mkl_core_dll.lib")
       endif()
    else()
       set(SEQ_LIB "libmkl_sequential.so")
-      set(THR_LIB "libmkl_intel_lp64.so")
+      set(INT_LIB "libmkl_intel_lp64.so")
       set(COR_LIB "libmkl_core.so")
    endif()
 endif()
@@ -52,8 +52,8 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
                        $ENV{INTEL}/mkl/lib/intel64
                  NO_DEFAULT_PATH)
 
-     find_library(MKL_THREAD_LIBRARY
-                 NAMES ${THR_LIB}
+     find_library(MKL_INTERFACE_LIBRARY
+                 NAMES ${INT_LIB}
                  PATHS $ENV{MKLROOT}/lib
                        $ENV{MKLROOT}/lib/intel64
                        $ENV{INTEL}/mkl/lib/intel64
@@ -74,18 +74,18 @@ else()
                        $ENV{INTEL}/mkl/lib/ia32
                  NO_DEFAULT_PATH)
 
-     find_library(MKL_THREAD_LIBRARY
-                 NAMES ${THR_LIB}
+     find_library(MKL_INTERFACE_LIBRARY
+                 NAMES ${INT_LIB}
                  PATHS $ENV{MKLROOT}/lib
                        $ENV{MKLROOT}/lib/ia32
                        $ENV{INTEL}/mkl/lib/ia32
                  NO_DEFAULT_PATH)
 endif()
 set(MKL_INCLUDE_DIRS ${MKL_INCLUDE_DIR})
-set(MKL_LIBRARIES ${MKL_SEQUENTIAL_LAYER_LIBRARY} ${MKL_THREAD_LIBRARY} ${MKL_CORE_LIBRARY})
+set(MKL_LIBRARIES ${MKL_SEQUENTIAL_LAYER_LIBRARY} ${MKL_INTERFACE_LIBRARY} ${MKL_CORE_LIBRARY})
 
 if (MKL_INCLUDE_DIR AND
-    MKL_THREAD_LIBRARY AND
+    MKL_INTERFACE_LIBRARY AND
     MKL_SEQUENTIAL_LAYER_LIBRARY AND
     MKL_CORE_LIBRARY)
 
@@ -99,6 +99,6 @@ else()
 endif()
 
 INCLUDE(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_LIBRARIES MKL_INCLUDE_DIRS  MKL_SEQUENTIAL_LAYER_LIBRARY MKL_CORE_LIBRARY MKL_THREAD_LIBRARY)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_LIBRARIES MKL_INCLUDE_DIRS  MKL_SEQUENTIAL_LAYER_LIBRARY MKL_CORE_LIBRARY MKL_INTERFACE_LIBRARY)
 
-MARK_AS_ADVANCED(MKL_INCLUDE_DIRS MKL_LIBRARIES MKL_SEQUENTIAL_LAYER_LIBRARY MKL_CORE_LIBRARY MKL_THREAD_LIBRARY)
+MARK_AS_ADVANCED(MKL_INCLUDE_DIRS MKL_LIBRARIES MKL_SEQUENTIAL_LAYER_LIBRARY MKL_CORE_LIBRARY MKL_INTERFACE_LIBRARY)
