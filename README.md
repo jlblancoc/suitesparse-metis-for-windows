@@ -2,7 +2,7 @@
 [![Grunt status](https://img.shields.io/appveyor/ci/jlblancoc/suitesparse-metis-for-windows/master.svg?label=Appveyor)](https://ci.appveyor.com/project/jlblancoc/suitesparse-metis-for-windows/history)
 
 
-CMake scripts for painless usage of Tim Davis' [SuiteSparse](http://www.cise.ufl.edu/research/sparse/SuiteSparse/) (CHOLMOD,UMFPACK,AMD,LDL,SPQR,...) and [METIS](http://glaros.dtc.umn.edu/gkhome/views/metis) from Visual Studio and the rest of Windows/Linux/OSX IDEs supported by CMake. The project includes precompiled BLAS/LAPACK DLLs for easy use with Visual C++. Licensed under BSD 3-Clause License.
+CMake scripts for painless usage of Tim Davis' [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html) (CHOLMOD,UMFPACK,AMD,LDL,SPQR,...) and [METIS](http://glaros.dtc.umn.edu/gkhome/views/metis) from Visual Studio and the rest of Windows/Linux/OSX IDEs supported by CMake. The project includes precompiled BLAS/LAPACK DLLs for easy use with Visual C++. Licensed under BSD 3-Clause License.
 
 The goal is using one single CMake code to build against *SuiteSparse* in standard Linux package systems (e.g. `libsuitesparse-dev`) and in manual compilations under Windows. 
 
