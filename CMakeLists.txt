@@ -49,7 +49,7 @@ endif()
 
 # Fix GKlib path:
 IF(NOT WIN32)
-	SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/metis/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
+  SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/SuiteSparse/metis-5.1.0/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
 ENDIF()
 
 # allow creating DLLs in Windows without touching the source code:
@@ -79,14 +79,14 @@ ENDIF(MSVC)
 
 ## check if we can build metis
 SET(BUILD_METIS_DEFAULT ON)
-IF(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/metis/CMakeLists.txt")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse/metis-5.1.0/CMakeLists.txt")
 	SET(BUILD_METIS_DEFAULT OFF)
-ENDIF(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/metis/CMakeLists.txt")
+endif()
 
 SET(WITH_CUDA OFF CACHE BOOL "Build with CUDA support")
 
 SET(BUILD_METIS ${BUILD_METIS_DEFAULT} CACHE BOOL "Build METIS for partitioning?")
-SET(METIS_DIR ${${PROJECT_NAME}_SOURCE_DIR}/metis CACHE PATH "Source directory of METIS")
+SET(METIS_DIR ${${PROJECT_NAME}_SOURCE_DIR}/SuiteSparse/metis-5.1.0 CACHE PATH "Source directory of METIS")
 
 if(BUILD_METIS)
 	## prepare the installation :
@@ -111,7 +111,7 @@ if(BUILD_METIS)
 			)
 		endif()
 	endif()
-	add_subdirectory(metis) ## important part for building metis from its src files
+    add_subdirectory(SuiteSparse/metis-5.1.0) ## important part for building metis from its src files
 endif(BUILD_METIS)
 
 
