@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Makefile for all SuiteSparse packages (except GraphBLAS)
+# Makefile for all SuiteSparse packages
 #-------------------------------------------------------------------------------
 
 SUITESPARSE = $(CURDIR)
@@ -12,6 +12,8 @@ include SuiteSparse_config/SuiteSparse_config.mk
 # Compile the default rules for each package
 go: metis
 	( cd SuiteSparse_config && $(MAKE) )
+	( cd GraphBLAS && $(MAKE) CMAKE_OPTIONS='$(CMAKE_OPTIONS)' )
+	( cd Mongoose  && $(MAKE) CMAKE_OPTIONS='$(CMAKE_OPTIONS)' )
 	( cd AMD && $(MAKE) )
 	( cd BTF && $(MAKE) )
 	( cd CAMD && $(MAKE) )
@@ -36,6 +38,8 @@ endif
 # (note that CSparse is not installed; CXSparse is installed instead)
 install: metisinstall
 	( cd SuiteSparse_config && $(MAKE) install )
+	( cd GraphBLAS && $(MAKE) CMAKE_OPTIONS='$(CMAKE_OPTIONS)' install )
+	( cd Mongoose  && $(MAKE) CMAKE_OPTIONS='$(CMAKE_OPTIONS)' install )
 	( cd AMD && $(MAKE) install )
 	( cd BTF && $(MAKE) install )
 	( cd CAMD && $(MAKE) install )
@@ -80,6 +84,8 @@ uninstall:
 	$(RM) $(INSTALL_DOC)/SuiteSparse_README.txt
 	( cd SuiteSparse_config && $(MAKE) uninstall )
 	- ( cd metis-5.1.0 && $(MAKE) uninstall )
+	- ( cd GraphBLAS && $(MAKE) uninstall )
+	- ( cd Mongoose  && $(MAKE) uninstall )
 	( cd AMD && $(MAKE) uninstall )
 	( cd CAMD && $(MAKE) uninstall )
 	( cd COLAMD && $(MAKE) uninstall )
@@ -106,9 +112,12 @@ ifeq (,$(MY_METIS_LIB))
 endif
 	$(RM) -r $(INSTALL_DOC)
 
-# compile the dynamic libraries
+# compile the dynamic libraries.  For GraphBLAS and Mongoose, this also builds
+# the static library
 library: metis
 	( cd SuiteSparse_config && $(MAKE) )
+	( cd GraphBLAS && $(MAKE) CMAKE_OPTIONS='$(CMAKE_OPTIONS)' library )
+	( cd Mongoose  && $(MAKE) CMAKE_OPTIONS='$(CMAKE_OPTIONS)' library )
 	( cd AMD && $(MAKE) library )
 	( cd BTF && $(MAKE) library )
 	( cd CAMD && $(MAKE) library )
@@ -129,9 +138,13 @@ endif
 #	( cd PIRO_BAND && $(MAKE) library )
 #	( cd SKYLINE_SVD && $(MAKE) library )
 
-# compile the static libraries (except for metis, which is only dynamic)
+# compile the static libraries (except for metis, GraphBLAS, and Mongoose).
+# metis is only dynamic, and the 'make static' for GraphBLAS and Mongoose makes
+# both the dynamic and static libraries.
 static: metis
 	( cd SuiteSparse_config && $(MAKE) static )
+	( cd GraphBLAS && $(MAKE) CMAKE_OPTIONS='$(CMAKE_OPTIONS)' static )
+	( cd Mongoose  && $(MAKE) CMAKE_OPTIONS='$(CMAKE_OPTIONS)' static )
 	( cd AMD && $(MAKE) static )
 	( cd BTF && $(MAKE) static )
 	( cd CAMD && $(MAKE) static )
@@ -157,6 +170,8 @@ purge:
 	- ( cd SuiteSparse_config && $(MAKE) purge )
 	- ( cd metis-5.1.0 && $(MAKE) distclean )
 	- ( cd AMD && $(MAKE) purge )
+	- ( cd GraphBLAS && $(MAKE) purge )
+	- ( cd Mongoose  && $(MAKE) purge )
 	- ( cd CAMD && $(MAKE) purge )
 	- ( cd COLAMD && $(MAKE) purge )
 	- ( cd BTF && $(MAKE) purge )
@@ -168,7 +183,7 @@ purge:
 	- ( cd CSparse && $(MAKE) purge )
 	- ( cd CXSparse && $(MAKE) purge )
 	- ( cd RBio && $(MAKE) purge )
-	- ( cd MATLAB_Tools/UFcollection && $(RM) *.mex* )
+	- ( cd MATLAB_Tools/SuiteSparseCollection && $(RM) *.mex* )
 	- ( cd MATLAB_Tools/SSMULT && $(RM) *.mex* )
 	- ( cd SuiteSparse_GPURuntime && $(MAKE) purge )
 	- ( cd GPUQREngine && $(MAKE) purge )
@@ -182,6 +197,8 @@ purge:
 clean:
 	- ( cd SuiteSparse_config && $(MAKE) clean )
 	- ( cd metis-5.1.0 && $(MAKE) clean )
+	- ( cd GraphBLAS && $(MAKE) clean )
+	- ( cd Mongoose  && $(MAKE) clean )
 	- ( cd AMD && $(MAKE) clean )
 	- ( cd CAMD && $(MAKE) clean )
 	- ( cd COLAMD && $(MAKE) clean )
@@ -202,6 +219,8 @@ clean:
 
 # Create the PDF documentation
 docs:
+	( cd GraphBLAS && $(MAKE) docs )
+	( cd Mongoose  && $(MAKE) docs )
 	( cd AMD && $(MAKE) docs )
 	( cd CAMD && $(MAKE) docs )
 	( cd KLU && $(MAKE) docs )
@@ -247,7 +266,7 @@ metis: include/metis.h
 # hardcoded below.
 include/metis.h:
 ifeq (,$(MY_METIS_LIB))
-	- ( cd metis-5.1.0 && $(MAKE) config shared=1 prefix=$(SUITESPARSE) )
+	- ( cd metis-5.1.0 && $(MAKE) config shared=1 prefix=$(SUITESPARSE) cc=$(CC) )
 	- ( cd metis-5.1.0 && $(MAKE) )
 	- ( cd metis-5.1.0 && $(MAKE) install )
 	- $(SO_INSTALL_NAME) $(SUITESPARSE)/lib/libmetis.dylib \
@@ -255,4 +274,14 @@ ifeq (,$(MY_METIS_LIB))
 else
 	@echo 'Using pre-installed METIS 5.1.0 library at ' '[$(MY_METIS_LIB)]'
 endif
+
+# just compile GraphBLAS
+gb:
+	echo $(CMAKE_OPTIONS)
+	( cd GraphBLAS && $(MAKE) CMAKE_OPTIONS='$(CMAKE_OPTIONS)' )
+
+# just install GraphBLAS
+gbinstall:
+	echo $(CMAKE_OPTIONS)
+	( cd GraphBLAS && $(MAKE) CMAKE_OPTIONS='$(CMAKE_OPTIONS)' install )
 
