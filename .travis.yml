@@ -44,6 +44,7 @@ matrix:
         TOOLCHAIN=linux-mingw-w64-cxx11
         BUILD_PACKAGES="cmake mingw-w64 wine-stable"
         BUILD_METIS=OFF
+        LAPACK_DIR=lapack_windows/x64/
     - os: linux
       env: >
         BUILD_FLAVOR=ubuntu
@@ -52,6 +53,7 @@ matrix:
         TOOLCHAIN=linux-mingw-w64-cxx17
         BUILD_PACKAGES="cmake mingw-w64 wine-stable"
         BUILD_METIS=OFF
+        LAPACK_DIR=lapack_windows/x64/
 
 before_install:
   # use the Dockerfile.<distro>.template file for building the image with sed magic
@@ -62,7 +64,7 @@ before_install:
     -e "s/@BUILD_ARCH@/${BUILD_ARCH}/g" \
     -e "s/@BUILD_PACKAGES@/${BUILD_PACKAGES}/g" \
     ci/Dockerfile.$BUILD_FLAVOR.template | tee ci/Dockerfile.$BUILD_FLAVOR.$BUILD_RELEASE.$BUILD_ARCH
-  - docker build -f ci/Dockerfile.$BUILD_FLAVOR.$BUILD_RELEASE.$BUILD_ARCH -t suitesparse-devel .
+  - docker build -f ci/Dockerfile.$BUILD_FLAVOR.$BUILD_RELEASE.$BUILD_ARCH -t suitesparse-devel_${TOOLCHAIN} .
 
 script: |
   # run the respective .travis.<distro>.sh script
@@ -73,5 +75,6 @@ script: |
   -e TOOLCHAIN="$TOOLCHAIN" \
   -e BUILD_METIS="$BUILD_METIS" \
   -e RUN_TESTS="$RUN_TESTS" \
-  -it suitesparse-devel ci/travis.$BUILD_FLAVOR.sh
+  -e LAPACK_DIR="$LAPACK_DIR" \
+  -it suitesparse-devel_${TOOLCHAIN} ci/travis.$BUILD_FLAVOR.sh
 

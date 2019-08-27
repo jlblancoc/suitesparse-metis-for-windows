@@ -4,7 +4,10 @@ set -x
 
 uname -a
 
-cmake -H. -B_build_${TOOLCHAIN} -DCMAKE_INSTALL_PREFIX=${PWD}/_install_${TOOLCHAIN} -DCMAKE_TOOLCHAIN_FILE="${PWD}/ci/toolchains/${TOOLCHAIN}.cmake" -DBUILD_METIS=${BUILD_METIS}
+if [ "$LAPACK_DIR" != "" ]; then
+	LAPACK_DIR_FLAG="-DLAPACK_DIR=${LAPACK_DIR}"
+fi
+cmake -H. -B_build_${TOOLCHAIN} -DCMAKE_INSTALL_PREFIX=${PWD}/_install_${TOOLCHAIN} -DCMAKE_TOOLCHAIN_FILE="${PWD}/ci/toolchains/${TOOLCHAIN}.cmake" -DBUILD_METIS=${BUILD_METIS} ${LAPACK_DIR_FLAG}
 cmake --build _build_${TOOLCHAIN} --target install -- -j4
 
 if [ "$RUN_TESTS" = true ]; then
@@ -15,4 +18,13 @@ if [ "$RUN_TESTS" = true ]; then
 	CTEST_OUTPUT_ON_FAILURE=1 cmake --build _build_${TOOLCHAIN} --target test
 fi
 
+# get the SuiteSparse-config.cmake directory expanding the version number wildcard
+SuiteSparse_DIR=$(echo "${PWD}/_install_${TOOLCHAIN}/lib/cmake/suitesparse-"*/)
 
+echo "build example-projects/cholmod"
+cmake -Hexample-projects/cholmod -B_build_example_cholmod_${TOOLCHAIN} -DSuiteSparse_DIR=${SuiteSparse_DIR} -DCMAKE_TOOLCHAIN_FILE="${PWD}/ci/toolchains/${TOOLCHAIN}.cmake" ${LAPACK_DIR_FLAG}
+cmake --build _build_example_cholmod_${TOOLCHAIN}
+
+echo "build example-projects/spqr"
+cmake -Hexample-projects/spqr -B_build_example_spqr_${TOOLCHAIN} -DSuiteSparse_DIR=${SuiteSparse_DIR} -DCMAKE_TOOLCHAIN_FILE="${PWD}/ci/toolchains/${TOOLCHAIN}.cmake" ${LAPACK_DIR_FLAG}
+cmake --build _build_example_cholmod_${TOOLCHAIN}

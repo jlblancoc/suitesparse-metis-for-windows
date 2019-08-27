@@ -7,6 +7,7 @@ environment:
     CTEST_OUTPUT_ON_FAILURE: 1
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     BUILD_METIS: ON
+    LAPACK_DIR: "lapack_windows/x64/"
 
   # test matrix
   matrix:
@@ -46,8 +47,8 @@ install:
   - cmd: set VS150COMNTOOLS=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools
 
 build_script:
-  - cmd: cmake -H. -B_build_%TOOLCHAIN%_Debug -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=%cd%\_install_%TOOLCHAIN%_DEBUG -DCMAKE_TOOLCHAIN_FILE="%cd%\ci\toolchains\%TOOLCHAIN%.cmake" -DBUILD_METIS=%BUILD_METIS%
+  - cmd: cmake -H. -B_build_%TOOLCHAIN%_Debug -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=%cd%\_install_%TOOLCHAIN%_DEBUG -DCMAKE_TOOLCHAIN_FILE="%cd%\ci\toolchains\%TOOLCHAIN%.cmake" -DLAPACK_DIR=%LAPACK_DIR% -DBUILD_METIS=%BUILD_METIS%
   - cmd: cmake --build _build_%TOOLCHAIN%_Debug --config Debug --target install
-  #- cmd: cmake -H. -B_build_%TOOLCHAIN%_Release -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=%cd%\_install_%TOOLCHAIN%_Release -DCMAKE_TOOLCHAIN_FILE="%cd%\toolchains\%TOOLCHAIN%.cmake" -DBUILD_METIS=%BUILD_METIS%
+  #- cmd: cmake -H. -B_build_%TOOLCHAIN%_Release -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=%cd%\_install_%TOOLCHAIN%_Release -DCMAKE_TOOLCHAIN_FILE="%cd%\toolchains\%TOOLCHAIN%.cmake" -DLAPACK_DIR=%LAPACK_DIR% -DBUILD_METIS=%BUILD_METIS%
   #- cmd: cmake --build _build_%TOOLCHAIN%_Release --config Release --target install
 
