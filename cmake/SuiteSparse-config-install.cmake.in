@@ -4,9 +4,14 @@ get_filename_component(_SuiteSparse_PREFIX "${_SuiteSparse_SELF_DIR}" PATH)
 get_filename_component(_SuiteSparse_PREFIX "${_SuiteSparse_PREFIX}" PATH)
 get_filename_component(_SuiteSparse_PREFIX "${_SuiteSparse_PREFIX}" PATH)
 
-find_package(LAPACK CONFIG)
-if (NOT LAPACK_FOUND) # Load the LAPACK package with which we were built.
-	@ExternConfig@
+include(CMakeFindDependencyMacro)
+if (@SuiteSparse_LAPACK_used_CONFIG@) # SuiteSparse_LAPACK_used_CONFIG
+  # use config file which provides LAPACK (and BLAS) for us
+  find_dependency(LAPACK CONFIG)
+else()
+  # try to find BLAS and LAPACK with modules
+  find_dependency(BLAS)
+  find_dependency(LAPACK)
 endif ()
 
 # Load targets from the install tree.
