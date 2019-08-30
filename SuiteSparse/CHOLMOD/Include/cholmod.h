@@ -72,10 +72,6 @@
 #ifndef CHOLMOD_H
 #define CHOLMOD_H
 
-#ifdef GPU_BLAS
-#include <cublas_v2.h>
-#endif
-
 /* make it easy for C++ programs to include CHOLMOD */
 #ifdef __cplusplus
 extern "C" {
