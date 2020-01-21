@@ -18,10 +18,10 @@ The goal is using one single CMake code to build against *SuiteSparse* in standa
 	  * (OPTIONAL) CMake will download SuiteSparse sources automatically for you (skip to step 4), but you may do it manually if preferred:
         * Populate the directories within `SP_ROOT` with the original sources from each project:
           * *`SuiteSparse`:*
-            * Download [SuiteSparse-X.Y.Z.tar.gz](http://www.cise.ufl.edu/research/sparse/SuiteSparse/) from Tim Davis' webpage.
+            * Download [SuiteSparse-X.Y.Z.tar.gz](http://faculty.cse.tamu.edu/davis/suitesparse.html) from Tim Davis' webpage.
             * Extract it.
             * Merge (e.g. copy and paste from Windows Explorer) the tree `SuiteSparse/*` into `SP_ROOT/SuiteSparse/*`.
-            * Make sure of **looking for patches** in [the original webpage](http://www.cise.ufl.edu/research/sparse/SuiteSparse/) and apply them to prevent build errors.
+            * Make sure of **looking for patches** in [the original webpage](http://faculty.cse.tamu.edu/davis/suitesparse.html) and apply them to prevent build errors.
           * *`METIS`:*  (Optional, only if need METIS for partitioning)
             * Download [metis-X.Y.Z.tar.gz](http://glaros.dtc.umn.edu/gkhome/metis/metis/download).
             * Extract it.
