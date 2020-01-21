@@ -1,11 +1,11 @@
-PROJECT(SPQR)
+project(SPQR)
 
 include_directories("${suitesparseconfig_SOURCE_DIR}")
 include_directories("${SPQR_SOURCE_DIR}/Include")
 include_directories("${CHOLMOD_SOURCE_DIR}/Include")
 
-FILE(GLOB LIBHDRS "Include/*.h*") # .h & .hpp
-SET(LIBSRCS 
+file(GLOB LIBHDRS "Include/*.h*") # .h & .hpp
+set(LIBSRCS 
 	Source/spqr_rmap.cpp
 	Source/SuiteSparseQR_C.cpp
 	Source/SuiteSparseQR_expert.cpp

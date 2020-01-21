@@ -1,7 +1,7 @@
-PROJECT(SuiteSparse)
+project(SuiteSparse)
 
 # Set optimized building:
-IF(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+if(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 	# only optimize for native processer when NOT cross compiling
@@ -9,24 +9,24 @@ IF(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native")
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=native")
 	endif(NOT CMAKE_CROSSCOMPILING)
-ENDIF(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+endif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
 
 # Global flags:
-IF (BUILD_METIS)
-	INCLUDE_DIRECTORIES("${METIS_SOURCE_DIR}/include")
-ELSE (BUILD_METIS)
-	ADD_DEFINITIONS(-DNPARTITION)
-ENDIF ( BUILD_METIS)
+if (BUILD_METIS)
+	include_directories("${METIS_SOURCE_DIR}/include")
+else (BUILD_METIS)
+	add_definitions(-DNPARTITION)
+endif ( BUILD_METIS)
 
 # Disable COMPLEX numbers: disable it by default, since it causes problems in some platforms.
-SET(HAVE_COMPLEX OFF CACHE BOOL "Enables building SuiteSparse with complex numbers (disabled by default to avoid problems in some platforms)")
-IF (NOT HAVE_COMPLEX)
-	ADD_DEFINITIONS(-DNCOMPLEX)
-ENDIF (NOT HAVE_COMPLEX)
+set(HAVE_COMPLEX OFF CACHE BOOL "Enables building SuiteSparse with complex numbers (disabled by default to avoid problems in some platforms)")
+if (NOT HAVE_COMPLEX)
+	add_definitions(-DNCOMPLEX)
+endif (NOT HAVE_COMPLEX)
 
 # Used even for MSVC, so blas function names have the final "_"
 if (MSVC)
-	ADD_DEFINITIONS(-D__MINGW32__)
+	add_definitions(-D__MINGW32__)
 endif(MSVC)
 
 

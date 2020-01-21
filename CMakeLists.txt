@@ -17,7 +17,7 @@ HunterGate(
     URL "https://github.com/cpp-pm/hunter/archive/v0.23.244.tar.gz"
     SHA1 "2c0f491fd0b80f7b09e3d21adb97237161ef9835"
 )
-PROJECT(SuiteSparseProject)
+project(SuiteSparseProject)
 
 cmake_minimum_required(VERSION 3.1)
 
@@ -39,8 +39,8 @@ if(BUILD_SHARED_LIBS)
 endif(BUILD_SHARED_LIBS)
 
 
-SET(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
-SET(EXECUTABLE_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/bin CACHE PATH "Output directory for applications" )
+set(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
+set(EXECUTABLE_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/bin CACHE PATH "Output directory for applications" )
 
 # Override "CMAKE_INSTALL_PREFIX", on Windows if not set:
 if(WIN32 AND (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT))
@@ -52,14 +52,14 @@ else()
 endif()
 
 # Fix GKlib path:
-IF(NOT WIN32)
-  SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/SuiteSparse/metis-5.1.0/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
-ENDIF()
+if(NOT WIN32)
+  set(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/SuiteSparse/metis-5.1.0/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
+endif()
 
 # allow creating DLLs in Windows without touching the source code:
-IF(NOT ${CMAKE_VERSION} VERSION_LESS "3.4.0" AND WIN32)
+if(NOT ${CMAKE_VERSION} VERSION_LESS "3.4.0" AND WIN32)
 	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-ENDIF()
+endif()
 
 ## get CMAKE_INSTALL_BINDIR and CMAKE_INSTALL_LIBDIR
 include(GNUInstallDirs)
@@ -77,20 +77,20 @@ mark_as_advanced(LIB_POSTFIX)
 # We want libraries to be named "libXXX" and "libXXXd" in all compilers:
 # ------------------------------------------------------------------------
 set(CMAKE_DEBUG_POSTFIX  "d")
-IF(MSVC)
+if(MSVC)
 	set(SP_LIB_PREFIX "lib")  # Libs are: "libXXX"
-ENDIF(MSVC)
+endif(MSVC)
 
 ## check if we can build metis
-SET(BUILD_METIS_DEFAULT ON)
+set(BUILD_METIS_DEFAULT ON)
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse/metis-5.1.0/CMakeLists.txt")
-	SET(BUILD_METIS_DEFAULT OFF)
+	set(BUILD_METIS_DEFAULT OFF)
 endif()
 
-SET(WITH_CUDA OFF CACHE BOOL "Build with CUDA support")
+set(WITH_CUDA OFF CACHE BOOL "Build with CUDA support")
 
-SET(BUILD_METIS ${BUILD_METIS_DEFAULT} CACHE BOOL "Build METIS for partitioning?")
-SET(METIS_DIR ${${PROJECT_NAME}_SOURCE_DIR}/SuiteSparse/metis-5.1.0 CACHE PATH "Source directory of METIS")
+set(BUILD_METIS ${BUILD_METIS_DEFAULT} CACHE BOOL "Build METIS for partitioning?")
+set(METIS_DIR ${${PROJECT_NAME}_SOURCE_DIR}/SuiteSparse/metis-5.1.0 CACHE PATH "Source directory of METIS")
 
 if(BUILD_METIS)
 	## prepare the installation :
@@ -182,15 +182,15 @@ macro(declare_suitesparse_library targetName srcsList headersList)
 	if(WITH_CUDA)
 		find_package(CUDA)
 	endif()
-	IF(${CUDA_FOUND})
-		INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
-		INCLUDE_DIRECTORIES(${SuiteSparse_GPUQREngine_INCLUDE})
-		INCLUDE_DIRECTORIES(${SuiteSparse_GPURuntime_INCLUDE})
+	if(${CUDA_FOUND})
+		include_directories(${CUDA_INCLUDE_DIRS})
+		include_directories(${SuiteSparse_GPUQREngine_INCLUDE})
+		include_directories(${SuiteSparse_GPURuntime_INCLUDE})
 		CUDA_ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
-	ELSE(${CUDA_FOUND})
-		ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
-	ENDIF(${CUDA_FOUND})
-	SET_TARGET_PROPERTIES(${targetName} PROPERTIES
+	else(${CUDA_FOUND})
+		add_library(${targetName} ${srcsList} ${headersList})
+	endif(${CUDA_FOUND})
+	set_target_properties(${targetName} PROPERTIES
 		OUTPUT_NAME ${SP_LIB_PREFIX}${targetName}
 	)
 
@@ -204,21 +204,21 @@ endmacro()
 
 # Example of usage:
 #  REMOVE_MATCHING_FILES_FROM_LIST(".*_LIN.cpp" my_srcs)
-MACRO(REMOVE_MATCHING_FILES_FROM_LIST match_expr lst_files)
-	SET(lst_files_aux "")
-	FOREACH(FIL ${${lst_files}})
-		IF(NOT ${FIL} MATCHES "${match_expr}")
-			SET(lst_files_aux "${lst_files_aux}" "${FIL}")
-		ENDIF(NOT ${FIL} MATCHES "${match_expr}")
-	ENDFOREACH(FIL)
-	SET(${lst_files} ${lst_files_aux})
-ENDMACRO(REMOVE_MATCHING_FILES_FROM_LIST)
+macro(REMOVE_MATCHING_FILES_FROM_LIST match_expr lst_files)
+	set(lst_files_aux "")
+	foreach(FIL ${${lst_files}})
+		if(NOT ${FIL} MATCHES "${match_expr}")
+			set(lst_files_aux "${lst_files_aux}" "${FIL}")
+		endif(NOT ${FIL} MATCHES "${match_expr}")
+	endforeach(FIL)
+	set(${lst_files} ${lst_files_aux})
+endmacro(REMOVE_MATCHING_FILES_FROM_LIST)
 
 if(WITH_CUDA)
-	FIND_PACKAGE(cuda)
-	IF(${CUDA_FOUND})
-		ADD_DEFINITIONS(-DGPU_BLAS)
-	ENDIF(${CUDA_FOUND})
+	find_package(cuda)
+	if(${CUDA_FOUND})
+		add_definitions(-DGPU_BLAS)
+	endif(${CUDA_FOUND})
 endif()
 
 hunter_add_package(LAPACK) # only in effect if HUNTER_ENABLED is set
@@ -250,14 +250,14 @@ else()
   endif()
 endif()
 
-IF(BUILD_METIS)
+if(BUILD_METIS)
 	set(SuiteSparse_LINKER_METIS_LIBS "metis")
 	## namespaced library target for config
 	set(SuiteSparse_EXPORTED_METIS_LIBS "SuiteSparse::metis")
 else()
 	set(SuiteSparse_LINKER_METIS_LIBS "")
 	set(SuiteSparse_EXPORTED_METIS_LIBS "")
-ENDIF()
+endif()
 
 add_subdirectory(SuiteSparse)
 

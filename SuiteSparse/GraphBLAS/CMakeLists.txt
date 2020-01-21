@@ -233,7 +233,7 @@ endif ( )
 
 file ( GLOB GRAPHBLAS_SOURCES "Source/*.c" "Source/Generated/*.c" )
 add_library ( graphblas SHARED ${GRAPHBLAS_SOURCES} )
-SET_TARGET_PROPERTIES ( graphblas PROPERTIES
+set_target_properties ( graphblas PROPERTIES
     VERSION ${GraphBLAS_VERSION_MAJOR}.${GraphBLAS_VERSION_MINOR}.${GraphBLAS_VERSION_SUB}
     SOVERSION ${GraphBLAS_VERSION_MAJOR}
     C_STANDARD_REQUIRED 11
@@ -245,7 +245,7 @@ set_property ( TARGET graphblas PROPERTY C_STANDARD 11 )
 #-------------------------------------------------------------------------------
 
 add_library ( graphblas_static STATIC ${GRAPHBLAS_SOURCES} )
-SET_TARGET_PROPERTIES ( graphblas_static PROPERTIES
+set_target_properties ( graphblas_static PROPERTIES
     VERSION ${GraphBLAS_VERSION_MAJOR}.${GraphBLAS_VERSION_MINOR}.${GraphBLAS_VERSION_SUB}
     OUTPUT_NAME graphblas
     POSITION_INDEPENDENT_CODE OFF
@@ -343,12 +343,12 @@ install ( TARGETS graphblas graphblas_static
 
 file ( GLOB DEMO_SOURCES "Demo/Source/*.c" )
 add_library ( graphblasdemo SHARED ${DEMO_SOURCES} )
-SET_TARGET_PROPERTIES ( graphblasdemo PROPERTIES
+set_target_properties ( graphblasdemo PROPERTIES
     C_STANDARD_REQUIRED 11 )
 set_property ( TARGET graphblasdemo PROPERTY C_STANDARD 11 )
 
 add_library ( graphblasdemo_static STATIC ${DEMO_SOURCES} )
-SET_TARGET_PROPERTIES ( graphblasdemo_static PROPERTIES
+set_target_properties ( graphblasdemo_static PROPERTIES
     C_STANDARD_REQUIRED 11 )
 set_property ( TARGET graphblasdemo_static PROPERTY C_STANDARD 11 )
 

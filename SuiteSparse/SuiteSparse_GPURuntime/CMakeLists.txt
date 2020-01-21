@@ -1,14 +1,14 @@
-PROJECT("SuiteSparse_GPURuntime")
+project("SuiteSparse_GPURuntime")
 
 
-FILE(GLOB LIBHDRS "Include/*.hpp")
-FILE(GLOB LIBSRCS "Source/*.cpp")
-INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/Include")
+file(GLOB LIBHDRS "Include/*.hpp")
+file(GLOB LIBSRCS "Source/*.cpp")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/Include")
 
-SET(SuiteSparse_GPURuntime_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/Include" PARENT_SCOPE)
-FIND_PACKAGE(CUDA REQUIRED)
-INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
+set(SuiteSparse_GPURuntime_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/Include" PARENT_SCOPE)
+find_package(CUDA REQUIRED)
+include_directories(${CUDA_INCLUDE_DIRS})
 include_directories("${suitesparseconfig_SOURCE_DIR}")
-ADD_LIBRARY(SuiteSparse_GPURuntime ${LIBHDRS} ${LIBSRCS})
+add_library(SuiteSparse_GPURuntime ${LIBHDRS} ${LIBSRCS})
 target_link_libraries(SuiteSparse_GPURuntime suitesparseconfig ${CUDA_LIBRARIES})
 install_suitesparse_project(SuiteSparse_GPURuntime "${LIBHDRS}")

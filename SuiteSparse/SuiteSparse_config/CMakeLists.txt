@@ -1,8 +1,8 @@
-PROJECT(suitesparseconfig)
+project(suitesparseconfig)
 
 include_directories("${suitesparseconfig_SOURCE_DIR}")
 
-ADD_LIBRARY(suitesparseconfig STATIC
+add_library(suitesparseconfig STATIC
 	SuiteSparse_config.c
 	SuiteSparse_config.h
 	)
