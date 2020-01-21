@@ -56,42 +56,47 @@ An example to test CUDA support can be found [here](https://gist.github.com/andr
 ## 3. Integration in your code (unique code for Windows/Linux)
 
 
-  * Add a block like this to your CMake code (see complete [example](https://github.com/jlblancoc/suitesparse-metis-for-windows/blob/master/example-projects/cholmod/CMakeLists.txt)):
-
+  * Add a block like this to your CMake code (see complete [example](https://github.com/jlblancoc/suitesparse-metis-for-windows/blob/master/example-projects/cholmod/CMakeLists.txt)), and set the CMake variable `SuiteSparse_DIR` to
+  `SP_INSTALL_DIR/lib/cmake/suitesparse-5.4.0/` or the equivalent place where `SuiteSparse-config.cmake` was installed.
 
     ```
-    #...
-
     # ------------------------------------------------------------------
     # Detect SuiteSparse libraries:
     # If not found automatically, set SuiteSparse_DIR in CMake to the
-    # directory where SuiteSparse was built.
+    # directory where SuiteSparse-config.cmake was installed.
     # ------------------------------------------------------------------
-    LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/..") # Add the directory where FindSuiteSparse.cmake module can be found.
+    find_package(SuiteSparse CONFIG REQUIRED)
+    target_link_libraries(MY_PROGRAM PRIVATE ${SuiteSparse_LIBRARIES})
 
-    set(SuiteSparse_USE_LAPACK_BLAS ON)
-    find_package(SuiteSparse QUIET NO_MODULE)  # 1st: Try to locate the *config.cmake file.
-    if(NOT SuiteSparse_FOUND)
-            set(SuiteSparse_VERBOSE ON)
-            find_package(SuiteSparse REQUIRED) # 2nd: Use FindSuiteSparse.cmake module
-            include_directories(${SuiteSparse_INCLUDE_DIRS})
-    else()
-            message(STATUS "Find SuiteSparse : include(${USE_SuiteSparse})")
-            include(${USE_SuiteSparse})
-    endif()
-    MESSAGE(STATUS "SuiteSparse_LIBS: ${SuiteSparse_LIBRARIES}")
-    # ------------------------------------------------------------------
-    #   End of SuiteSparse detection
-    # ------------------------------------------------------------------
-
-    #...
-
-    #TARGET_LINK_LIBRARIES(MY_PROGRAM ${SuiteSparse_LIBRARIES})
+    # or directly add only the libs you need:
+    target_link_libraries(MY_PROGRAM PRIVATE
+      	SuiteSparse::suitesparseconfig
+      	SuiteSparse::amd
+      	SuiteSparse::btf
+      	SuiteSparse::camd
+      	SuiteSparse::ccolamd
+      	SuiteSparse::colamd
+      	SuiteSparse::cholmod
+      	SuiteSparse::cxsparse
+      	SuiteSparse::klu
+      	SuiteSparse::ldl
+      	SuiteSparse::umfpack
+      	SuiteSparse::spqr
+      	SuiteSparse::metis
+      )
     ```
 
+  * In Windows, if you have a CMake error like:
 
-Remember to set **`SuiteSparse_DIR` to the install directory**, if CMake does not find it automatically. This will not be required when suitesparse is available as a system library in a Unix/Linux environment.
+    ```
+    Could not find a package configuration file provided by "LAPACK" with any
+     of the following names:
 
+       LAPACKConfig.cmake
+       lapack-config.cmake
+    ```
+
+    set the CMake variable `LAPACK_DIR` to `SP_ROOT/lapack_windows/x64/` (or `x32` for 32bit builds).
 
 
 ## 4. Why did you create this project?

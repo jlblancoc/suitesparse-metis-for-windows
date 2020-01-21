@@ -6,12 +6,7 @@
 # -----------------------------------------------------------------
 
 # Hunter stuff must be included before project()
-if (WIN32)
-  set(HUNTER_ENABLED_DEFAULT ON)
-else()
-  set(HUNTER_ENABLED_DEFAULT OFF)
-endif()
-option(HUNTER_ENABLED "Enable Hunter package manager support" ${HUNTER_ENABLED_DEFAULT})
+option(HUNTER_ENABLED "Enable Hunter package manager support" OFF)
 
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.12.0")
   cmake_policy(SET CMP0074 NEW) # Use PKG_ROOT variables.
@@ -228,6 +223,10 @@ endif()
 
 hunter_add_package(LAPACK) # only in effect if HUNTER_ENABLED is set
 # prefer LAPACK config file
+if (WIN32)
+  set(LAPACK_DIR "lapack_windows/x64/" CACHE PATH "LAPACK directory" )
+endif()
+
 find_package(LAPACK CONFIG)
 if (LAPACK_FOUND AND TARGET blas AND TARGET lapack)
   message(STATUS "found lapack and blas config file. Linking targets lapack and blas")

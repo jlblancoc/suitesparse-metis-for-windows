@@ -7,12 +7,7 @@
 # -----------------------------------------------
 
 # Hunter stuff must be included before project()
-if (WIN32)
-  set(HUNTER_ENABLED_DEFAULT ON)
-else()
-  set(HUNTER_ENABLED_DEFAULT OFF)
-endif()
-option(HUNTER_ENABLED "Enable Hunter package manager support" ${HUNTER_ENABLED_DEFAULT})
+option(HUNTER_ENABLED "Enable Hunter package manager support" OFF)
 include("../../cmake/HunterGate.cmake")
 HunterGate(
     URL "https://github.com/cpp-pm/hunter/archive/v0.23.244.tar.gz"
