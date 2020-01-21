@@ -5,9 +5,19 @@
 # Updated by jesnault (jerome.esnault@inria.fr) 2014-01-21
 # -----------------------------------------------------------------
 
-option(HUNTER_ENABLED "Enable Hunter package manager support" OFF)
-include(cmake/HunterGate.cmake)
+# Hunter stuff must be included before project()
+if (WIN32)
+  set(HUNTER_ENABLED_DEFAULT ON)
+else()
+  set(HUNTER_ENABLED_DEFAULT OFF)
+endif()
+option(HUNTER_ENABLED "Enable Hunter package manager support" ${HUNTER_ENABLED_DEFAULT})
 
+if(NOT ${CMAKE_VERSION} VERSION_LESS "3.12.0")
+  cmake_policy(SET CMP0074 NEW) # Use PKG_ROOT variables.
+endif()
+
+include(cmake/HunterGate.cmake)
 HunterGate(
   URL "https://github.com/ruslo/hunter/archive/v0.23.214.tar.gz"
   SHA1 "e14bc153a7f16d6a5eeec845fb0283c8fad8c358"
