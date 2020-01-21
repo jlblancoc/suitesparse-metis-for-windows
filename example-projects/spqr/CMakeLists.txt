@@ -6,11 +6,17 @@
 # Updated by NeroBurner (pyro4hell@gmail.com) 2019-04-11
 # -----------------------------------------------
 
-option(HUNTER_ENABLED "Enable Hunter package manager support" OFF)
+# Hunter stuff must be included before project()
+if (WIN32)
+  set(HUNTER_ENABLED_DEFAULT ON)
+else()
+  set(HUNTER_ENABLED_DEFAULT OFF)
+endif()
+option(HUNTER_ENABLED "Enable Hunter package manager support" ${HUNTER_ENABLED_DEFAULT})
 include("../../cmake/HunterGate.cmake")
 HunterGate(
-  URL "https://github.com/ruslo/hunter/archive/v0.23.34.tar.gz"
-  SHA1 "70287b1ffa810ee4e952052a9adff9b4856d0d54"
+    URL "https://github.com/cpp-pm/hunter/archive/v0.23.244.tar.gz"
+    SHA1 "2c0f491fd0b80f7b09e3d21adb97237161ef9835"
 )
 
 project(SPQR_example CXX)
