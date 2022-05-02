@@ -7,6 +7,8 @@
 
 # Hunter stuff must be included before project()
 option(HUNTER_ENABLED "Enable Hunter package manager support" OFF)
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(WITH_TBB "Enable using TBB" OFF)
 
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.12.0")
   cmake_policy(SET CMP0074 NEW) # Use PKG_ROOT variables.
@@ -36,7 +38,7 @@ include(checkGetSuiteSparse.cmake)
 
 if(BUILD_SHARED_LIBS)
 	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif(BUILD_SHARED_LIBS)
+endif()
 
 
 set(LIBRARY_OUTPUT_PATH ${${PROJECT_NAME}_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
@@ -198,6 +200,11 @@ macro(declare_suitesparse_library targetName srcsList headersList)
 			 ${dsl_TARGET_PUBLIC_LINK} suitesparseconfig ## suitesparseconfig is used for every projects (embedded into cmake build)
 		 ${dsl_TARGET_PRIVATE_LINK}	## external required libs
 	)
+
+	if (WITH_TBB)
+		target_link_libraries(${targetName} ${dsl_TARGET_PRIVATE_LINK} tbb)
+		target_compile_definitions(${targetName} PRIVATE HAVE_TBB)
+	endif()
 
 	install_suitesparse_project(${targetName} "${headersList}")
 endmacro()
