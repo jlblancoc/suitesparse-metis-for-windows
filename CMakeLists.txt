@@ -16,8 +16,8 @@ endif()
 
 include(cmake/HunterGate.cmake)
 HunterGate(
-    URL "https://github.com/cpp-pm/hunter/archive/v0.23.244.tar.gz"
-    SHA1 "2c0f491fd0b80f7b09e3d21adb97237161ef9835"
+  URL "https://github.com/cpp-pm/hunter/archive/v0.24.9.tar.gz"
+  SHA1 "09b7e533d3da57eec51765aa73041ecd5ec94e60"
 )
 project(SuiteSparseProject)
 
