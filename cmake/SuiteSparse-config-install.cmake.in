@@ -5,14 +5,24 @@ get_filename_component(_SuiteSparse_PREFIX "${_SuiteSparse_PREFIX}" PATH)
 get_filename_component(_SuiteSparse_PREFIX "${_SuiteSparse_PREFIX}" PATH)
 
 include(CMakeFindDependencyMacro)
-if (@SuiteSparse_LAPACK_used_CONFIG@) # SuiteSparse_LAPACK_used_CONFIG
-  # use config file which provides LAPACK (and BLAS) for us
-  find_dependency(LAPACK CONFIG)
+set(_SuiteSparse_WITH_OPENBLAS @WITH_OPENBLAS)
+if (_SuiteSparse_WITH_OPENBLAS)
+  # SuiteSparse was built with OpenBLAS::OpenBLAS cmake target
+  # client projects should use OpenBLAS as well to not mix BLAS/LAPACK
+  # implementations
+  find_dependency(OpenBLAS CONFIG)
+  set(BLA_VENDOR OpenBLAS)
 else()
-  # try to find BLAS and LAPACK with modules
-  find_dependency(BLAS)
-  find_dependency(LAPACK)
-endif ()
+  set(_SuiteSparse_LAPACK_used_CONFIG @SuiteSparse_LAPACK_used_CONFIG@)
+  if (_SuiteSparse_LAPACK_used_CONFIG)
+    # use config file which provides LAPACK (and BLAS) for us
+    find_dependency(LAPACK CONFIG)
+  else()
+    # try to find BLAS and LAPACK with modules
+    find_dependency(BLAS)
+    find_dependency(LAPACK)
+  endif()
+endif()
 
 # Load targets from the install tree.
 include(${_SuiteSparse_SELF_DIR}/SuiteSparse-targets.cmake)
