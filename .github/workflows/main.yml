@@ -1,0 +1,92 @@
+name: build-with-cmake
+on:
+  push: # all pushes
+  workflow_dispatch: # started manually
+  pull_request:
+    branches: [ master ] # PRs against the master branch
+
+jobs:
+  job:
+    name: ${{ matrix.os }}-${{ matrix.toolchain }}-${{ github.workflow }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows MSVC jobs
+          - os: windows-latest
+            toolchain: vs-win64
+            vsversion: 2022 # for ilammy/msvc-dev-cmd to setup vsdevcmd
+            BUILD_METIS: "ON"
+          # remove C++17 build in favor of newer C++20 build
+          #- os: windows-latest
+          #  toolchain: vs-win64-cxx17
+          #  vsversion: 2022
+          #  BUILD_METIS: "ON"
+          - os: windows-latest
+            toolchain: vs-win64-cxx20
+            vsversion: 2022
+            BUILD_METIS: "ON"
+
+          # Linux GCC jobs
+          - os: ubuntu-22.04
+            toolchain: gcc-cxx11
+            BUILD_METIS: "ON"
+          # remove C++17 build in favor of newer C++20 build
+          #- os: ubuntu-22.04
+          #  toolchain: gcc-cxx17
+          #  BUILD_METIS: "ON"
+          - os: ubuntu-22.04
+            toolchain: gcc-cxx20
+            BUILD_METIS: "ON"
+
+          # Linux Clang jobs
+          # remove C++17 build in favor of newer C++20 build
+          #- os: ubuntu-22.04
+          #  toolchain: clang-cxx17
+          #  BUILD_METIS: "OFF"
+          - os: ubuntu-22.04
+            toolchain: clang-cxx20
+            BUILD_METIS: "OFF"
+
+          # Linux MinGW cross compile jobs
+          # Disabled mingw builds, error with "multiple definition of `SuiteSparse_malloc'"
+          #- os: ubuntu-22.04
+          #  toolchain: linux-mingw-w64-cxx11
+          #  BUILD_METIS: "OFF"
+          #- os: ubuntu-22.04
+          #  toolchain: linux-mingw-w64-cxx17
+          #  BUILD_METIS: "OFF"
+
+    steps:
+      - name: "Update apt chache to install build dependencies"
+        run: sudo apt-get update -q
+        if: startsWith(matrix.os, 'ubuntu')
+      - name: "Install BLAS/LAPACK Linux dependencies"
+        run: sudo apt install -yq libblas-dev liblapack-dev
+        if: startsWith(matrix.os, 'ubuntu')
+      - name: "Install mingw-w64 for Linux cross compile"
+        run: sudo apt install -yq mingw-w64 wine-stable
+        if: startsWith(matrix.toolchain, 'linux-mingw')
+
+      - uses: actions/checkout@v3
+
+      - uses: lukka/get-cmake@latest
+
+      # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly. As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          vsversion: ${{ matrix.vsversion }}
+        if: startsWith(matrix.os, 'windows')
+
+      # Run CMake to generate Ninja project files
+      - name: Configure CMake project
+        run: |
+          cmake -S . -B build -G "Ninja" -DCMAKE_TOOLCHAIN_FILE="ci/toolchains/${{ matrix.toolchain }}.cmake" -DBUILD_METIS=${{ matrix.BUILD_METIS }}
+        working-directory: "${{ github.workspace }}"
+
+      # Build the whole project with Ninja (which is spawn by CMake).
+      - name: Build
+        run: |
+          cmake --build build --config Release
+        working-directory: "${{ github.workspace }}"
