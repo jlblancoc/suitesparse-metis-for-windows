@@ -9,6 +9,7 @@
 option(HUNTER_ENABLED "Enable Hunter package manager support" OFF)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(WITH_TBB "Enable using TBB" OFF)
+option(WITH_OPENBLAS "Build with OpenBLAS instead of generic BLAS/LAPACK" OFF)
 
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.12.0")
   cmake_policy(SET CMP0074 NEW) # Use PKG_ROOT variables.
@@ -16,8 +17,8 @@ endif()
 
 include(cmake/HunterGate.cmake)
 HunterGate(
-    URL "https://github.com/cpp-pm/hunter/archive/v0.23.244.tar.gz"
-    SHA1 "2c0f491fd0b80f7b09e3d21adb97237161ef9835"
+  URL "https://github.com/cpp-pm/hunter/archive/v0.24.9.tar.gz"
+  SHA1 "09b7e533d3da57eec51765aa73041ecd5ec94e60"
 )
 project(SuiteSparseProject)
 
@@ -228,32 +229,50 @@ if(WITH_CUDA)
 	endif(${CUDA_FOUND})
 endif()
 
-hunter_add_package(LAPACK) # only in effect if HUNTER_ENABLED is set
-# prefer LAPACK config file
-if (WIN32)
-  set(LAPACK_DIR "lapack_windows/x64/" CACHE PATH "LAPACK directory" )
-endif()
-
-find_package(LAPACK CONFIG)
-if (LAPACK_FOUND AND TARGET blas AND TARGET lapack)
-  message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
-  message(STATUS "- LAPACK_CONFIG: ${LAPACK_CONFIG}")
-  set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas)
-  # for suitesparse-config file set method used to find LAPACK (and BLAS)
-  set(SuiteSparse_LAPACK_used_CONFIG YES)
+if (WITH_OPENBLAS)
+  # Starting with OpenBLAS v0.3.21 a f2c-converted copy of LAPACK 3.9.0
+  # is included and used if no fortran compiler is available. This
+  # means we can compile OpenBLAS to provide BLAS and LAPACK functionality
+  # with a regular C++ compiler like MSVC or GCC. This includes compiling
+  # everything as a static library. If that library is later used to compile
+  # an executable the executable can run without any external dependencies
+  # (like fortran runtimes or lapack dlls)
+  # When building OpenBLAS be sure to use 'BUILD_WITHOUT_LAPACK=NO' and
+  # mabye with 'NOFORTAN=1' to get a pure C++ OpenBLAS library (with the
+  # benefits described above)
+  hunter_add_package(OpenBLAS)
+  find_package(OpenBLAS CONFIG REQUIRED)
+  message(STATUS "found OpenBLAS config file. Linking target OpenBLAS::OpenBLAS")
+  set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS OpenBLAS::OpenBLAS)
+  set(BLA_VENDOR OpenBLAS)
 else()
-  # missing config file or targets, try BLAS and LAPACK
-  find_package(BLAS)
-  find_package(LAPACK)
-  if (BLAS_FOUND AND LAPACK_FOUND)
+  hunter_add_package(LAPACK) # only in effect if HUNTER_ENABLED is set
+  # prefer LAPACK config file
+  if (WIN32)
+    set(LAPACK_DIR "lapack_windows/x64/" CACHE PATH "LAPACK directory" )
+  endif()
+
+  find_package(LAPACK CONFIG)
+  if (LAPACK_FOUND AND TARGET blas AND TARGET lapack)
     message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
-    message(STATUS "- LAPACK_LIBRARIES: ${LAPACK_LIBRARIES}")
-    message(STATUS "- BLAS_LIBRARIES:   ${BLAS_LIBRARIES}")
-    set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+    message(STATUS "- LAPACK_CONFIG: ${LAPACK_CONFIG}")
+    set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS lapack blas)
     # for suitesparse-config file set method used to find LAPACK (and BLAS)
-    set(SuiteSparse_LAPACK_used_CONFIG NO)
-  else () # LAPACK is not found
-    message(FATAL_ERROR "lapack not found")
+    set(SuiteSparse_LAPACK_used_CONFIG YES)
+  else()
+    # missing config file or targets, try BLAS and LAPACK
+    find_package(BLAS)
+    find_package(LAPACK)
+    if (BLAS_FOUND AND LAPACK_FOUND)
+      message(STATUS "found lapack and blas config file. Linking targets lapack and blas")
+      message(STATUS "- LAPACK_LIBRARIES: ${LAPACK_LIBRARIES}")
+      message(STATUS "- BLAS_LIBRARIES:   ${BLAS_LIBRARIES}")
+      set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+      # for suitesparse-config file set method used to find LAPACK (and BLAS)
+      set(SuiteSparse_LAPACK_used_CONFIG NO)
+    else () # LAPACK is not found
+      message(FATAL_ERROR "lapack not found")
+    endif()
   endif()
 endif()
 

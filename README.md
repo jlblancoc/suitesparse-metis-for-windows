@@ -44,6 +44,17 @@ The goal is using one single CMake code to build against *SuiteSparse* in standa
 
   * (7) Only for Windows: You will have to append `CMAKE_INSTALL_PREFIX\lib*\lapack_blas_windows\` and `CMAKE_INSTALL_PREFIX\lib*` to the environment variable `PATH` before executing any program, for Windows to localize the required BLAS/Fortran libraries (`.DLL`s).
 
+### 1.2 Using OpenBLAS as alternative to generic BLAS/LAPACK
+
+Starting with `v0.3.21` OpenBLAS ships with an f2c-converted copy of LAPACK `v3.9.0` which is used if no fortran compiler is available.
+This means we can compile OpenBLAS to provide BLAS and LAPACK functionality with a regular C++ compiler like MSVC or GCC.
+This includes compiling everything as a static library.
+If that library is later used to compile an executable the executable can run without any external dependencies (like fortran runtimes or lapack dlls in the generic fortran based BLAS and LAPACK implementation).
+
+When building OpenBLAS yourself be sure to use `BUILD_WITHOUT_LAPACK=NO` and `NOFORTAN=1` when configuring OpenBLAS with CMake to get a pure C++ OpenBLAS library (with the benefits described above).
+
+To tell SuiteSparse to build against this OpenBLAS implementation set the option `WITH_OPENBLAS=ON`.
+
 
 ## 2. Test program
 
