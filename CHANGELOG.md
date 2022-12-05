@@ -1,5 +1,5 @@
-# unreleased
-- update copy of HunterGate to v0.9.2 to fix Hunter build
+# Release 1.6.1: December 5th, 2022
+- update copy of HunterGate to v0.9.2 to fix Hunter build [#108](https://github.com/jlblancoc/suitesparse-metis-for-windows/pull/108)
 
 # Release 1.6.0: December 3rd, 2022
 - Add option WITH_OPENBLAS to replace generic BLAS and LAPACK (See README for details)
