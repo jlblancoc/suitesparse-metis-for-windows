@@ -1,3 +1,6 @@
+# unreleased
+- update copy of HunterGate to v0.9.2 to fix Hunter build
+
 # Release 1.6.0: December 3rd, 2022
 - Add option WITH_OPENBLAS to replace generic BLAS and LAPACK (See README for details)
 - Hunter: update to v0.24.9 for OpenBLAS v0.3.21
