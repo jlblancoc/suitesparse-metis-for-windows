@@ -118,7 +118,7 @@ if(BUILD_METIS)
 			)
 		endif()
 	endif()
-    add_subdirectory(SuiteSparse/metis-5.1.0) ## important part for building metis from its src files
+  add_subdirectory("${METIS_DIR}" "metis") ## important part for building metis from its src files
 
   # extract METIS version string from metis.h header
   set(_METIS_VERSION_HEADER ${METIS_DIR}/include/metis.h)
