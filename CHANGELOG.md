@@ -1,3 +1,6 @@
+# Unreleased
+- If `BUILD_METIS=ON` extract and provide `SuiteSparse_METIS_VERSION` in generated config [#109](https://github.com/jlblancoc/suitesparse-metis-for-windows/issues/109)
+
 # Release 1.6.1: December 5th, 2022
 - update copy of HunterGate to v0.9.2 to fix Hunter build [#108](https://github.com/jlblancoc/suitesparse-metis-for-windows/pull/108)
 

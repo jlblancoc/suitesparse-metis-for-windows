@@ -46,6 +46,9 @@ set(SuiteSparse_LIBRARIES
 	SuiteSparse::spqr
 	@SuiteSparse_EXPORTED_METIS_LIBS@
 )
+if(TARGET SuiteSparse::metis)
+  set(SuiteSparse_METIS_VERSION "@SuiteSparse_METIS_VERSION@")
+endif()
 
 unset(_SuiteSparse_PREFIX)
 unset(_SuiteSparse_SELF_DIR)

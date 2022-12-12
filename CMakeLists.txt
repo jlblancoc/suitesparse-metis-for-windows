@@ -119,6 +119,31 @@ if(BUILD_METIS)
 		endif()
 	endif()
     add_subdirectory(SuiteSparse/metis-5.1.0) ## important part for building metis from its src files
+
+  # extract METIS version string from metis.h header
+  set(_METIS_VERSION_HEADER ${METIS_DIR}/include/metis.h)
+  file(READ ${_METIS_VERSION_HEADER} _METIS_VERSION_CONTENTS)
+  string(REGEX REPLACE ".*#define METIS_VER_MAJOR[ \t]+([0-9]+).*" "\\1"
+    METIS_VERSION_MAJOR "${_METIS_VERSION_CONTENTS}")
+  string(REGEX REPLACE ".*#define METIS_VER_MINOR[ \t]+([0-9]+).*" "\\1"
+    METIS_VERSION_MINOR "${_METIS_VERSION_CONTENTS}")
+  string(REGEX REPLACE ".*#define METIS_VER_SUBMINOR[ \t]+([0-9]+).*" "\\1"
+    METIS_VERSION_PATCH "${_METIS_VERSION_CONTENTS}")
+  # combine in one variable later passed to generated cmake config file
+  set(SuiteSparse_METIS_VERSION
+    ${METIS_VERSION_MAJOR}.${METIS_VERSION_MINOR}.${METIS_VERSION_PATCH})
+  message(STATUS "METIS: building with SuiteSparse_METIS_VERSION '${SuiteSparse_METIS_VERSION}'")
+  # some sanity checks if we managed to extract METIS version numbers
+  if ("${METIS_VERSION_MAJOR}" STREQUAL "")
+    message(FATAL_ERROR "METIS: error extracting METIS_VER_MAJOR from metis.h file at '${_METIS_VERSION_HEADER}'")
+  endif()
+  if ("${METIS_VERSION_MINOR}" STREQUAL "")
+    message(FATAL_ERROR "METIS: error extracting METIS_VER_MINOR from metis.h file at '${_METIS_VERSION_HEADER}'")
+  endif()
+  if ("${METIS_VERSION_PATCH}" STREQUAL "")
+    message(FATAL_ERROR "METIS: error extracting METIS_VER_PATCH from metis.h file at '${_METIS_VERSION_HEADER}'")
+  endif()
+
 endif(BUILD_METIS)
 
 
