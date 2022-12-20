@@ -5,7 +5,7 @@ get_filename_component(_SuiteSparse_PREFIX "${_SuiteSparse_PREFIX}" PATH)
 get_filename_component(_SuiteSparse_PREFIX "${_SuiteSparse_PREFIX}" PATH)
 
 include(CMakeFindDependencyMacro)
-set(_SuiteSparse_WITH_OPENBLAS @WITH_OPENBLAS)
+set(_SuiteSparse_WITH_OPENBLAS @WITH_OPENBLAS@)
 if (_SuiteSparse_WITH_OPENBLAS)
   # SuiteSparse was built with OpenBLAS::OpenBLAS cmake target
   # client projects should use OpenBLAS as well to not mix BLAS/LAPACK
