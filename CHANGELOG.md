@@ -1,6 +1,9 @@
 # Unreleased
+
+# Release 1.7.0: December 21st, 2022
 - If `BUILD_METIS=ON` extract and provide `SuiteSparse_METIS_VERSION` in generated config [#109](https://github.com/jlblancoc/suitesparse-metis-for-windows/issues/109)
 - Fix `METIS_DIR` not used for `add_subdirectory()` call [#110](https://github.com/jlblancoc/suitesparse-metis-for-windows/issues/110)
+- Fix `@WITH_OPENBLAS` substitution in generated cmake-config file [#113](https://github.com/jlblancoc/suitesparse-metis-for-windows/pull/113)
 
 # Release 1.6.1: December 5th, 2022
 - update copy of HunterGate to v0.9.2 to fix Hunter build [#108](https://github.com/jlblancoc/suitesparse-metis-for-windows/pull/108)
