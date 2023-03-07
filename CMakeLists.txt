@@ -10,6 +10,7 @@ option(HUNTER_ENABLED "Enable Hunter package manager support" OFF)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(WITH_TBB "Enable using TBB" OFF)
 option(WITH_OPENBLAS "Build with OpenBLAS instead of generic BLAS/LAPACK" OFF)
+option(WITH_MKL "Build with MKL instead of generic BLAS/LAPACK" OFF)
 
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.12.0")
   cmake_policy(SET CMP0074 NEW) # Use PKG_ROOT variables.
@@ -270,6 +271,14 @@ if (WITH_OPENBLAS)
   message(STATUS "found OpenBLAS config file. Linking target OpenBLAS::OpenBLAS")
   set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS OpenBLAS::OpenBLAS)
   set(BLA_VENDOR OpenBLAS)
+elseif (WITH_MKL)
+  hunter_add_package(mkl)
+  set(BLA_VENDOR "Intel10_64lp")
+  find_package(BLAS REQUIRED)
+  find_package(LAPACK REQUIRED)
+  set(SuiteSparse_LINKER_LAPACK_BLAS_LIBS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+  # for suitesparse-config file set method used to find LAPACK (and BLAS)
+  set(SuiteSparse_LAPACK_used_CONFIG NO)
 else()
   hunter_add_package(LAPACK) # only in effect if HUNTER_ENABLED is set
   # prefer LAPACK config file
