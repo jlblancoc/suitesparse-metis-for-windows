@@ -20,7 +20,7 @@ endif(SHARED)
 include(${GKLIB_PATH}/GKlibSystem.cmake)
 # Add include directories.
 include_directories(${GKLIB_PATH})
-include_directories(include)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 # Recursively look for CMakeLists.txt in subdirs.
 add_subdirectory("include")
 add_subdirectory("libmetis")

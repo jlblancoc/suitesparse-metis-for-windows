@@ -107,7 +107,7 @@ if(BUILD_METIS)
 		if(NOT alreadyModified)
 			file(APPEND "${METIS_DIR}/libmetis/CMakeLists.txt"
 			"
-				set_target_properties(metis PROPERTIES PUBLIC_HEADER \"../include/metis.h\")
+				set_target_properties(metis PROPERTIES PUBLIC_HEADER \"\${CMAKE_CURRENT_BINARY_DIR}/../include/metis.h\")
 				install(TARGETS metis ## this line is also the string pattern to check if the modification had already done
 						EXPORT 	SuiteSparseTargets
 						RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
