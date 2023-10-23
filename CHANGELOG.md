@@ -1,4 +1,5 @@
 # Unreleased
+- Increase minimum required CMake version to v3.5 to prevent deprecation warnings [#117](https://github.com/jlblancoc/suitesparse-metis-for-windows/issues/117).
 
 # Release 1.7.0: December 21st, 2022
 - If `BUILD_METIS=ON` extract and provide `SuiteSparse_METIS_VERSION` in generated config [#109](https://github.com/jlblancoc/suitesparse-metis-for-windows/issues/109)
