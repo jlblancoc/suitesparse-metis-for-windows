@@ -21,9 +21,9 @@ HunterGate(
   URL "https://github.com/cpp-pm/hunter/archive/v0.24.9.tar.gz"
   SHA1 "09b7e533d3da57eec51765aa73041ecd5ec94e60"
 )
-project(SuiteSparseProject)
+cmake_minimum_required(VERSION 3.5)
 
-cmake_minimum_required(VERSION 3.1)
+project(SuiteSparseProject)
 
 # https://cmake.org/cmake/help/latest/prop_tgt/CXX_STANDARD.html
 string(COMPARE EQUAL "${CMAKE_CXX_STANDARD}" "" no_cmake_cxx_standard_set)
