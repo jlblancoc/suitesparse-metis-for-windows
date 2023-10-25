@@ -1,4 +1,6 @@
 # Unreleased
+
+# Release 1.8.0: October 25th, 2023
 - Increase minimum required CMake version to v3.5 to prevent deprecation warnings [#117](https://github.com/jlblancoc/suitesparse-metis-for-windows/issues/117).
 - Add option `METIS_IDXTYPEWIDTH` with default `64` to override the index type used for `metis.h` [#116](https://github.com/jlblancoc/suitesparse-metis-for-windows/issues/116).
 
