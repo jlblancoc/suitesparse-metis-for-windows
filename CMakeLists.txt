@@ -332,24 +332,25 @@ macro(get_SuiteSparse_Version)
 
   file(READ ${_SuiteSparse_VERSION_FILE} SUITESPARSE_CONFIG_CONTENTS)
 
-  string(REGEX MATCH "#define SUITESPARSE_MAIN_VERSION [0-9]+"
+  string(REGEX MATCH "#define SUITESPARSE_MAIN_VERSION[ ]+[0-9]+"
     SuiteSparse_VERSION_MAJOR "${SUITESPARSE_CONFIG_CONTENTS}")
-  string(REGEX REPLACE "#define SUITESPARSE_MAIN_VERSION ([0-9]+)" "\\1"
+  string(REGEX REPLACE "#define SUITESPARSE_MAIN_VERSION[ ]+([0-9]+)" "\\1"
     SuiteSparse_VERSION_MAJOR "${SuiteSparse_VERSION_MAJOR}")
 
-  string(REGEX MATCH "#define SUITESPARSE_SUB_VERSION [0-9]+"
+  string(REGEX MATCH "#define SUITESPARSE_SUB_VERSION[ ]+[0-9]+"
     SuiteSparse_VERSION_MINOR "${SUITESPARSE_CONFIG_CONTENTS}")
-  string(REGEX REPLACE "#define SUITESPARSE_SUB_VERSION ([0-9]+)" "\\1"
+  string(REGEX REPLACE "#define SUITESPARSE_SUB_VERSION[ ]+([0-9]+)" "\\1"
     SuiteSparse_VERSION_MINOR "${SuiteSparse_VERSION_MINOR}")
 
-  string(REGEX MATCH "#define SUITESPARSE_SUBSUB_VERSION [0-9]+"
+  string(REGEX MATCH "#define SUITESPARSE_SUBSUB_VERSION[ ]+[0-9]+"
     SuiteSparse_VERSION_PATCH "${SUITESPARSE_CONFIG_CONTENTS}")
-  string(REGEX REPLACE "#define SUITESPARSE_SUBSUB_VERSION ([0-9]+)" "\\1"
+  string(REGEX REPLACE "#define SUITESPARSE_SUBSUB_VERSION[ ]+([0-9]+)" "\\1"
     SuiteSparse_VERSION_PATCH "${SuiteSparse_VERSION_PATCH}")
 
   # set version string
   set(SuiteSparse_VERSION
     "${SuiteSparse_VERSION_MAJOR}.${SuiteSparse_VERSION_MINOR}.${SuiteSparse_VERSION_PATCH}")
+  message(STATUS "Extracted SuiteSparse version: ${SuiteSparse_VERSION}")
 endmacro()
 
 # get SuiteSparse version
