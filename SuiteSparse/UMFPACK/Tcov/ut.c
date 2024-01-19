@@ -1,13 +1,13 @@
-/* ========================================================================== */
-/* === umfpack tcov ========================================================= */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Tcov/ut.c: exhaustive test for UMFPACK
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2022, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
 
-/* (Nearly) exhaustive statement-coverage testing for UMFPACK.  */
+//------------------------------------------------------------------------------
+
+/* (Nearly) exhaustive statement-coverage testing for UMFPACK. */
 
 /* #define DEBUGGING */
 
@@ -29,6 +29,7 @@
 #include "umf_realloc.h"
 #include "umf_free.h"
 #include "umf_malloc.h"
+#include "umf_cholmod.h"
 
 /*
 #if defined (UMF_MALLOC_COUNT) || !defined (NDEBUG)
@@ -507,9 +508,10 @@ static double do_solvers
 	*y, *yz, *Rs, *Cx, *Cz ;
     double Con [UMFPACK_CONTROL] ;
     Int *noP = INULL, *noQ = INULL, irstep, orig, i, prl, status, n,
-	s1, s2, do_recip, *Cp, *Ci, nz, scale ;
+	do_recip, *Cp, *Ci, nz, scale ;
     Entry bb, xx, xtrue ;
     NumericType *Num ;
+    int s1, s2 ;
 
 #ifdef COMPLEX
     if (split)
@@ -1099,7 +1101,7 @@ static double do_solvers
 		error ("transposed (PAQ)'x=b failed\n", 0.) ;
 	    }
 	    rnorm = resid (n, Cp, Ci, Cx, Cz, x, xz, b, bz, r, rz, UMFPACK_A, noP, noQ, Wx) ;
-	    if (prl >= 2) printf ("99b: rnorm (PAQ)'x=b is %g\n", rnorm) ;
+	    if (prl >= 2) printf ("101b: rnorm (PAQ)'x=b is %g\n", rnorm) ;
 	    if (check_tol && rnorm > TOL)
 	    {
 		dump_mat ("A", n, n, Ap, Ai, CARG(Ax,Az)) ;
@@ -1639,9 +1641,9 @@ static double do_symnum
     void *Symbolic, *Numeric ;
     double *Lx, *Ux, *Lz, *Uz, rnorm, *Rs ;
     Int *noP = INULL, *noQ = INULL, *Li, *Ui, n, n_inner, n1, do_recip ;
-    Int lnz, unz, nz, nn, nfr, nchains, nsparse_col, status ;
+    Int lnz, unz, nz, nfr, nchains, nsparse_col, status ;
     Int *Front_npivots, *Front_parent, *Chain_start, *Chain_maxrows ;
-    Int *Chain_maxcols, *Lrowi, *Lrowp, is_singular ;
+    Int *Chain_maxcols, *Lrowi, *Lrowp, is_singular, *Dmap ;
     double Info [UMFPACK_INFO], *Lrowx, *Lrowz, *Dx, *Dz ;
     Int nnrow, nncol, nzud, *Front_1strow, *Front_leftmostdesc, prl, i ;
     double mind, maxd, rcond ;
@@ -1803,8 +1805,200 @@ static double do_symnum
 	{
 	    error ("load symbolic failed\n", 0.) ;
 	}
-
     }
+
+    //--------------------------------------------------------------------------
+    // test copy
+    //--------------------------------------------------------------------------
+
+    void *Symbolic_copy = NULL ;
+    status = UMFPACK_copy_symbolic (&Symbolic_copy, Symbolic) ;
+    if (status != UMFPACK_OK)
+    {
+        error ("copy symbolic failed\n", 0.) ;
+    }
+    UMFPACK_free_symbolic (&Symbolic) ;
+    Symbolic = Symbolic_copy ;
+    Symbolic_copy = NULL ;
+
+//  if (n < 15)
+    {
+        int umf_fail_save [3], memcnt ;
+
+        /* test memory handling */
+        umf_fail_save [0] = umf_fail ;
+        umf_fail_save [1] = umf_fail_lo ;
+        umf_fail_save [2] = umf_fail_hi ;
+
+        umf_fail = -1 ;
+        umf_fail_lo = 0 ;
+        umf_fail_hi = 0 ;
+
+        status = UMFPACK_copy_symbolic (&Symbolic_copy, Symbolic) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("copy symbolic failed\n", 0.) ;
+        }
+        UMFPACK_free_symbolic (&Symbolic) ;
+        Symbolic = Symbolic_copy ;
+        Symbolic_copy = NULL ;
+
+	Sym = (SymbolicType *) Symbolic ;
+	memcnt = 12 ;
+	if (Sym->esize > 0)
+	{
+	    memcnt++ ;
+	}
+	if (Sym->prefer_diagonal > 0)
+	{
+	    memcnt++ ;
+	}
+
+        for (i = 1 ; i <= memcnt ; i++)
+        {
+            umf_fail = i ;
+            status = UMFPACK_copy_symbolic (&Symbolic_copy, Symbolic) ;
+            if (status != UMFPACK_ERROR_out_of_memory)
+            {
+                error ("load symbolic should have failed\n", 0.) ;
+            }
+        }
+
+        umf_fail = memcnt + 1 ;
+
+        status = UMFPACK_copy_symbolic (&Symbolic_copy, Symbolic) ;
+        if (status != UMFPACK_OK)
+        {
+            printf ("memcnt %d\n", memcnt) ;
+            error ("copy symbolic failed (edge)\n", 0.) ;
+        }
+        UMFPACK_free_symbolic (&Symbolic) ;
+        Symbolic = Symbolic_copy ;
+        Symbolic_copy = NULL ;
+
+        umf_fail    = umf_fail_save [0] ;
+        umf_fail_lo = umf_fail_save [1] ;
+        umf_fail_hi = umf_fail_save [2] ;
+
+        status = UMFPACK_copy_symbolic (&Symbolic_copy, Symbolic) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("copy symbolic failed\n", 0.) ;
+        }
+        UMFPACK_free_symbolic (&Symbolic) ;
+        Symbolic = Symbolic_copy ;
+        Symbolic_copy = NULL ;
+    }
+
+    //--------------------------------------------------------------------------
+    // test serialize/deserialize
+    //--------------------------------------------------------------------------
+
+    // determine the required blobsize
+    int64_t S_blobsize ;
+    status = UMFPACK_serialize_symbolic_size (&S_blobsize, Symbolic) ;
+    if (status != UMFPACK_OK)
+    {
+	error ("UMFPACK_serialize_symbolic_size failed", 0.) ;
+    }
+    printf ("\nSymbolic blob size: %"PRId64"\n", S_blobsize) ;
+    // allocate the blob
+    int8_t *S_blob = malloc (S_blobsize) ;
+    if (!S_blob)
+    {
+	error ("out of memory", 0.) ;
+    }
+    // serialize the blob
+    status = UMFPACK_serialize_symbolic (S_blob, S_blobsize, Symbolic) ;
+    if (status != UMFPACK_OK)
+    {
+	error ("UMFPACK_serialize_symbolic failed", 0.) ;
+    }
+    // free the Symbolic object; its contents are preserved in the blob
+    UMFPACK_free_symbolic (&Symbolic) ;
+    // deserialize the blob back into the Symbolic object
+    status = UMFPACK_deserialize_symbolic (&Symbolic, S_blob, S_blobsize) ;
+    if (status < 0)
+    {
+	error ("UMFPACK_deserialize_symbolic failed", 0.) ;
+    }
+    printf ("\nDone serialize/deserialize of symbolic object\n") ;
+
+//  if (n < 15)
+    {
+        int umf_fail_save [3], memcnt ;
+
+        /* test memory handling */
+        umf_fail_save [0] = umf_fail ;
+        umf_fail_save [1] = umf_fail_lo ;
+        umf_fail_save [2] = umf_fail_hi ;
+
+        umf_fail = -1 ;
+        umf_fail_lo = 0 ;
+        umf_fail_hi = 0 ;
+
+        status = UMFPACK_serialize_symbolic (S_blob, S_blobsize, Symbolic) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("serialize symbolic failed\n", 0.) ;
+        }
+        status = UMFPACK_deserialize_symbolic (&Symbolic_copy, S_blob, S_blobsize) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("serialize symbolic failed\n", 0.) ;
+        }
+        UMFPACK_free_symbolic (&Symbolic) ;
+        Symbolic = Symbolic_copy ;
+        Symbolic_copy = NULL ;
+
+	Sym = (SymbolicType *) Symbolic ;
+	memcnt = 12 ;
+	if (Sym->esize > 0)
+	{
+	    memcnt++ ;
+	}
+	if (Sym->prefer_diagonal > 0)
+	{
+	    memcnt++ ;
+	}
+
+        for (i = 1 ; i <= memcnt ; i++)
+        {
+            umf_fail = i ;
+            status = UMFPACK_deserialize_symbolic (&Symbolic_copy, S_blob, S_blobsize) ;
+            if (status != UMFPACK_ERROR_out_of_memory)
+            {
+                error ("deserialize symbolic should have failed\n", 0.) ;
+            }
+        }
+
+        umf_fail = memcnt + 1 ;
+
+        status = UMFPACK_deserialize_symbolic (&Symbolic_copy, S_blob, S_blobsize) ;
+        if (status != UMFPACK_OK)
+        {
+            printf ("memcnt %d\n", memcnt) ;
+            error ("deserialize symbolic failed (edge)\n", 0.) ;
+        }
+        UMFPACK_free_symbolic (&Symbolic) ;
+        Symbolic = Symbolic_copy ;
+        Symbolic_copy = NULL ;
+
+        umf_fail    = umf_fail_save [0] ;
+        umf_fail_lo = umf_fail_save [1] ;
+        umf_fail_hi = umf_fail_save [2] ;
+
+        status = UMFPACK_deserialize_symbolic (&Symbolic_copy, S_blob, S_blobsize) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("deserialize symbolic failed\n", 0.) ;
+        }
+        UMFPACK_free_symbolic (&Symbolic) ;
+        Symbolic = Symbolic_copy ;
+        Symbolic_copy = NULL ;
+    }
+
+    free (S_blob) ;
 
     /* ---------------------------------------------------------------------- */
     /* get the symbolic factorization */
@@ -1825,14 +2019,15 @@ static double do_symnum
     Chain_start = (Int *) malloc ((n+1) * sizeof (Int)) ;		/* [ */
     Chain_maxrows = (Int *) malloc ((n+1) * sizeof (Int)) ;		/* [ */
     Chain_maxcols = (Int *) malloc ((n+1) * sizeof (Int)) ;		/* [ */
+    Dmap = (Int *) malloc ((n+1) * sizeof (Int)) ;		        /* [ */
 
     if (!Front_npivots || !Front_parent || !Chain_start || !Chain_maxrows
-	|| !Front_leftmostdesc || !Front_1strow
+	|| !Front_leftmostdesc || !Front_1strow || !Dmap
 	|| !Chain_maxcols || !Qtree || !Ptree) error ("out of memory (1)",0.) ;
 
     status = UMFPACK_get_symbolic (&nnrow, &nncol, &n1, &nz, &nfr, &nchains,
 	Ptree, Qtree, Front_npivots, Front_parent, Front_1strow, Front_leftmostdesc,
-	Chain_start, Chain_maxrows, Chain_maxcols, Symbolic) ;
+	Chain_start, Chain_maxrows, Chain_maxcols, Dmap, Symbolic) ;
 
     if (status != UMFPACK_OK)
     {
@@ -1840,6 +2035,7 @@ static double do_symnum
 	error ("get symbolic failed\n", 0.) ;
     }
 
+    free (Dmap) ;               /* ] */
     free (Chain_maxcols) ;	/* ] */
     free (Chain_maxrows) ;	/* ] */
     free (Chain_start) ;	/* ] */
@@ -1973,92 +2169,286 @@ static double do_symnum
     status = UMFPACK_save_numeric (Numeric, "n.umf") ;
     if (status != UMFPACK_OK)
     {
-	error ("save numeric failed\n", 0.) ;
+        error ("save numeric failed\n", 0.) ;
     }
     UMFPACK_free_numeric (&Numeric) ;
     status = UMFPACK_load_numeric (&Numeric, "n.umf") ;
     if (status != UMFPACK_OK)
     {
-	error ("load numeric failed\n", 0.) ;
+        error ("load numeric failed\n", 0.) ;
     }
 
     if (n < 15)
     {
-	int umf_fail_save [3], memcnt ;
+        int umf_fail_save [3], memcnt ;
 
-	status = UMFPACK_save_numeric (Numeric, (char *) NULL) ;
-	if (status != UMFPACK_OK)
-	{
-	    error ("save numeric failed\n", 0.) ;
-	}
-	UMFPACK_free_numeric (&Numeric) ;
-	status = UMFPACK_load_numeric (&Numeric, (char *) NULL) ;
-	if (status != UMFPACK_OK)
-	{
-	    error ("load numeric failed\n", 0.) ;
-	}
+        status = UMFPACK_save_numeric (Numeric, (char *) NULL) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("save numeric failed\n", 0.) ;
+        }
+        UMFPACK_free_numeric (&Numeric) ;
+        status = UMFPACK_load_numeric (&Numeric, (char *) NULL) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("load numeric failed\n", 0.) ;
+        }
 
-	/* test memory handling */
-	umf_fail_save [0] = umf_fail ;
-	umf_fail_save [1] = umf_fail_lo ;
-	umf_fail_save [2] = umf_fail_hi ;
+        /* test memory handling */
+        umf_fail_save [0] = umf_fail ;
+        umf_fail_save [1] = umf_fail_lo ;
+        umf_fail_save [2] = umf_fail_hi ;
 
-	umf_fail = -1 ;
-	umf_fail_lo = 0 ;
-	umf_fail_hi = 0 ;
+        umf_fail = -1 ;
+        umf_fail_lo = 0 ;
+        umf_fail_hi = 0 ;
 
-	UMFPACK_free_numeric (&Numeric) ;
-	status = UMFPACK_load_numeric (&Numeric, (char *) NULL) ;
-	if (status != UMFPACK_OK)
-	{
-	    error ("load numeric failed\n", 0.) ;
-	}
+        UMFPACK_free_numeric (&Numeric) ;
+        status = UMFPACK_load_numeric (&Numeric, (char *) NULL) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("load numeric failed\n", 0.) ;
+        }
 
-	Num = (NumericType *) Numeric ;
+        Num = (NumericType *) Numeric ;
 
-	memcnt = 11 ;
-	if (Num->scale != UMFPACK_SCALE_NONE)
-	{
-	    memcnt++ ;
-	}
-	if (Num->ulen > 0)
-	{
-	    memcnt++ ;
-	}
+        memcnt = 11 ;
+        if (Num->scale != UMFPACK_SCALE_NONE)
+        {
+            memcnt++ ;
+        }
+        if (Num->ulen > 0)
+        {
+            memcnt++ ;
+        }
 
-	for (i = 1 ; i <= memcnt ; i++)
-	{
-	    umf_fail = i ;
-	    UMFPACK_free_numeric (&Numeric) ;
-	    status = UMFPACK_load_numeric (&Numeric, (char *) NULL) ;
-	    if (status != UMFPACK_ERROR_out_of_memory)
-	    {
-		error ("load numeric should have failed\n", 0.) ;
-	    }
-	}
+        for (i = 1 ; i <= memcnt ; i++)
+        {
+            umf_fail = i ;
+            UMFPACK_free_numeric (&Numeric) ;
+            status = UMFPACK_load_numeric (&Numeric, (char *) NULL) ;
+            if (status != UMFPACK_ERROR_out_of_memory)
+            {
+                error ("load numeric should have failed\n", 0.) ;
+            }
+        }
 
-	umf_fail = memcnt + 1 ;
+        umf_fail = memcnt + 1 ;
 
-	UMFPACK_free_numeric (&Numeric) ;
-	status = UMFPACK_load_numeric (&Numeric, (char *) NULL) ;
-	if (status != UMFPACK_OK)
-	{
-	    printf ("memcnt %d\n", memcnt) ;
-	    error ("load numeric failed (edge)\n", 0.) ;
-	}
+        UMFPACK_free_numeric (&Numeric) ;
+        status = UMFPACK_load_numeric (&Numeric, (char *) NULL) ;
+        if (status != UMFPACK_OK)
+        {
+            printf ("memcnt %d\n", memcnt) ;
+            error ("load numeric failed (edge)\n", 0.) ;
+        }
 
-	umf_fail    = umf_fail_save [0] ;
-	umf_fail_lo = umf_fail_save [1] ;
-	umf_fail_hi = umf_fail_save [2] ;
+        umf_fail    = umf_fail_save [0] ;
+        umf_fail_lo = umf_fail_save [1] ;
+        umf_fail_hi = umf_fail_save [2] ;
 
-	UMFPACK_free_numeric (&Numeric) ;
-	status = UMFPACK_load_numeric (&Numeric, "n.umf") ;
-	if (status != UMFPACK_OK)
-	{
-	    error ("load numeric failed\n", 0.) ;
-	}
-
+        UMFPACK_free_numeric (&Numeric) ;
+        status = UMFPACK_load_numeric (&Numeric, "n.umf") ;
+        if (status != UMFPACK_OK)
+        {
+            error ("load numeric failed\n", 0.) ;
+        }
     }
+
+    //--------------------------------------------------------------------------
+    // test copy
+    //--------------------------------------------------------------------------
+
+    void *Numeric_copy = NULL ;
+    status = UMFPACK_copy_numeric (&Numeric_copy, Numeric) ;
+    if (status != UMFPACK_OK)
+    {
+        error ("copy numeric failed\n", 0.) ;
+    }
+    UMFPACK_free_numeric (&Numeric) ;
+    Numeric = Numeric_copy ;
+    Numeric_copy = NULL ;
+
+//  if (n < 15)
+    {
+        int umf_fail_save [3], memcnt ;
+
+        /* test memory handling */
+        umf_fail_save [0] = umf_fail ;
+        umf_fail_save [1] = umf_fail_lo ;
+        umf_fail_save [2] = umf_fail_hi ;
+
+        umf_fail = -1 ;
+        umf_fail_lo = 0 ;
+        umf_fail_hi = 0 ;
+
+        status = UMFPACK_copy_numeric (&Numeric_copy, Numeric) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("copy numeric failed\n", 0.) ;
+        }
+        UMFPACK_free_numeric (&Numeric) ;
+        Numeric = Numeric_copy ;
+        Numeric_copy = NULL ;
+
+        Num = (NumericType *) Numeric ;
+
+        memcnt = 11 ;
+        if (Num->scale != UMFPACK_SCALE_NONE)
+        {
+            memcnt++ ;
+        }
+        if (Num->ulen > 0)
+        {
+            memcnt++ ;
+        }
+
+        for (i = 1 ; i <= memcnt ; i++)
+        {
+            umf_fail = i ;
+            status = UMFPACK_copy_numeric (&Numeric_copy, Numeric) ;
+            if (status != UMFPACK_ERROR_out_of_memory)
+            {
+                error ("copy numeric should have failed\n", 0.) ;
+            }
+        }
+
+        umf_fail = memcnt + 1 ;
+
+        status = UMFPACK_copy_numeric (&Numeric_copy, Numeric) ;
+        if (status != UMFPACK_OK)
+        {
+            printf ("memcnt %d\n", memcnt) ;
+            error ("copy numeric failed (edge)\n", 0.) ;
+        }
+        UMFPACK_free_numeric (&Numeric) ;
+        Numeric = Numeric_copy ;
+        Numeric_copy = NULL ;
+
+        umf_fail    = umf_fail_save [0] ;
+        umf_fail_lo = umf_fail_save [1] ;
+        umf_fail_hi = umf_fail_save [2] ;
+
+        status = UMFPACK_copy_numeric (&Numeric_copy, Numeric) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("copy numeric failed\n", 0.) ;
+        }
+        UMFPACK_free_numeric (&Numeric) ;
+        Numeric = Numeric_copy ;
+        Numeric_copy = NULL ;
+    }
+
+    //--------------------------------------------------------------------------
+    // test serialize/deserialize
+    //--------------------------------------------------------------------------
+
+    // determine the required blobsize
+    int64_t N_blobsize ;
+    status = UMFPACK_serialize_numeric_size (&N_blobsize, Numeric) ;
+    if (status != UMFPACK_OK)
+    {
+	error ("UMFPACK_serialize_numeric_size failed", 0.) ;
+    }
+    printf ("\nNumeric blob size: %"PRId64"\n", N_blobsize) ;
+    // allocate the blob
+    int8_t *N_blob = malloc (N_blobsize) ;
+    if (!N_blob)
+    {
+	error ("out of memory", 0.) ;
+    }
+    // serialize the blob
+    status = UMFPACK_serialize_numeric (N_blob, N_blobsize, Numeric) ;
+    if (status != UMFPACK_OK)
+    {
+	error ("UMFPACK_serialize_numeric failed", 0.) ;
+    }
+    // free the Numeric object; its contents are preserved in the blob
+    UMFPACK_free_numeric (&Numeric) ;
+    // deserialize the blob back into the Numeric object
+    status = UMFPACK_deserialize_numeric (&Numeric, N_blob, N_blobsize) ;
+    if (status < 0)
+    {
+	error ("UMFPACK_deserialize_numeric failed", 0.) ;
+    }
+    printf ("\nDone serialize/deserialize of numeric object\n") ;
+
+//  if (n < 15)
+    {
+        int umf_fail_save [3], memcnt ;
+
+        /* test memory handling */
+        umf_fail_save [0] = umf_fail ;
+        umf_fail_save [1] = umf_fail_lo ;
+        umf_fail_save [2] = umf_fail_hi ;
+
+        umf_fail = -1 ;
+        umf_fail_lo = 0 ;
+        umf_fail_hi = 0 ;
+
+        status = UMFPACK_serialize_numeric (N_blob, N_blobsize, Numeric) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("serialize numeric failed\n", 0.) ;
+        }
+        status = UMFPACK_deserialize_numeric (&Numeric_copy, N_blob, N_blobsize) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("serialize numeric failed\n", 0.) ;
+        }
+        UMFPACK_free_numeric (&Numeric) ;
+        Numeric = Numeric_copy ;
+        Numeric_copy = NULL ;
+
+        Num = (NumericType *) Numeric ;
+
+        memcnt = 11 ;
+        if (Num->scale != UMFPACK_SCALE_NONE)
+        {
+            memcnt++ ;
+        }
+        if (Num->ulen > 0)
+        {
+            memcnt++ ;
+        }
+
+        for (i = 1 ; i <= memcnt ; i++)
+        {
+            umf_fail = i ;
+            status = UMFPACK_deserialize_numeric (&Numeric_copy, N_blob, N_blobsize) ;
+            if (status != UMFPACK_ERROR_out_of_memory)
+            {
+                error ("deserialize numeric should have failed\n", 0.) ;
+            }
+        }
+
+        umf_fail = memcnt + 1 ;
+
+        status = UMFPACK_deserialize_numeric (&Numeric_copy, N_blob, N_blobsize) ;
+        if (status != UMFPACK_OK)
+        {
+            printf ("memcnt %d\n", memcnt) ;
+            error ("deserialize numeric failed (edge)\n", 0.) ;
+        }
+        UMFPACK_free_numeric (&Numeric) ;
+        Numeric = Numeric_copy ;
+        Numeric_copy = NULL ;
+
+        umf_fail    = umf_fail_save [0] ;
+        umf_fail_lo = umf_fail_save [1] ;
+        umf_fail_hi = umf_fail_save [2] ;
+
+        status = UMFPACK_deserialize_numeric (&Numeric_copy, N_blob, N_blobsize) ;
+        if (status != UMFPACK_OK)
+        {
+            error ("deserialize numeric failed\n", 0.) ;
+        }
+        UMFPACK_free_numeric (&Numeric) ;
+        Numeric = Numeric_copy ;
+        Numeric_copy = NULL ;
+    }
+
+    free (N_blob) ;
 
     /* ---------------------------------------------------------------------- */
     /* get the LU factorization */
@@ -2645,7 +3035,7 @@ static double do_matrix
     if (n < 15) Control [UMFPACK_PRL] = 4 ;
     for (singletons = 0 ; singletons <= 1 ; singletons++)
     {
-        for (ordering = EMPTY ; ordering <= UMFPACK_ORDERING_USER ; ordering++)
+        for (ordering = EMPTY ; ordering <= UMFPACK_ORDERING_METIS_GUARD ; ordering++)
         {
             Control [UMFPACK_ORDERING] = ordering ;
             Control [UMFPACK_SINGLETONS] = singletons ;
@@ -3520,8 +3910,8 @@ static void matgen_compaction
     Int nz, *Bp, *Bi, *Ti, *Tj, k, i, j, prl, status ;
     double *Bx, *Tx, *Bz, *Tz, Control [UMFPACK_INFO] ;
 
-    prl = Control ? Control [UMFPACK_PRL] : UMFPACK_DEFAULT_PRL ; 
     UMFPACK_defaults (Control) ;
+    prl = Control ? Control [UMFPACK_PRL] : UMFPACK_DEFAULT_PRL ; 
 
     UMFPACK_report_control (Control) ;
 
@@ -3985,12 +4375,14 @@ static void matgen_file
     Int i, j, k, *Ti, *Tj, nr, nc, nz, *Bp, *Bi, *Q, status, isreal, nz1, n ;
     double x, *Tx, *Bx, *Tz, *Bz, ximag, Control [UMFPACK_CONTROL],
 	    d_x, d_z, d_real ;
+    int ioerr ;
 
     printf ("\nFile: %s\n", filename) ;
     f = fopen (filename, "r") ;
     if (!f) error ("bad file", 0.) ;
 
-    fscanf (f, ""ID" "ID" "ID" "ID"\n", &nr, &nc, &nz, &isreal) ;
+    ioerr = fscanf (f, ""ID" "ID" "ID" "ID"\n", &nr, &nc, &nz, &isreal) ;
+    if (ioerr == EOF) error ("bad file", 0.) ;
     n = MAX (nr, nc) ;
     n = MAX (n,1) ;
 
@@ -4011,13 +4403,14 @@ static void matgen_file
     {
 	if (isreal)
 	{
-	     fscanf (f, ""ID" "ID" %lg\n", &i, &j, &x) ;
+	     ioerr = fscanf (f, ""ID" "ID" %lg\n", &i, &j, &x) ;
 	     ximag = 0. ;
 	}
 	else
 	{
-	     fscanf (f, ""ID" "ID" %lg %lg\n", &i, &j, &x, &ximag) ;
+	     ioerr = fscanf (f, ""ID" "ID" %lg %lg\n", &i, &j, &x, &ximag) ;
 	}
+        if (ioerr == EOF) error ("bad file", 0.) ;
 	Ti [k] = i-1 ;	/* convert to 0-based */ 
 	Tj [k] = j-1 ;
 	Tx [k] = x ;
@@ -4031,20 +4424,23 @@ static void matgen_file
 
     for (k = 0 ; k < nc ; k++)
     {
-	fscanf (f, ""ID"\n", &i) ;
+	ioerr = fscanf (f, ""ID"\n", &i) ;
+        if (ioerr == EOF) error ("bad file", 0.) ;
 	Q [k] = i-1 ;	/* convert to 0-based */
     }
 
     if (isreal)
     {
-	fscanf (f, "%lg\n", &d_x) ;
+	ioerr = fscanf (f, "%lg\n", &d_x) ;
 	d_z = 0 ;
     }
     else
     {
-	fscanf (f, "%lg %lg\n", &d_x, &d_z) ;
+	ioerr = fscanf (f, "%lg %lg\n", &d_x, &d_z) ;
     }
-    fscanf (f, "%lg\n", &d_real) ;
+    if (ioerr == EOF) error ("bad file", 0.) ;
+    ioerr = fscanf (f, "%lg\n", &d_real) ;
+    if (ioerr == EOF) error ("bad file", 0.) ;
     printf ("%s det: %g + (%g)i, real(A): %g\n", filename, d_x, d_z, d_real) ;
 
 #ifdef COMPLEX
@@ -4534,20 +4930,20 @@ int main (int argc, char **argv)
 	alphas [ ] = {-1.0, 0.0, 0.1, 0.5, 10.}, *info, maxrnorm_shl0,
 	rnorm_omega2, maxrnorm_arc130, det_x, det_z, Mx, Mz, Exp ;
     Int Ncontrols [UMFPACK_CONTROL], c, i, n, prl, *Qinit, *Qinit2, n1,
-	*Ap, *Ai, *Aj, nz, *Ap2, *Ai2, p, j, d, s, s2, *Pinit, k, n2, *Map,
-	*Lp, *Li, *P, *Q, *Up, *Ui, lnz, unz, nn, *Cp, *Ci, *Cj, *Bi, *Bp, *Bj,
+	*Ap, *Ai, *Aj, nz, *Ap2, *Ai2, p, j, d, *Pinit, k, n2, *Map,
+	*Lp, *Li, *P, *Q, *Up, *Ui, lnz, unz, *Cp, *Ci, *Cj, *Bi, *Bp, *Bj,
 	*Pa, *Front_npivots, *Front_parent, *Chain_start, *Chain_maxrows, *ip,
-	*Chain_maxcols, nfr, nchains, nsparse_col, *Qtree, *Ptree, nnz,
+	*Chain_maxcols, nfr, nchains, nsparse_col, *Qtree, *Ptree, nnz, *Dmap,
 	MemOK [6], MemBad [6], nnrow, nncol, nzud, n_row, n_col, n_row2,
 	n_col2, scale, *Front_1strow, *Front_leftmostdesc, strategy,
 	t, aggressive, *Pamd, mem1, mem2, do_recip ;
-    int ok ;
+    int ok, s, s2 ;
     void *Symbolic, *Numeric ;
     SymbolicType *Sym ;
     NumericType *Num ;
     DIR *dir ;
     struct dirent *direntp ;
-    char filename [200] ;
+    char filename [400] ;
     FILE *f ;
     Int my_params [3], csave ;
     double my_info [3] ;
@@ -5116,7 +5512,7 @@ int main (int argc, char **argv)
     if (s != Info [UMFPACK_STATUS]) error ("huh", (double) __LINE__)  ;
     UMFPACK_report_status (Control, s) ;
     UMFPACK_report_info (Control, Info) ;
-    printf ("p1b status: "ID" Numeric handle bad %d\n", s, !Numeric) ;
+    printf ("p1b status: %d Numeric handle bad %d\n", s, !Numeric) ;
     s2 = UMFPACK_report_numeric (Numeric, Control) ;
     if (!Numeric || s != UMFPACK_OK) error ("p1b",0.) ;
     printf ("Good numeric, pattern test: ") ;
@@ -5918,7 +6314,7 @@ int main (int argc, char **argv)
 	if (s != UMFPACK_ERROR_invalid_matrix) error ("51k",0.); 
 
 	s = do_amd (n, Ap, Ai, Pamd) ;
-	printf ("amd jumbled: "ID"\n", s) ;
+	printf ("amd jumbled: %d\n", s) ;
 	if (s != AMD_OK_BUT_JUMBLED) error ("amd 11", (double) s) ;
 
 	Ai [Ap [3] + 1] = c ;	/* Ai fixed ] */
@@ -6026,7 +6422,85 @@ int main (int argc, char **argv)
         UMFPACK_report_status (Con, s) ;
 	UMFPACK_report_info (Con, Info) ;
 	if (!Symbolic || s != UMFPACK_OK) error ("30c",0.) ;
+
+        //----------------------------------------------------------------------
+        // test error handling for copy/serialize/deserialize Symbolic
+        //----------------------------------------------------------------------
+
+	Sym = (SymbolicType *) Symbolic ;
+        void *Symbolic_copy = NULL ;
+        s = UMFPACK_copy_symbolic (&Symbolic_copy, NULL) ;
+	if (Symbolic_copy || s != UMFPACK_ERROR_argument_missing) error ("99a",0.) ;
+
+        Sym->valid = -1 ;
+        s = UMFPACK_copy_symbolic (&Symbolic_copy, Symbolic) ;
+        if (Symbolic_copy || s != UMFPACK_ERROR_invalid_Symbolic_object) error ("99r",0.) ;
+        Sym->valid = SYMBOLIC_VALID ;
+
+        int8_t *S_blob = NULL ;
+        int64_t S_blobsize = 0 ;
+
+        s = UMFPACK_serialize_symbolic_size (&S_blobsize, NULL) ;
+	if (s != UMFPACK_ERROR_argument_missing) error ("99b",0.) ;
+
+        Sym->valid = -1 ;
+        s = UMFPACK_serialize_symbolic_size (&S_blobsize, Symbolic) ;
+	if (s != UMFPACK_ERROR_invalid_Symbolic_object) error ("99c",0.) ;
+        Sym->valid = SYMBOLIC_VALID ;
+
+        s = UMFPACK_serialize_symbolic_size (&S_blobsize, Symbolic) ;
+	if (s != UMFPACK_OK) error ("99d",0.) ;
+
+        s = UMFPACK_serialize_symbolic (NULL, S_blobsize, Symbolic) ;
+	if (s != UMFPACK_ERROR_argument_missing) error ("99e",0.) ;
+
+        S_blob = malloc (S_blobsize) ;
+	if (S_blob == NULL) error ("99f",0.) ;
+
+        Sym->valid = -1 ;
+        s = UMFPACK_serialize_symbolic (S_blob, S_blobsize, Symbolic) ;
+	if (s != UMFPACK_ERROR_invalid_Symbolic_object) error ("99g",0.) ;
+        Sym->valid = SYMBOLIC_VALID ;
+
+        s = UMFPACK_serialize_symbolic (S_blob, 1, Symbolic) ;
+	if (s != UMFPACK_ERROR_invalid_blob) error ("99i",0.) ;
+        UMFPACK_report_status (Con, s) ;
+
+        s = UMFPACK_serialize_symbolic (S_blob, S_blobsize, Symbolic) ;
+	if (s != UMFPACK_OK) error ("99j",0.) ;
+
+        s = UMFPACK_deserialize_symbolic (&Symbolic_copy, S_blob, S_blobsize) ;
+	if (s != UMFPACK_OK) error ("99k",0.) ;
+	UMFPACK_free_symbolic (&Symbolic_copy) ;
+
+        s = UMFPACK_deserialize_symbolic (NULL, S_blob, S_blobsize) ;
+	if (s != UMFPACK_ERROR_argument_missing) error ("99l",0.) ;
+
+        s = UMFPACK_deserialize_symbolic (&Symbolic_copy, S_blob, 1) ;
+	if (Symbolic_copy != NULL || s != UMFPACK_ERROR_invalid_blob) error ("99m",0.) ;
+
+        // mangle the S_blob
+        int64_t S_header = sizeof (int64_t) + 10 * sizeof (int32_t) ;
+        memset (S_blob + S_header, 0, S_blobsize - S_header) ;
+
+        s = UMFPACK_deserialize_symbolic (&Symbolic_copy, S_blob, S_blobsize) ;
+	if (s != UMFPACK_ERROR_invalid_Symbolic_object) error ("99n",0.) ;
+
+        s = UMFPACK_serialize_symbolic (S_blob, S_blobsize, Symbolic) ;
+	if (s != UMFPACK_OK) error ("99o",0.) ;
+
+        // mangle the S_blob header
+        memset (S_blob, 0, S_header) ;
+
+        s = UMFPACK_deserialize_symbolic (&Symbolic_copy, S_blob, S_blobsize) ;
+	if (s != UMFPACK_ERROR_invalid_blob) error ("99p",0.) ;
+
 	UMFPACK_free_symbolic (&Symbolic) ;
+        free (S_blob) ;
+
+        //----------------------------------------------------------------------
+        // test AMD
+        //----------------------------------------------------------------------
 
 	s = do_amd (2*n, Ap2, Ai2, Pamd) ;
 	if (s != AMD_OK) error ("amd 14", (double) s) ;
@@ -6075,6 +6549,79 @@ int main (int argc, char **argv)
 	    s = UMFPACK_report_numeric ( Numeric, Con) ;
 	    if (s != UMFPACK_OK) error ("90",0.) ;
 
+            //----------------------------------------------------------------------
+            // test error handling for copy/serialize/deserialize Numeric
+            //----------------------------------------------------------------------
+
+            Num = (NumericType *) Numeric ;
+            void *Numeric_copy = NULL ;
+            s = UMFPACK_copy_numeric (&Numeric_copy, NULL) ;
+            if (Numeric_copy || s != UMFPACK_ERROR_argument_missing) error ("103a",0.) ;
+
+            Num->valid = -1 ;
+            s = UMFPACK_copy_numeric (&Numeric_copy, Numeric) ;
+            if (Numeric_copy || s != UMFPACK_ERROR_invalid_Numeric_object) error ("103r",0.) ;
+            Num->valid = NUMERIC_VALID ;
+
+            int8_t *N_blob = NULL ;
+            int64_t N_blobsize = 0 ;
+
+            s = UMFPACK_serialize_numeric_size (&N_blobsize, NULL) ;
+            if (s != UMFPACK_ERROR_argument_missing) error ("103b",0.) ;
+
+            Num->valid = -1 ;
+            s = UMFPACK_serialize_numeric_size (&N_blobsize, Numeric) ;
+            if (s != UMFPACK_ERROR_invalid_Numeric_object) error ("103c",0.) ;
+            Num->valid = NUMERIC_VALID ;
+
+            s = UMFPACK_serialize_numeric_size (&N_blobsize, Numeric) ;
+            if (s != UMFPACK_OK) error ("103d",0.) ;
+
+            s = UMFPACK_serialize_numeric (NULL, N_blobsize, Numeric) ;
+            if (s != UMFPACK_ERROR_argument_missing) error ("103e",0.) ;
+
+            N_blob = malloc (N_blobsize) ;
+            if (N_blob == NULL) error ("103f",0.) ;
+
+            Num->valid = -1 ;
+            s = UMFPACK_serialize_numeric (N_blob, N_blobsize, Numeric) ;
+            if (s != UMFPACK_ERROR_invalid_Numeric_object) error ("103g",0.) ;
+            Num->valid = NUMERIC_VALID ;
+
+            s = UMFPACK_serialize_numeric (N_blob, 1, Numeric) ;
+            if (s != UMFPACK_ERROR_invalid_blob) error ("103i",0.) ;
+
+            s = UMFPACK_serialize_numeric (N_blob, N_blobsize, Numeric) ;
+            if (s != UMFPACK_OK) error ("103j",0.) ;
+
+            s = UMFPACK_deserialize_numeric (&Numeric_copy, N_blob, N_blobsize) ;
+            if (s != UMFPACK_OK) error ("103k",0.) ;
+            UMFPACK_free_numeric (&Numeric_copy) ;
+
+            s = UMFPACK_deserialize_numeric (NULL, N_blob, N_blobsize) ;
+            if (s != UMFPACK_ERROR_argument_missing) error ("103l",0.) ;
+
+            s = UMFPACK_deserialize_numeric (&Numeric_copy, N_blob, 1) ;
+            if (Numeric_copy != NULL || s != UMFPACK_ERROR_invalid_blob) error ("103m",0.) ;
+
+            // mangle the N_blob
+            int64_t N_header = sizeof (int64_t) + 10 * sizeof (int32_t) ;
+            memset (N_blob + N_header, 0, N_blobsize - N_header) ;
+
+            s = UMFPACK_deserialize_numeric (&Numeric_copy, N_blob, N_blobsize) ;
+            if (s != UMFPACK_ERROR_invalid_Numeric_object) error ("103n",0.) ;
+
+            s = UMFPACK_serialize_numeric (N_blob, N_blobsize, Numeric) ;
+            if (s != UMFPACK_OK) error ("103o",0.) ;
+
+            // mangle the N_blob header
+            memset (N_blob, 0, N_header) ;
+
+            s = UMFPACK_deserialize_numeric (&Numeric_copy, N_blob, N_blobsize) ;
+            if (s != UMFPACK_ERROR_invalid_blob) error ("103p",0.) ;
+
+            free (N_blob) ;
+
 	    /* ------------------------------------------------------------------ */
 
 	    s = UMFPACK_get_lunz (INULL, &unz, &nnrow, &nncol, &nzud, Numeric) ;
@@ -6083,8 +6630,8 @@ int main (int argc, char **argv)
 	    /* ------------------------------------------------------------------ */
 
 	    s = UMFPACK_get_lunz (&lnz, &unz, &nnrow, &nncol, &nzud, Numeric) ;
-	    printf ("lnz "ID" unz "ID" nn "ID"\n", lnz, unz, nn) ;
 	    if (s != UMFPACK_OK) error ("58",0.) ;
+	    printf ("lnz "ID" unz "ID" nn "ID" "ID"\n", lnz, unz, nnrow, nncol) ;
 
 	    /* ------------------------------------------------------------------ */
 
@@ -6241,7 +6788,7 @@ int main (int argc, char **argv)
 	    if (s != UMFPACK_ERROR_invalid_Numeric_object) error ("70num",0.) ;
 
 	    s = UMFPACK_get_lunz (&lnz, &unz, &nnrow, &nncol, &nzud, Numeric) ;
-	    printf ("s "ID"\n", s) ;
+	    printf ("s %d\n", s) ;
 	    if (s != UMFPACK_ERROR_invalid_Numeric_object) error ("70b",0.) ;
 
 	    s = UMFPACK_solve (UMFPACK_A, Ap, Ai, CARG(Ax,Az), CARG(x,xz), CARG(b,bz), (void *) NULL, Con, Info) ;
@@ -6612,14 +7159,16 @@ int main (int argc, char **argv)
 	Chain_maxcols = (Int *) malloc (n * sizeof (Int)) ;		/* [ */
 	Qtree = (Int *) malloc (n * sizeof (Int)) ;			/* [ */
 	Ptree = (Int *) malloc (n * sizeof (Int)) ;			/* [ */
+	Dmap = (Int *) malloc (n * sizeof (Int)) ;			/* [ */
 	if (!Front_npivots || !Front_parent || !Chain_start || !Chain_maxrows
 	    || !Chain_maxcols || !Qtree) error ("out of memory (22)",0.) ;
 
 	s = UMFPACK_get_symbolic (&nnrow, &nncol, &n1, &nnz, &nfr, &nchains,
 	    Ptree, Qtree, Front_npivots, Front_parent, Front_1strow, Front_leftmostdesc,
-	    Chain_start, Chain_maxrows, Chain_maxcols, Symbolic) ;
+	    Chain_start, Chain_maxrows, Chain_maxcols, Dmap, Symbolic) ;
 	if (s != UMFPACK_ERROR_invalid_Symbolic_object) error ("93", 0.) ;
 
+	free (Dmap) ;           /* ] */
 	free (Ptree) ;		/* ] */
 	free (Qtree) ;		/* ] */
 	free (Chain_maxcols) ;	/* ] */
@@ -6634,7 +7183,7 @@ int main (int argc, char **argv)
 	if (s != Info [UMFPACK_STATUS]) error ("huh", (double) __LINE__)  ;
 	UMFPACK_report_status (Con, s) ;
 	UMFPACK_report_info (Con, Info) ;
-	printf ("32c s: "ID"\n", s) ;
+	printf ("32c s: %d\n", s) ;
 	if (Numeric || s != UMFPACK_ERROR_invalid_Symbolic_object) error ("32c",0.) ;
 
 	Sym->valid = SYMBOLIC_VALID ;
@@ -7197,7 +7746,7 @@ int main (int argc, char **argv)
 	free (Cj) ;	/* ] */
 	free (Cp) ;	/* ] */
 
-	for (i = 1 ; i <= 24 ; i++)
+	for (i = 1 ; i <= 100 ; i++)
 	{
 	    umf_fail = i ;
 	    printf ("umf_fail starts at %d\n", umf_fail) ;
@@ -7209,15 +7758,32 @@ int main (int argc, char **argv)
 	    if (s != Info [UMFPACK_STATUS]) error ("huh", (double) __LINE__)  ;
 	    UMFPACK_report_status (Control, s) ;
 	    UMFPACK_report_info (Control, Info) ;
-	    if (Symbolic || Info [UMFPACK_STATUS] != UMFPACK_ERROR_out_of_memory) error ("104", (double) i) ;
+
+            if (s == UMFPACK_ERROR_out_of_memory)
+            {
+                // keep testing ...
+	        if (Symbolic) error ("104", (double) i) ;
+            }
+            else if (s == UMFPACK_OK)
+            {
+                // done
+	        if (!Symbolic) error ("105", 0.) ;
+	        UMFPACK_report_status (Control, s) ;
+	        UMFPACK_report_info (Control, Info) ;
+                UMFPACK_free_symbolic (&Symbolic) ;
+            }
+            else
+            {
+	        error ("121", 0.) ;
+            }
 	}
 
-	umf_fail = 25 ;
-	s = UMFPACK_qsymbolic (n, n, Ap, Ai, CARG(Ax,Az), Qinit, &Symbolic, Control, Info) ;	/* [ */
+	umf_fail = 1000 ;
+        s = UMFPACK_qsymbolic (n, n, Ap, Ai, CARG(Ax,Az), Qinit, &Symbolic, Control, Info) ;	/* [ */
 	if (s != Info [UMFPACK_STATUS]) error ("huh", (double) __LINE__)  ;
 	UMFPACK_report_status (Control, s) ;
 	UMFPACK_report_info (Control, Info) ;
-	if (!Symbolic || s != UMFPACK_OK) error ("105", 0.) ;
+        if (!Symbolic || s != UMFPACK_OK) error ("105", 0.) ;
 
 	umf_fail = 1 ;
 	if (prl > 2) printf ("\nMemfail Symbolic: ") ;
@@ -7360,7 +7926,7 @@ int main (int argc, char **argv)
 	s = UMFPACK_get_determinant (CARG (&Mx, &Mz), &Exp, Numeric, Info) ;
 	if (s != Info [UMFPACK_STATUS])
 	{
-	    printf ("s "ID" %g\n", s, Info [UMFPACK_STATUS]) ;
+	    printf ("s %d %g\n", s, Info [UMFPACK_STATUS]) ;
 	    error ("huh", (double) __LINE__)  ;
 	}
 	if (s != UMFPACK_ERROR_out_of_memory) error ("73det",0.) ;

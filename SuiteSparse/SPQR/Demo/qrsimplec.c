@@ -2,6 +2,9 @@
 /* === qrsimplec.c ========================================================== */
 /* ========================================================================== */
 
+// SPQR, Copyright (c) 2008-2022, Timothy A Davis. All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
 /* A very simple example of the use of SuiteSparseQR by a C main program.
    Usage:  qrsimplec < Matrix_in_MatrixMarket_format */
 
@@ -37,7 +40,7 @@ int main (int argc, char **argv)
 #else
     printf ("2-norm of residual: not computed (requires CHOLMOD/MatrixOps)\n") ;
 #endif
-    printf ("rank %ld\n", cc->SPQR_istat [4]) ;
+    printf ("rank %" PRId64 "\n", cc->SPQR_istat [4]) ;
 
     /* free everything and finish CHOLMOD */
     cholmod_l_free_dense (&Residual, cc) ;

@@ -2,10 +2,15 @@
 /* === SuiteSparseQR_definitions.h ========================================== */
 /* ========================================================================== */
 
+// SPQR, Copyright (c) 2008-2023, Timothy A Davis. All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
 /* Core definitions for both C and C++ programs. */
 
 #ifndef SUITESPARSEQR_DEFINITIONS_H
 #define SUITESPARSEQR_DEFINITIONS_H
+
+#include "SuiteSparse_config.h"
 
 /* ordering options */
 #define SPQR_ORDERING_FIXED 0
@@ -59,11 +64,23 @@
         #endif
  */
 
-#define SPQR_DATE "Dec 28, 2018"
-#define SPQR_VER_CODE(main,sub) ((main) * 1000 + (sub))
-#define SPQR_MAIN_VERSION 2
-#define SPQR_SUB_VERSION 0
-#define SPQR_SUBSUB_VERSION 9
-#define SPQR_VERSION SPQR_VER_CODE(SPQR_MAIN_VERSION,SPQR_SUB_VERSION)
+#define SPQR_DATE "Jan 10, 2024"
+#define SPQR_MAIN_VERSION   4
+#define SPQR_SUB_VERSION    3
+#define SPQR_SUBSUB_VERSION 1
+
+#define SPQR_VER_CODE(main,sub) SUITESPARSE_VER_CODE(main,sub)
+#define SPQR_VERSION SPQR_VER_CODE(4,3)
+
+#define SPQR__VERSION SUITESPARSE__VERCODE(4,3,1)
+#if !defined (SUITESPARSE__VERSION) || \
+    (SUITESPARSE__VERSION < SUITESPARSE__VERCODE(7,5,0))
+#error "SPQR 4.3.1 requires SuiteSparse_config 7.5.0 or later"
+#endif
+
+#if !defined (CHOLMOD__VERSION) || \
+    (CHOLMOD__VERSION < SUITESPARSE__VERCODE(5,1,1))
+#error "SPQR 4.3.1 requires CHOLMOD 5.1.1 or later"
+#endif
 
 #endif

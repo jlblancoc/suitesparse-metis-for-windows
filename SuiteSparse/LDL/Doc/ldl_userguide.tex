@@ -1,4 +1,5 @@
 \documentclass[12pt]{article}
+\batchmode
 
 \newcommand{\m}[1]{{\bf{#1}}}       % for matrices and vectors
 \newcommand{\tr}{^{\sf T}}          % transpose
@@ -24,8 +25,7 @@ and Lawrence Berkeley National Laboratory (with funding from Stanford
 University and the SciDAC program).
 }}
 
-\date{VERSION 2.2.6, May 4, 2016}
-
+\input{ldl_version.tex}
 \maketitle
 
 %-------------------------------------------------------------------------------
@@ -508,11 +508,8 @@ instead.
 \label{C}
 %-------------------------------------------------------------------------------
 
-To compile the library, do {\tt make}.  To install the shared library in
-/usr/local/include and /usr/local/lib, do {\tt make install}; to remove it
-from there, use {\tt make uninstall}.
-For alternative installation locations, see the instructions in
-{\tt SuiteSparse/README.txt}.
+To compile the library, a {\tt cmake} build system is provided.
+See the instructions in {\tt SuiteSparse/README.txt}.
 
 The C-callable {\tt LDL} library consists of nine user-callable routines
 and one include file.

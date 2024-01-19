@@ -2,12 +2,12 @@
 // GB_shallow_op:  create a shallow copy and apply a unary operator to a matrix
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-// C = op (A)
+// C = op (A), called only by GB_apply.
 
 // Create a shallow copy of a matrix, applying an operator to the entries.
 
@@ -22,17 +22,22 @@
 // out-of-memory conditions.  This function is not user-callable.  Shallow
 // matrices are never passed back to the user.
 
-// Compare this function with GB_shallow_cast.c
+// Compare this function with GB_shallow_copy.c.
 
-#include "GB.h"
+#include "GB_apply.h"
+
+#define GB_FREE_ALL GB_phybix_free (C) ;
 
 GrB_Info GB_shallow_op      // create shallow matrix and apply operator
 (
-    GrB_Matrix *Chandle,    // output matrix C, of type op->ztype
+    GrB_Matrix C,           // output C, of type op*->ztype, static header
     const bool C_is_csc,    // desired CSR/CSC format of C
-    const GrB_UnaryOp op,   // operator to apply
+        const GB_Operator op,       // unary/index-unary/binop to apply
+        const GrB_Scalar scalar,    // scalar to bind to binary operator
+        bool binop_bind1st,         // if true, binop(x,A) else binop(A,y)
+        bool flipij,                // if true, flip i,j for user idxunop
     const GrB_Matrix A,     // input matrix to typecast
-    GB_Context Context
+    GB_Werk Werk
 )
 {
 
@@ -40,59 +45,103 @@ GrB_Info GB_shallow_op      // create shallow matrix and apply operator
     // check inputs
     //--------------------------------------------------------------------------
 
-    ASSERT (Chandle != NULL) ;
-    ASSERT_OK (GB_check (A, "A for shallow_op", GB0)) ;
-    ASSERT_OK (GB_check (op, "op for shallow_op", GB0)) ;
-    ASSERT (GB_Type_compatible (op->xtype, A->type)) ;
-    ASSERT ((A->nzmax == 0) == (A->i == NULL && A->x == NULL)) ;
-    ASSERT (!GB_PENDING (A)) ; ASSERT (!GB_ZOMBIES (A)) ;
+    ASSERT (C != NULL && (C->static_header || GBNSTATIC)) ;
+    ASSERT_MATRIX_OK (A, "A for shallow_op", GB0) ;
+    ASSERT_OP_OK (op, "unop/binop for shallow_op", GB0) ;
+    ASSERT (!GB_ZOMBIES (A)) ;
+    ASSERT (GB_JUMBLED_OK (A)) ;
+    ASSERT (!GB_PENDING (A)) ;
 
-    (*Chandle) = NULL ;
+    GrB_Type ztype = op->ztype ;
+    GrB_Type op_intype = NULL ;
+    GB_Opcode opcode = op->opcode ;
+
+    bool op_is_positional = GB_OPCODE_IS_POSITIONAL (opcode) ;
+    if (GB_IS_UNARYOP_CODE (opcode))
+    {
+        ASSERT_OP_OK (op, "unop for shallow_op", GB0) ;
+        if (!op_is_positional)
+        { 
+            ASSERT (GB_Type_compatible (op->xtype, A->type)) ;
+            op_intype = op->xtype ;
+        }
+    }
+    else if (GB_IS_BINARYOP_CODE (opcode))
+    {
+        ASSERT_OP_OK (op, "binop for shallow_op", GB0) ;
+        if (!op_is_positional)
+        { 
+            op_intype = (binop_bind1st) ? op->xtype : op->ytype ;
+            ASSERT (GB_Type_compatible (op_intype, A->type)) ;
+        }
+    }
+    else // GB_IS_INDEXUNARYOP_CODE (opcode)
+    { 
+        ASSERT_OP_OK (op, "ixdunop for shallow_op", GB0) ;
+        op_intype = op->xtype ;
+        ASSERT (GB_Type_compatible (op_intype, A->type)) ;
+    }
 
     //--------------------------------------------------------------------------
     // construct a shallow copy of A for the pattern of C
     //--------------------------------------------------------------------------
 
-    // allocate the struct for C, but do not allocate C->h, C->p, C->i, or C->x.
-    // C has the exact same hypersparsity as A.
+    GB_iso_code C_code_iso = GB_unop_code_iso (A, op, binop_bind1st) ;
+    bool C_iso = (C_code_iso != GB_NON_ISO) ;
+
+    // initialized the header for C, but do not allocate C->{p,h,b,i,x}
+    // C has the exact same sparsity structure as A.
     GrB_Info info ;
-    GrB_Matrix C = NULL ;           // allocate a new header for C
-    GB_NEW (&C, op->ztype, A->vlen, A->vdim, GB_Ap_null, C_is_csc,
-        GB_SAME_HYPER_AS (A->is_hyper), A->hyper_ratio, 0) ;
-    if (info != GrB_SUCCESS)
-    { 
-        // out of memory
-        return (info) ;
-    }
+    info = GB_new (&C, // any sparsity, existing header
+        ztype, A->vlen, A->vdim, GB_Ap_null, C_is_csc,
+        GB_sparsity (A), A->hyper_switch, 0) ;
+    ASSERT (info == GrB_SUCCESS) ;
 
     //--------------------------------------------------------------------------
     // make a shallow copy of the vector pointers
     //--------------------------------------------------------------------------
 
-    ASSERT (C->magic == GB_MAGIC2) ;   // [ be careful; C not yet initialized
-    C->p_shallow = true ;           // C->p not freed when freeing C
-    C->h_shallow = true ;           // C->h not freed when freeing C
-    C->p = A->p ;                   // C->p is of size A->plen + 1
-    C->h = A->h ;                   // C->h is of size A->plen
-    C->plen = A->plen ;             // C and A have the same hyperlist sizes
+    C->p_shallow = (A->p != NULL) ;     // C->p not freed when freeing C
+    C->h_shallow = (A->h != NULL) ;     // C->h not freed when freeing C
+    C->p = A->p ;                       // C->p is of size A->plen + 1
+    C->h = A->h ;                       // C->h is of size A->plen
+    C->p_size = A->p_size ;
+    C->h_size = A->h_size ;
+    C->plen = A->plen ;                 // C and A have the same hyperlist sizes
     C->nvec = A->nvec ;
     C->nvec_nonempty = A->nvec_nonempty ;
-    C->magic = GB_MAGIC ;           // C is now initialized ]
+    C->jumbled = A->jumbled ;           // C is jumbled if A is jumbled
+    C->nvals = A->nvals ;
+    C->magic = GB_MAGIC ;
+    C->iso = C_iso ;                    // OK
+    if (C_iso)
+    { 
+        GB_BURBLE_MATRIX (A, "(iso apply) ") ;
+    }
+
+    //--------------------------------------------------------------------------
+    // make a shallow copy of the A->Y hyper_hash
+    //--------------------------------------------------------------------------
+
+    C->Y = A->Y ;
+    C->Y_shallow = (A->Y != NULL) ;
 
     //--------------------------------------------------------------------------
     // check for empty matrix
     //--------------------------------------------------------------------------
 
-    if (A->nzmax == 0)
+    if (GB_nnz_max (A) == 0)
     { 
         // C->p and C->h are shallow but the rest is empty
-        C->nzmax = 0 ;
+        C->b = NULL ;
         C->i = NULL ;
         C->x = NULL ;
+        C->b_shallow = false ;
         C->i_shallow = false ;
         C->x_shallow = false ;
-        ASSERT_OK (GB_check (C, "C = quick copy of empty A", GB0)) ;
-        (*Chandle) = C ;
+        C->jumbled = false ;
+        C->iso = false ;
+        ASSERT_MATRIX_OK (C, "C = quick copy of empty A", GB0) ;
         return (GrB_SUCCESS) ;
     }
 
@@ -100,53 +149,56 @@ GrB_Info GB_shallow_op      // create shallow matrix and apply operator
     // make a shallow copy of the pattern
     //--------------------------------------------------------------------------
 
-    C->i = A->i ;               // of size A->nzmax
-    C->i_shallow = true ;       // C->i will not be freed when freeing C
+    C->b = A->b ; C->b_shallow = (A->b != NULL) ; C->b_size = A->b_size ;
+    C->i = A->i ; C->i_shallow = (A->i != NULL) ; C->i_size = A->i_size ;
+
+    //--------------------------------------------------------------------------
+    // make a shallow copy of the values, if possible
+    //--------------------------------------------------------------------------
+
+    // If the identity operator, first(A,y), or second(x,A) are used with no
+    // typecasting, C->x becomes a shallow copy of A->x, and no work is done.
+
+    int64_t anz = GB_nnz_held (A) ;
+
+    if ((A->type == op_intype) &&
+        ((opcode == GB_IDENTITY_unop_code) ||
+         (opcode == GB_FIRST_binop_code  && !binop_bind1st) ||
+         (opcode == GB_SECOND_binop_code &&  binop_bind1st)))
+    { 
+        // no work is done at all.  C is a pure shallow copy
+        GBURBLE ("(pure shallow) ") ;
+        C->x = A->x ;
+        C->x_shallow = true ;       // C->x will not be freed when freeing C
+        C->x_size = A->x_size ;
+        C->iso = A->iso ;           // C has the same iso property as A
+        ASSERT_MATRIX_OK (C, "C = pure shallow (A)", GB0) ;
+        return (GrB_SUCCESS) ;
+    }
 
     //--------------------------------------------------------------------------
     // apply the operator to the numerical values
     //--------------------------------------------------------------------------
 
-    int64_t anz = GB_NNZ (A) ;
-    ASSERT (A->nzmax >= GB_IMAX (anz,1)) ;
-
-    if (op->opcode == GB_IDENTITY_opcode && A->type == op->xtype)
-    { 
-        // no work is done at all.  C is a pure shallow copy
-        ASSERT (op->ztype == op->xtype) ;
-        C->nzmax = A->nzmax ;
-        C->x = A->x ;
-        C->x_shallow = true ;       // C->x will not be freed when freeing C
-        ASSERT_OK (GB_check (C, "C = pure shallow (A)", GB0)) ;
-        (*Chandle) = C ;
-        return (GrB_SUCCESS) ;
-    }
-
-    // allocate new space for the numerical values of C
-    C->nzmax = GB_IMAX (anz,1) ;
-    GB_MALLOC_MEMORY (C->x, C->nzmax, C->type->size) ;
+    // allocate new space for the numerical values of C; use calloc if bitmap
+    C->x = GB_XALLOC (GB_IS_BITMAP (C), C_iso, anz,     // x:OK
+        C->type->size, &(C->x_size)) ;
     C->x_shallow = false ;          // free C->x when freeing C
     if (C->x == NULL)
     { 
         // out of memory
-        double memory = GBYTES (C->nzmax, C->type->size) ;
-        GB_MATRIX_FREE (&C) ;
-        return (GB_OUT_OF_MEMORY (memory)) ;
+        GB_FREE_ALL ;
+        return (GrB_OUT_OF_MEMORY) ;
     }
 
-    //--------------------------------------------------------------------------
-    // apply the unary operator
-    //--------------------------------------------------------------------------
-
-    // C->x = op ((op->xtype) Ax)
-    GB_apply_op (C->x, op, A->x, A->type, anz) ;
+    GB_OK (GB_apply_op ((GB_void *) C->x, C->type, C_code_iso, op,
+        scalar, binop_bind1st, flipij, A, Werk)) ;
 
     //--------------------------------------------------------------------------
     // return the result
     //--------------------------------------------------------------------------
 
-    ASSERT_OK (GB_check (C, "C = shallow (op (A))", GB0)) ;
-    (*Chandle) = C ;
+    ASSERT_MATRIX_OK (C, "C = shallow (op (A))", GB0) ;
     return (GrB_SUCCESS) ;
 }
 

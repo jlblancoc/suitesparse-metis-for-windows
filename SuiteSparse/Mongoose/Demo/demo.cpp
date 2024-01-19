@@ -4,6 +4,14 @@
  * the results. Does not take any input. This application can be used to
  * test that compilation was successful and that everything is working
  * properly.
+ *
+ * Mongoose, Copyright (c) 2018, All Rights Reserved.
+ *   Nuri Yeralan, Microsoft Research
+ *   Scott Kolodziej, Texas A&M University
+ *   Tim Davis, Texas A&M University
+ *   William Hager, University of Florida.
+ * 
+ * SPDX-License-Identifier: GPL-3.0-only
  */
 
 #include "Mongoose.hpp"
@@ -45,7 +53,7 @@ int main(int argn, const char **argv)
     cout << "Mongoose is licensed under Version 3 of the GNU General Public License." << endl;
     cout << "Mongoose is also available under other licenses; contact authors for details." << endl;
 
-    clock_t start = clock();
+    double start = SUITESPARSE_TIME;
     double duration;
 
     for (int k = 0; k < NMAT; k++)
@@ -53,7 +61,7 @@ int main(int argn, const char **argv)
         cout << "********************************************************************************" << endl;
         cout << "Computing an edge cut for " << demo_files[k] << "..." << endl;
         
-        clock_t trial_start = clock();
+        double trial_start = SUITESPARSE_TIME;
         EdgeCut_Options *options = EdgeCut_Options::create();
         if (!options) return EXIT_FAILURE; // Return an error if we failed.
 
@@ -79,7 +87,7 @@ int main(int argn, const char **argv)
             cout << "Cut Imbalance:  " << setprecision(2) << 100*(result->imbalance) << "%" << endl;
         }
 
-        double trial_duration = (std::clock() - trial_start) / (double) CLOCKS_PER_SEC;
+        double trial_duration = (SUITESPARSE_TIME - trial_start) ;
         cout << "Trial Time:     " << trial_duration*1000 << "ms" << endl;
 
         options->~EdgeCut_Options();
@@ -87,7 +95,7 @@ int main(int argn, const char **argv)
         result->~EdgeCut();
     }
 
-    duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+    duration = (SUITESPARSE_TIME - start) ;
 
     cout << "********************************************************************************" << endl;
     cout << "Total Demo Time:  " << setprecision(2) << duration << "s" << endl;

@@ -1,13 +1,15 @@
-/* ========================================================================== */
-/* === RBio/Source/RBio.c: C-callable RBio functions ======================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// RBio/Source/RBio.c: C-callable RBio functions
+//------------------------------------------------------------------------------
 
-/* Copyright 2009, Timothy A. Davis, All Rights Reserved.
-   Refer to RBio/Doc/license.txt for the RBio license. */
+// RBio, Copyright (c) 2009-2022, Timothy A. Davis.  All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /* This file contains functions for writing/reading a sparse matrix to/from a
-   file in Rutherford-Boeing format.  User-callable functions are declared
-   as PUBLIC.  PRIVATE functions are available only within this file.
+   file in Rutherford-Boeing format.
+   PRIVATE functions are available only within this file.
 */
 
 /* ========================================================================== */
@@ -18,13 +20,13 @@
 
 #ifdef INT
 /* int version */
-#define Int int
+#define Int int32_t
 #define IDD "d"
 #define RB(name) RB ## name ## _i
 #else
 /* Default: long (except for Windows, which is __int64) */
-#define Int SuiteSparse_long
-#define IDD SuiteSparse_long_idd
+#define Int int64_t
+#define IDD PRId64
 #define RB(name) RB ## name
 #endif
 #define ID "%" IDD
@@ -35,8 +37,8 @@
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #define ABS(a)   (((a) > 0) ? (a) : -(a))
 #define ISNAN(a) ((a) != (a))
+
 #define PRIVATE static
-#define PUBLIC
 
 #define SLEN 4096
 #define FREE_WORK   { SuiteSparse_free (w) ; \
@@ -63,7 +65,7 @@ PRIVATE Int RB(format)  /* return format to use (index in F_, C_format) */
 (
     /* input */
     Int nnz,            /* number of nonzeros */
-    double *x,          /* of size nnz */
+    const double *x,    /* of size nnz */
     Int is_int,         /* true if integer format is to be used */
     double xmin,        /* minimum value of x */
     double xmax,        /* maximum value of x */
@@ -93,11 +95,11 @@ PRIVATE Int RB(cards)
     Int nperline        /* number of items per line */
 ) ;
 
-PRIVATE Int RB(iprint)        /* returns TRUE if OK, FALSE otherwise */
+PRIVATE int RB(iprint)        /* returns TRUE if OK, FALSE otherwise */
 (
     /* input */
     FILE *file,             /* which file to write to */
-    char *indcfm,           /* C format to use */
+    const char *indcfm,     /* C format to use */
     Int i,                  /* value to write */
     Int indn,               /* number of entries to write per line */
 
@@ -105,11 +107,11 @@ PRIVATE Int RB(iprint)        /* returns TRUE if OK, FALSE otherwise */
     Int *nbuf               /* number of entries written to current line */
 ) ;
 
-PRIVATE Int RB(xprint)        /* returns TRUE if OK, FALSE otherwise */
+PRIVATE int RB(xprint)        /* returns TRUE if OK, FALSE otherwise */
 (
     /* input */
     FILE *file,             /* which file to write to */
-    char *valcfm,           /* C format to use */
+    const char *valcfm,     /* C format to use */
     double x,               /* value to write */
     Int valn,               /* number of entries to write per line */
     Int mkind,              /* 0:real, 1:pattern, 2:complex, 3:integer */
@@ -128,29 +130,29 @@ PRIVATE void RB(fill)
 PRIVATE Int RB(fix_mkind_in)      /* return revised mkind */
 (
     Int mkind_in,       /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
-    double *Ax,
-    double *Az
+    const double *Ax,
+    const double *Az
 ) ;
 
-PRIVATE Int RB(writeTask)       /* returns TRUE if OK, FALSE on failure */
+PRIVATE int RB(writeTask)       /* returns TRUE if OK, FALSE on failure */
 (
     /* input */
-    FILE *file,     /* file to print to (already open) */
-    Int task,       /* 0 to 3 (see above) */
-    Int nrow,       /* A is nrow-by-ncol */
+    FILE *file,         /* file to print to (already open) */
+    Int task,           /* 0 to 3 (see above) */
+    Int nrow,           /* A is nrow-by-ncol */
     Int ncol,
-    Int mkind,      /* 0:real, 1:pattern, 2:complex, 3:integer */
-    Int skind,      /* -1:rect, 0:unsym, 1:sym, 2:hermitian, 3:skew */
-    Int *Ap,        /* size ncol+1, column pointers */
-    Int *Ai,        /* size anz=Ap[ncol], row indices */
-    double *Ax,     /* size anz, real values */
-    double *Az,     /* size anz, imaginary part (may be NULL) */
-    Int *Zp,        /* size ncol+1, column pointers for Z (may be NULL) */
-    Int *Zi,        /* size Zp[ncol], row indices for Z */
-    char *indcfm,   /* C format for indices */
-    Int indn,       /* # of indices per line */
-    char *valcfm,   /* C format for values */
-    Int valn,       /* # of values per line */
+    Int mkind,          /* 0:real, 1:pattern, 2:complex, 3:integer */
+    Int skind,          /* -1:rect, 0:unsym, 1:sym, 2:hermitian, 3:skew */
+    const Int *Ap,      /* size ncol+1, column pointers */
+    const Int *Ai,      /* size anz=Ap[ncol], row indices */
+    const double *Ax,   /* size anz, real values */
+    const double *Az,   /* size anz, imaginary part (may be NULL) */
+    const Int *Zp,      /* size ncol+1, column pointers for Z (may be NULL) */
+    const Int *Zi,      /* size Zp[ncol], row indices for Z */
+    const char *indcfm, /* C format for indices */
+    Int indn,           /* # of indices per line */
+    const char *valcfm, /* C format for values */
+    Int valn,           /* # of values per line */
 
     /* output */
     Int *nnz,           /* number of entries that will be printed to the file */
@@ -160,7 +162,7 @@ PRIVATE Int RB(writeTask)       /* returns TRUE if OK, FALSE on failure */
     Int *cp         /* size MAX(nrow,ncol)+1 */
 ) ;
 
-PRIVATE Int RB(read2)     /* 0: OK, < 0: error, > 0: warning */
+PRIVATE int RB(read2)     /* 0: OK, < 0: error, > 0: warning */
 (
     /* input */
     FILE *file,         /* must be already open for reading */
@@ -231,7 +233,7 @@ PRIVATE void RB(substring)
     char *t             /* size tlen+1 */
 ) ;
 
-PRIVATE Int RB(xtoken)   /* TRUE if token found, FALSE othewise */
+PRIVATE int RB(xtoken)   /* TRUE if token found, FALSE othewise */
 (
     /* input/output */
     char *s,            /* parse the next token in s [k..len] and update k */
@@ -343,16 +345,24 @@ PRIVATE void RB(skipheader)
 /* === functions ============================================================ */
 /* ========================================================================== */
 
+#ifdef INT
+void RBio_version (int version [3])
+{
+    version [0] = RBIO_MAIN_VERSION ;
+    version [1] = RBIO_SUB_VERSION ;
+    version [2] = RBIO_SUBSUB_VERSION ;
+}
+#endif
 
 /* -------------------------------------------------------------------------- */
 /* RBget_entry: get numerical entry in the matrix at position p */
 /* -------------------------------------------------------------------------- */
 
-PUBLIC void RB(get_entry)
+void RB(get_entry)
 (
     Int mkind,          /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
-    double *Ax,         /* real part, or both if merged-complex */
-    double *Az,         /* imaginary part if split-complex */
+    const double *Ax,   /* real part, or both if merged-complex */
+    const double *Az,   /* imaginary part if split-complex */
     Int p,              /* index of the entry */
     double *xr,         /* real part */
     double *xz          /* imaginary part */
@@ -389,7 +399,7 @@ PUBLIC void RB(get_entry)
 /* RBput_entry: put numerical entry in the matrix in position p */
 /* -------------------------------------------------------------------------- */
 
-PUBLIC void RB(put_entry)
+void RB(put_entry)
 (
     Int mkind,          /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
     double *Ax,         /* real part, or both if merged-complex */
@@ -455,7 +465,7 @@ PRIVATE void RB(skipheader)
 /* RBread2: read all but the header and construct the matrix */
 /* -------------------------------------------------------------------------- */
 
-PRIVATE Int RB(read2)   /* 0: OK, < 0: error, > 0: warning */
+PRIVATE int RB(read2)   /* 0: OK, < 0: error, > 0: warning */
 (
     /* input */
     FILE *file,         /* must be already open for reading */
@@ -851,7 +861,7 @@ PRIVATE void RB(substring)
 /* On input, the token to return from s [0..len] starts at s[k].  On output, k
    is updated so that the s[k] is the start of the token after this one. */
 
-PRIVATE Int RB(xtoken)    /* TRUE if token found, FALSE othewise */
+PRIVATE int RB(xtoken)    /* TRUE if token found, FALSE othewise */
 (
     /* input/output */
     char *s,            /* parse the next token in s [k..len] and update k */
@@ -1342,10 +1352,10 @@ PRIVATE Int RB(xread)     /* TRUE if OK, FALSE otherwise */
     (__E) are not handled.
  */
 
-PUBLIC Int RB(read)              /* 0: OK, < 0: error, > 0: warning */
+int RB(read)              /* 0: OK, < 0: error, > 0: warning */
 (
     /* input */
-    char *filename,     /* filename to read from */
+    const char *filename,  /* filename to read from */
     Int build_upper,    /* if true, construct upper part for sym. matrices */
     Int zero_handling,  /* 0: do nothing, 1: prune zeros, 2: extract zeros */
 
@@ -1568,10 +1578,10 @@ PUBLIC Int RB(read)              /* 0: OK, < 0: error, > 0: warning */
 /* RBreadraw: read the raw contents of a Rutherford/Boeing file */
 /* -------------------------------------------------------------------------- */
 
-PUBLIC Int RB(readraw)           /* 0: OK, < 0: error, > 0: warning */
+int RB(readraw)           /* 0: OK, < 0: error, > 0: warning */
 (
     /* input */
-    char *filename,     /* filename to read from */
+    const char *filename,  /* filename to read from */
 
     /* output */
     char title [73],
@@ -1724,8 +1734,8 @@ PUBLIC Int RB(readraw)           /* 0: OK, < 0: error, > 0: warning */
 PRIVATE Int RB(fix_mkind_in)      /* return revised mkind */
 (
     Int mkind_in,       /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
-    double *Ax,
-    double *Az
+    const double *Ax,
+    const double *Az
 )
 {
     if (!Ax)
@@ -1746,21 +1756,21 @@ PRIVATE Int RB(fix_mkind_in)      /* return revised mkind */
 /* RBwrite */
 /* -------------------------------------------------------------------------- */
 
-PUBLIC Int RB(write)         /* 0:OK, < 0: error, > 0: warning */
+int RB(write)         /* 0:OK, < 0: error, > 0: warning */
 (
     /* input */
-    char *filename, /* filename to write to (stdout if NULL) */
-    char *title,    /* title (72 char max), may be NULL */
-    char *key,      /* key (8 char max), may be NULL */
-    Int nrow,       /* A is nrow-by-ncol */
+    const char *filename, /* filename to write to (stdout if NULL) */
+    const char *title,    /* title (72 char max), may be NULL */
+    const char *key,      /* key (8 char max), may be NULL */
+    Int nrow,             /* A is nrow-by-ncol */
     Int ncol,
-    Int *Ap,        /* size ncol+1, column pointers */
-    Int *Ai,        /* size anz=Ap[ncol], row indices (sorted) */
-    double *Ax,     /* size anz or 2*anz, numerical values (binary if NULL) */
-    double *Az,     /* size anz, imaginary part (real if NULL) */
-    Int *Zp,        /* size ncol+1, column pointers for Z (or NULL) */
-    Int *Zi,        /* size znz=Zp[ncol], row indices for Z (or NULL) */
-    Int mkind_in,   /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
+    const Int *Ap,        /* size ncol+1, column pointers */
+    const Int *Ai,        /* size anz=Ap[ncol], row indices (sorted) */
+    const double *Ax,     /* size anz or 2*anz, numerical values (binary if NULL) */
+    const double *Az,     /* size anz, imaginary part (real if NULL) */
+    const Int *Zp,        /* size ncol+1, column pointers for Z (or NULL) */
+    const Int *Zi,        /* size znz=Zp[ncol], row indices for Z (or NULL) */
+    Int mkind_in,         /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
 
     /* output */
     char mtype [4]  /* matrix type (RUA, RSA, etc), may be NULL */
@@ -2023,16 +2033,16 @@ PUBLIC Int RB(write)         /* 0:OK, < 0: error, > 0: warning */
 /* RBkind: determine the type of a sparse matrix */
 /* -------------------------------------------------------------------------- */
 
-PUBLIC Int RB(kind)          /* 0: OK, < 0: error, > 0: warning */
+int RB(kind)          /* 0: OK, < 0: error, > 0: warning */
 (
     /* input */
-    Int nrow,       /* A is nrow-by-ncol */
+    Int nrow,             /* A is nrow-by-ncol */
     Int ncol,
-    Int *Ap,        /* Ap [0...ncol]: column pointers */
-    Int *Ai,        /* Ai [0...nnz-1]: row indices */
-    double *Ax,     /* Ax [0...nnz-1]: real values.  Az holds imaginary part */
-    double *Az,     /* if real, Az is NULL. if complex, Az is non-NULL */
-    Int mkind_in,   /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
+    const Int *Ap,        /* Ap [0...ncol]: column pointers */
+    const Int *Ai,        /* Ai [0...nnz-1]: row indices */
+    const double *Ax,     /* Ax [0...nnz-1]: real values.  Az holds imaginary part */
+    const double *Az,     /* if real, Az is NULL. if complex, Az is non-NULL */
+    Int mkind_in,         /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
 
     /* output */
     Int *mkind,     /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
@@ -2368,7 +2378,7 @@ PRIVATE Int RB(format)  /* return format to use (index in F_, C_format) */
 (
     /* input */
     Int nnz,            /* number of nonzeros */
-    double *x,          /* of size nnz */
+    const double *x,    /* of size nnz */
     Int is_int,         /* true if integer format is to be used */
     double xmin,        /* minimum value of x */
     double xmax,        /* maximum value of x */
@@ -2452,25 +2462,25 @@ PRIVATE Int RB(format)  /* return format to use (index in F_, C_format) */
    task 3: write the numerical values
 */
 
-PRIVATE Int RB(writeTask)     /* returns TRUE if successful, FALSE on failure */
+PRIVATE int RB(writeTask)     /* returns TRUE if successful, FALSE on failure */
 (
     /* input */
-    FILE *file,     /* file to print to (already open) */
-    Int task,       /* 0 to 3 (see above) */
-    Int nrow,       /* A is nrow-by-ncol */
+    FILE *file,         /* file to print to (already open) */
+    Int task,           /* 0 to 3 (see above) */
+    Int nrow,           /* A is nrow-by-ncol */
     Int ncol,
-    Int mkind,      /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
-    Int skind,      /* -1:rect, 0:unsym, 1:sym, 2:hermitian, 3:skew */
-    Int *Ap,        /* size ncol+1, column pointers */
-    Int *Ai,        /* size anz=Ap[ncol], row indices */
-    double *Ax,     /* size anz, real values */
-    double *Az,     /* size anz, imaginary part (may be NULL) */
-    Int *Zp,        /* size ncol+1, column pointers for Z (may be NULL) */
-    Int *Zi,        /* size Zp[ncol], row indices for Z */
-    char *indcfm,   /* C format for indices */
-    Int indn,       /* # of indices per line */
-    char *valcfm,   /* C format for values */
-    Int valn,       /* # of values per line */
+    Int mkind,          /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
+    Int skind,          /* -1:rect, 0:unsym, 1:sym, 2:hermitian, 3:skew */
+    const Int *Ap,      /* size ncol+1, column pointers */
+    const Int *Ai,      /* size anz=Ap[ncol], row indices */
+    const double *Ax,   /* size anz, real values */
+    const double *Az,   /* size anz, imaginary part (may be NULL) */
+    const Int *Zp,      /* size ncol+1, column pointers for Z (may be NULL) */
+    const Int *Zi,      /* size Zp[ncol], row indices for Z */
+    const char *indcfm, /* C format for indices */
+    Int indn,           /* # of indices per line */
+    const char *valcfm, /* C format for values */
+    Int valn,           /* # of values per line */
 
     /* output */
     Int *nnz,           /* number of entries that will be printed to the file */
@@ -2481,7 +2491,8 @@ PRIVATE Int RB(writeTask)     /* returns TRUE if successful, FALSE on failure */
 )
 {
     double xr, xz ;
-    Int j, pa, pz, paend, pzend, ia, iz, i, nbuf, ok ;
+    Int j, pa, pz, paend, pzend, ia, iz, i, nbuf ;
+    int ok ;
 
     /* ---------------------------------------------------------------------- */
     /* clear the nonzero counts */
@@ -2598,11 +2609,11 @@ PRIVATE Int RB(writeTask)     /* returns TRUE if successful, FALSE on failure */
 /* RBiprint: print one integer value to the file */
 /* -------------------------------------------------------------------------- */
 
-PRIVATE Int RB(iprint)        /* returns TRUE if OK, FALSE otherwise */
+PRIVATE int RB(iprint)        /* returns TRUE if OK, FALSE otherwise */
 (
     /* input */
     FILE *file,             /* which file to write to */
-    char *indcfm,           /* C format to use */
+    const char *indcfm,     /* C format to use */
     Int i,                  /* value to write */
     Int indn,               /* number of entries to write per line */
 
@@ -2627,11 +2638,11 @@ PRIVATE Int RB(iprint)        /* returns TRUE if OK, FALSE otherwise */
 /* RBxprint: print one real value to the file */
 /* -------------------------------------------------------------------------- */
 
-PRIVATE Int RB(xprint)    /* returns TRUE if OK, FALSE otherwise */
+PRIVATE int RB(xprint)    /* returns TRUE if OK, FALSE otherwise */
 (
     /* input */
     FILE *file,         /* which file to write to */
-    char *valcfm,       /* C format to use */
+    const char *valcfm, /* C format to use */
     double x,           /* value to write */
     Int valn,           /* number of entries to write per line */
     Int mkind,          /* 0:R, 1:P: 2:Csplit, 3:I, 4:Cmerged */
@@ -2803,19 +2814,19 @@ PRIVATE void RB(fill)
 /* RBok: verify a sparse matrix */
 /* -------------------------------------------------------------------------- */
 
-PUBLIC Int RB(ok)            /* 0:OK, < 0: error, > 0: warning */
+int RB(ok)            /* 0:OK, < 0: error, > 0: warning */
 (
     /* inputs, not modified */
-    Int nrow,       /* number of rows */
-    Int ncol,       /* number of columns */
-    Int nzmax,      /* max # of entries */
-    Int *Ap,        /* size ncol+1, column pointers */
-    Int *Ai,        /* size nz = Ap [ncol], row indices */
-    double *Ax,     /* real part, or both if merged-complex */
-    double *Az,     /* imaginary part for split-complex */
-    char *As,       /* logical matrices (useful for MATLAB caller only) */
-    Int mkind,      /* 0:real, 1:logical/pattern, 2:split-complex, 3:integer,
-                       4:merged-complex */
+    Int nrow,          /* number of rows */
+    Int ncol,          /* number of columns */
+    Int nzmax,         /* max # of entries */
+    const Int *Ap,     /* size ncol+1, column pointers */
+    const Int *Ai,     /* size nz = Ap [ncol], row indices */
+    const double *Ax,  /* real part, or both if merged-complex */
+    const double *Az,  /* imaginary part for split-complex */
+    const char *As,    /* logical matrices (useful for MATLAB caller only) */
+    Int mkind,         /* 0:real, 1:logical/pattern, 2:split-complex, 3:integer,
+                          4:merged-complex */
 
     /* outputs, not defined on input */
     Int *p_njumbled,   /* # of jumbled row indices (-1 if not computed) */

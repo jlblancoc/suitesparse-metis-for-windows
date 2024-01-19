@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_valid_numeric ==================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_valid_numeric: check if Numeric object is valid
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /* Returns TRUE if the Numeric object is valid, FALSE otherwise. */
 /* Does not check everything.  UMFPACK_report_numeric checks more. */
@@ -13,7 +13,7 @@
 #include "umf_internal.h"
 #include "umf_valid_numeric.h"
 
-GLOBAL Int UMF_valid_numeric
+Int UMF_valid_numeric
 (
     NumericType *Numeric
 )

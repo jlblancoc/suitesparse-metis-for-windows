@@ -1,11 +1,12 @@
-/* ========================================================================== */
-/* === ccolamd and csymamd example (long integer version) =================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// CCOLAMD/Demo/ccolamd_l_example: simple example for CCOLAMD (int64_t)
+//------------------------------------------------------------------------------
 
-/* ----------------------------------------------------------------------------
- * CCOLAMD Copyright (C), Univ. of Florida.  Authors: Timothy A. Davis,
- * Sivasankaran Rajamanickam, and Stefan Larimore
- * -------------------------------------------------------------------------- */
+// CCOLAMD, Copyright (c) 2005-2022, Univ. of Florida, All Rights Reserved.
+// Authors: Timothy A. Davis, Sivasankaran Rajamanickam, and Stefan Larimore.
+// SPDX-License-Identifier: BSD-3-clause
+
+//------------------------------------------------------------------------------
 
 /*
  *  ccolamd example of use, to order the columns of a 5-by-4 matrix with
@@ -51,14 +52,14 @@ int main (void)
     /* input matrix A definition */
     /* ====================================================================== */
 
-    SuiteSparse_long A [ALEN] = {
+    int64_t A [ALEN] = {
 
     	0, 1, 4,		/* row indices of nonzeros in column 0 */
 	2, 4,			/* row indices of nonzeros in column 1 */
 	0, 1, 2, 3,		/* row indices of nonzeros in column 2 */
 	1, 3} ;			/* row indices of nonzeros in column 3 */
 
-    SuiteSparse_long p [ ] = {
+    int64_t p [ ] = {
 
     	0,			/* column 0 is in A [0..2] */
 	3,			/* column 1 is in A [3..4] */ 
@@ -70,7 +71,7 @@ int main (void)
     /* input matrix B definition */
     /* ====================================================================== */
 
-    SuiteSparse_long B [ ] = {  /* Note: only strictly lower triangular part */
+    int64_t B [ ] = {  /* Note: only strictly lower triangular part */
     				/* is included, since symamd ignores the */
 				/* diagonal and upper triangular part of B. */
 
@@ -80,7 +81,7 @@ int main (void)
     	4			/* row indices of nonzeros in column 3 */
     	} ;			/* row indices of nonzeros in column 4 (none) */
 
-    SuiteSparse_long q [ ] = {
+    int64_t q [ ] = {
 
     	0,			/* column 0 is in B [0] */
 	1,			/* column 1 is in B [1..2] */ 
@@ -93,9 +94,25 @@ int main (void)
     /* other variable definitions */
     /* ====================================================================== */
 
-    SuiteSparse_long perm [B_N+1] ;	    /* note the size is N+1 */
-    SuiteSparse_long stats [CCOLAMD_STATS] ;  /* ccolamd/csymamd output stats */
-    SuiteSparse_long row, col, pp, length, ok ;
+    int64_t perm [B_N+1] ;	    /* note the size is N+1 */
+    int64_t stats [CCOLAMD_STATS] ;  /* ccolamd/csymamd output stats */
+    int64_t row, col, pp, length ;
+    int ok ;
+
+    //--------------------------------------------------------------------------
+    // ccolamd version
+    //--------------------------------------------------------------------------
+
+    int version [3] ;
+    ccolamd_version (version) ;
+    printf ("CCOLAMD v%d.%d.%d\n", version [0], version [1], version [2]) ;
+    if ((version [0] != CCOLAMD_MAIN_VERSION) ||
+        (version [1] != CCOLAMD_SUB_VERSION) ||
+        (version [2] != CCOLAMD_SUBSUB_VERSION))
+    {
+        fprintf (stderr, "version in header does not match library\n") ;
+        abort ( ) ;
+    }
 
     /* ====================================================================== */
     /* dump the input matrix A */
@@ -105,11 +122,11 @@ int main (void)
     for (col = 0 ; col < A_NCOL ; col++)
     {
 	length = p [col+1] - p [col] ;
-    	printf ("Column %ld, with %ld entries:\n", col, length) ;
+    	printf ("Column %"PRId64", with %"PRId64" entries:\n", col, length) ;
 	for (pp = p [col] ; pp < p [col+1] ; pp++)
 	{
 	    row = A [pp] ;
-	    printf ("    row %ld\n", row) ;
+	    printf ("    row %"PRId64"\n", row) ;
 	}
     }
 
@@ -131,10 +148,10 @@ int main (void)
     /* ====================================================================== */
 
     printf ("ccolamd_l column ordering:\n") ;
-    printf ("1st column: %ld\n", p [0]) ;
-    printf ("2nd column: %ld\n", p [1]) ;
-    printf ("3rd column: %ld\n", p [2]) ;
-    printf ("4th column: %ld\n", p [3]) ;
+    printf ("1st column: %"PRId64"\n", p [0]) ;
+    printf ("2nd column: %"PRId64"\n", p [1]) ;
+    printf ("3rd column: %"PRId64"\n", p [2]) ;
+    printf ("4th column: %"PRId64"\n", p [3]) ;
 
     /* ====================================================================== */
     /* dump the strictly lower triangular part of symmetric input matrix B */
@@ -145,11 +162,11 @@ int main (void)
     for (col = 0 ; col < B_N ; col++)
     {
 	length = q [col+1] - q [col] ;
-    	printf ("Column %ld, with %ld entries:\n", col, length) ;
+    	printf ("Column %"PRId64", with %"PRId64" entries:\n", col, length) ;
 	for (pp = q [col] ; pp < q [col+1] ; pp++)
 	{
 	    row = B [pp] ;
-	    printf ("    row %ld\n", row) ;
+	    printf ("    row %"PRId64"\n", row) ;
 	}
     }
 
@@ -172,11 +189,11 @@ int main (void)
     /* ====================================================================== */
 
     printf ("csymamd_l column ordering:\n") ;
-    printf ("1st row/column: %ld\n", perm [0]) ;
-    printf ("2nd row/column: %ld\n", perm [1]) ;
-    printf ("3rd row/column: %ld\n", perm [2]) ;
-    printf ("4th row/column: %ld\n", perm [3]) ;
-    printf ("5th row/column: %ld\n", perm [4]) ;
+    printf ("1st row/column: %"PRId64"\n", perm [0]) ;
+    printf ("2nd row/column: %"PRId64"\n", perm [1]) ;
+    printf ("3rd row/column: %"PRId64"\n", perm [2]) ;
+    printf ("4th row/column: %"PRId64"\n", perm [3]) ;
+    printf ("5th row/column: %"PRId64"\n", perm [4]) ;
 
     return (0) ;
 }

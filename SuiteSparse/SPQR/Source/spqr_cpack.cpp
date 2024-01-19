@@ -2,6 +2,11 @@
 // === spqr_cpack ==============================================================
 // =============================================================================
 
+// SPQR, Copyright (c) 2008-2022, Timothy A Davis. All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
+
 //  spqr_cpack copies the C matrix from the frontal matrix F and
 //  stores it in packed form.  F can be overwritten with C (the pack can occur
 //  in-place), but in that case, the R and H matrices are destroyed.
@@ -31,13 +36,13 @@
 
 #include "spqr.hpp"
 
-template <typename Entry> Long spqr_cpack     // returns # of rows in C
+template <typename Entry, typename Int> Int spqr_cpack     // returns # of rows in C
 (
     // input, not modified
-    Long m,                 // # of rows in F
-    Long n,                 // # of columns in F
-    Long npiv,              // number of pivotal columns in F
-    Long rank,              // the C block starts at F (rank,npiv)
+    Int m,                 // # of rows in F
+    Int n,                 // # of columns in F
+    Int npiv,              // number of pivotal columns in F
+    Int rank,              // the C block starts at F (rank,npiv)
 
     // input, not modified unless the pack occurs in-place
     Entry *F,               // m-by-n frontal matrix in column-major order
@@ -47,7 +52,7 @@ template <typename Entry> Long spqr_cpack     // returns # of rows in C
                             // trapezoidal form.
 )
 {
-    Long i, k, cm, cn ;
+    Int i, k, cm, cn ;
 
     // -------------------------------------------------------------------------
     // get inputs
@@ -101,40 +106,63 @@ template <typename Entry> Long spqr_cpack     // returns # of rows in C
     PR (("Cpack rank %ld cm %ld cn %ld\n", rank, cm, cn)) ;
     return (cm) ;                       // return # of rows in C
 }
-
-
-// =============================================================================
-
-template Long spqr_cpack <double>     // returns # of rows in C
+template int32_t spqr_cpack <double, int32_t>     // returns # of rows in C
 (
     // input, not modified
-    Long m,                 // # of rows in F
-    Long n,                 // # of columns in F
-    Long npiv,              // number of pivotal columns in F
-    Long rank,              // the C block starts at F (rank,npiv)
+    int32_t m,                 // # of rows in F
+    int32_t n,                 // # of columns in F
+    int32_t npiv,              // number of pivotal columns in F
+    int32_t rank,              // the C block starts at F (rank,npiv)
 
     // input, not modified unless the pack occurs in-place
-    double *F,              // m-by-n frontal matrix in column-major order
+    double *F,               // m-by-n frontal matrix in column-major order
 
     // output, contents not defined on input
-    double *C               // packed columns of C, of size cm-by-cn in upper
+    double *C                // packed columns of C, of size cm-by-cn in upper
                             // trapezoidal form.
 ) ;
-
-// =============================================================================
-
-template Long spqr_cpack <Complex>    // returns # of rows in C
+template int32_t spqr_cpack <Complex, int32_t>     // returns # of rows in C
 (
     // input, not modified
-    Long m,                 // # of rows in F
-    Long n,                 // # of columns in F
-    Long npiv,              // number of pivotal columns in F
-    Long rank,              // the C block starts at F (rank,npiv)
+    int32_t m,                 // # of rows in F
+    int32_t n,                 // # of columns in F
+    int32_t npiv,              // number of pivotal columns in F
+    int32_t rank,              // the C block starts at F (rank,npiv)
 
     // input, not modified unless the pack occurs in-place
-    Complex *F,             // m-by-n frontal matrix in column-major order
+    Complex *F,               // m-by-n frontal matrix in column-major order
 
     // output, contents not defined on input
-    Complex *C              // packed columns of C, of size cm-by-cn in upper
+    Complex *C                // packed columns of C, of size cm-by-cn in upper
+                            // trapezoidal form.
+) ;
+template int64_t spqr_cpack <double, int64_t>     // returns # of rows in C
+(
+    // input, not modified
+    int64_t m,                 // # of rows in F
+    int64_t n,                 // # of columns in F
+    int64_t npiv,              // number of pivotal columns in F
+    int64_t rank,              // the C block starts at F (rank,npiv)
+
+    // input, not modified unless the pack occurs in-place
+    double *F,               // m-by-n frontal matrix in column-major order
+
+    // output, contents not defined on input
+    double *C                // packed columns of C, of size cm-by-cn in upper
+                            // trapezoidal form.
+) ;
+template int64_t spqr_cpack <Complex, int64_t>     // returns # of rows in C
+(
+    // input, not modified
+    int64_t m,                 // # of rows in F
+    int64_t n,                 // # of columns in F
+    int64_t npiv,              // number of pivotal columns in F
+    int64_t rank,              // the C block starts at F (rank,npiv)
+
+    // input, not modified unless the pack occurs in-place
+    Complex *F,               // m-by-n frontal matrix in column-major order
+
+    // output, contents not defined on input
+    Complex *C                // packed columns of C, of size cm-by-cn in upper
                             // trapezoidal form.
 ) ;

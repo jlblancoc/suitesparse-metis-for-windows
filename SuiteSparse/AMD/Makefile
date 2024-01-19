@@ -1,73 +1,94 @@
-#------------------------------------------------------------------------------
-# AMD Makefile
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# SuiteSparse/AMD/Makefile
+#-------------------------------------------------------------------------------
 
-SUITESPARSE ?= $(realpath $(CURDIR)/..)
-export SUITESPARSE
+# AMD: Copyright (c) 2009-2022, Timothy A. Davis, Patrick Amestoy, Iain Duff.
+# All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-clause
 
-default: all
+#-------------------------------------------------------------------------------
 
-include ../SuiteSparse_config/SuiteSparse_config.mk
+# A simple Makefile for AMD, which relies on cmake to do the
+# actual build.  All the work is done in cmake so this Makefile is just for
+# convenience.
 
-demos: all
+# To compile with an alternate compiler:
+#
+#       make CC=gcc CXX=g++
+#
+# To compile/install for system-wide usage:
+#
+#       make
+#       sudo make install
+#
+# To compile/install for local usage (SuiteSparse/lib and SuiteSparse/include):
+#
+#       make local
+#       make install
+#
+# To clean up the files:
+#
+#       make clean
 
-# Compile all C code.  Do not compile the FORTRAN versions.
-all:
-	( cd Lib    ; $(MAKE) )
-	( cd Demo   ; $(MAKE) )
+JOBS ?= 8
 
-# compile just the C-callable libraries (not Demos)
+default: library
+
+# default is to install only in /usr/local
 library:
-	( cd Lib    ; $(MAKE) )
+	( cd build && cmake $(CMAKE_OPTIONS) .. && cmake --build . --config Release -j${JOBS} )
 
-# compile the static libraries only
-static:
-	( cd Lib    ; $(MAKE) static )
+# install only in SuiteSparse/lib and SuiteSparse/include
+local:
+	( cd build && cmake $(CMAKE_OPTIONS) -USUITESPARSE_PKGFILEDIR -DSUITESPARSE_LOCAL_INSTALL=1 .. && cmake --build . --config Release -j${JOBS} )
 
-# compile the FORTRAN libraries and demo programs (not compiled by "make all")
-fortran:
-	( cd Lib    ; $(MAKE) fortran )
-	( cd Demo   ; $(MAKE) fortran )
+# install only in /usr/local (default)
+global:
+	( cd build && cmake $(CMAKE_OPTIONS) -USUITESPARSE_PKGFILEDIR -DSUITESPARSE_LOCAL_INSTALL=0 .. && cmake --build . --config Release -j${JOBS} )
 
-# compile a FORTRAN demo program that calls the C version of AMD
-# (not compiled by "make all")
-cross:
-	( cd Demo   ; $(MAKE) cross )
+debug:
+	( cd build && cmake $(CMAKE_OPTIONS) -DCMAKE_BUILD_TYPE=Debug .. && cmake --build . --config Debug -j${JOBS} )
 
-# remove object files, but keep the compiled programs and library archives
-clean:
-	( cd Lib    ; $(MAKE) clean )
-	( cd Demo   ; $(MAKE) clean )
-	( cd MATLAB ; $(RM) $(CLEAN) )
-	( cd Doc    ; $(MAKE) clean )
+all: library
 
-# clean, and then remove compiled programs and library archives
-purge:
-	( cd Lib    ; $(MAKE) purge )
-	( cd Demo   ; $(MAKE) purge )
-	( cd MATLAB ; $(RM) $(CLEAN) ; $(RM) *.mex* )
-	( cd Doc    ; $(MAKE) purge )
+demos: library
+	( cd build && cmake $(CMAKE_OPTIONS) -DSUITESPARSE_DEMOS=1 .. && cmake --build . --config Release -j${JOBS} )
+	./build/amd_demo > build/amd_demo.out && ( command -v d2u && d2u ./build/amd_demo.out || true )
+	- diff Demo/amd_demo.out build/amd_demo.out
+	./build/amd_l_demo > build/amd_l_demo.out && ( command -v d2u && d2u ./build/amd_l_demo.out || true )
+	- diff Demo/amd_l_demo.out build/amd_l_demo.out
+	./build/amd_demo2 > build/amd_demo2.out && ( command -v d2u && d2u ./build/amd_demo2.out || true )
+	- diff Demo/amd_demo2.out build/amd_demo2.out
+	./build/amd_simple > build/amd_simple.out && ( command -v d2u && d2u ./build/amd_simple.out || true )
+	- diff Demo/amd_simple.out build/amd_simple.out
+	# Fortran demos will fail if no Fortran compiler is available
+	- ./build/amd_f77simple > build/amd_f77simple.out && ( command -v d2u && d2u ./build/amd_f77simple.out || true )
+	- diff Demo/amd_f77simple.out build/amd_f77simple.out
+	- ./build/amd_f77demo > build/amd_f77demo.out && ( command -v d2u && d2u ./build/amd_f77demo.out || true )
+	- diff Demo/amd_f77demo.out build/amd_f77demo.out
 
-distclean: purge
+# just compile after running cmake; do not run cmake again
+remake:
+	( cd build && cmake --build . -j${JOBS} )
 
-# create PDF documents for the original distribution
-docs:
-	( cd Doc    ; $(MAKE) )
+# just run cmake to set things up
+setup:
+	( cd build && cmake $(CMAKE_OPTIONS) .. )
 
-# get ready for distribution
-dist: purge
-	( cd Demo   ; $(MAKE) dist )
-	( cd Doc    ; $(MAKE) )
-
-ccode: library
-
-lib: library
-
-# install AMD
 install:
-	( cd Lib  ; $(MAKE) install )
+	( cd build && cmake --install . )
 
-# uninstall AMD
+# remove any installed libraries and #include files
 uninstall:
-	( cd Lib  ; $(MAKE) uninstall )
+	- xargs rm < build/install_manifest.txt
 
+# remove all files not in the distribution
+clean:
+	- $(RM) -rf build/* Config/*.tmp MATLAB/*.o MATLAB/*.mex*
+
+purge: clean
+
+distclean: clean
+
+docs:
+	( cd Doc && $(MAKE) )

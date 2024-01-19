@@ -2,13 +2,16 @@
 // === spqr_debug ==============================================================
 // =============================================================================
 
+// SPQR, Copyright (c) 2008-2022, Timothy A Davis. All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
+
 #include "spqr.hpp"
 
 // =============================================================================
 // This file is for debugging only.
 // =============================================================================
-
-
 #ifndef NDEBUG
 
 #ifndef NPRINT
@@ -37,16 +40,16 @@ void spqrDebug_print
 // === spqrDebug_dumpdense =====================================================
 // =============================================================================
 
-template <typename Entry> void spqrDebug_dumpdense
+template <typename Entry, typename Int> void spqrDebug_dumpdense
 (
     Entry *A,
-    Long m,
-    Long n,
-    Long lda,
+    Int m,
+    Int n,
+    Int lda,
     cholmod_common *cc
 )
 {
-    Long i, j ;
+    Int i, j ;
     if (cc == NULL) return ;
     PR (("Dense: m %ld n %ld lda %ld p %p\n", m, n, lda, A)) ;
     if (m < 0 || n < 0 || lda < m || A == NULL)
@@ -91,39 +94,21 @@ template <typename Entry> void spqrDebug_dumpdense
 
 }
 
-template void spqrDebug_dumpdense <double>
-(
-    double *A,
-    Long m,
-    Long n,
-    Long lda,
-    cholmod_common *cc
-) ;
-
-template void spqrDebug_dumpdense <Complex>
-(
-    Complex *A,
-    Long m,
-    Long n,
-    Long lda,
-    cholmod_common *cc
-) ;
-
 // =============================================================================
 // === spqrDebug_dumpsparse ====================================================
 // =============================================================================
 
-template <typename Entry> void spqrDebug_dumpsparse
+template <typename Entry, typename Int> void spqrDebug_dumpsparse
 (
-    Long *Ap,
-    Long *Ai,
+    Int *Ap,
+    Int *Ai,
     Entry *Ax,
-    Long m,
-    Long n,
+    Int m,
+    Int n,
     cholmod_common *cc
 )
 {
-    Long p, i, j ;
+    Int p, i, j ;
     if (cc == NULL) return ;
     PR (("\nSparse: m %ld n %ld nz %ld Ap %p Ai %p Ax %p\n",
         m, n, Ap [n], Ap, Ai,Ax)) ;
@@ -142,26 +127,6 @@ template <typename Entry> void spqrDebug_dumpsparse
     }
 }
 
-template void spqrDebug_dumpsparse <double>
-(
-    Long *Ap,
-    Long *Ai,
-    double *Ax,
-    Long m,
-    Long n,
-    cholmod_common *cc
-) ;
-
-template void spqrDebug_dumpsparse <Complex>
-(
-    Long *Ap,
-    Long *Ai,
-    Complex *Ax,
-    Long m,
-    Long n,
-    cholmod_common *cc
-) ;
-
 #endif
 
 // =============================================================================
@@ -171,13 +136,13 @@ template void spqrDebug_dumpsparse <Complex>
 #ifdef DEBUG_EXPENSIVE
 
 // returns # of times x is in the List [0..len-1]
-Long spqrDebug_listcount
+template <typename Int> Int spqrDebug_listcount
 (
-    Long x, Long *List, Long len, Long what,
+    Int x, Int *List, Int len, Int what,
     cholmod_common *cc
 )
 {
-    Long k, nfound = 0 ;
+    Int k, nfound = 0 ;
     if (cc == NULL) return (EMPTY) ;
     if (what == 0)
     {
@@ -205,18 +170,18 @@ Long spqrDebug_listcount
 
 // Count the number of entries in the R+H block for a single front.
 
-Long spqrDebug_rhsize       // returns # of entries in R+H
+template <typename Int> Int spqrDebug_rhsize    // returns # of entries in R+H
 (
     // input, not modified
-    Long m,                 // # of rows in F
-    Long n,                 // # of columns in F
-    Long npiv,              // number of pivotal columns in F
-    Long *Stair,            // size n; column j is dead if Stair [j] == 0.
+    Int m,                 // # of rows in F
+    Int n,                 // # of columns in F
+    Int npiv,              // number of pivotal columns in F
+    Int *Stair,            // size n; column j is dead if Stair [j] == 0.
                             // Only the first npiv columns can be dead.
     cholmod_common *cc
 )
 {
-    Long k, h, t, rm, rhsize = 0 ;
+    Int k, h, t, rm, rhsize = 0 ;
 
     ASSERT (m >= 0 && n >= 0 && npiv <= n && npiv >= 0) ;
 
@@ -269,11 +234,33 @@ Long spqrDebug_rhsize       // returns # of entries in R+H
 }
 
 
+template int32_t spqrDebug_rhsize    // returns # of entries in R+H
+(
+    // input, not modified
+    int32_t m,                 // # of rows in F
+    int32_t n,                 // # of columns in F
+    int32_t npiv,              // number of pivotal columns in F
+    int32_t *Stair,            // size n; column j is dead if Stair [j] == 0.
+                            // Only the first npiv columns can be dead.
+    cholmod_common *cc
+) ;
+
+template int64_t spqrDebug_rhsize    // returns # of entries in R+H
+(
+    // input, not modified
+    int64_t m,                 // # of rows in F
+    int64_t n,                 // # of columns in F
+    int64_t npiv,              // number of pivotal columns in F
+    int64_t *Stair,            // size n; column j is dead if Stair [j] == 0.
+                            // Only the first npiv columns can be dead.
+    cholmod_common *cc
+) ;
+
 // =============================================================================
 // === spqrDebug_dump_Parent ===================================================
 // =============================================================================
 
-void spqrDebug_dump_Parent (Long n, Long *Parent, const char *filename)
+template <typename Int> void spqrDebug_dump_Parent (Int n, Int *Parent, const char *filename)
 {
     FILE *pfile = fopen (filename, "w") ;
     if (Parent == NULL)
@@ -282,11 +269,16 @@ void spqrDebug_dump_Parent (Long n, Long *Parent, const char *filename)
     }
     else
     {
-        for (Long f = 0 ; f < n ; f++)
+        for (Int f = 0 ; f < n ; f++)
         {
             fprintf (pfile, "%ld\n", 1+Parent [f]) ;
         }
     }
     fclose (pfile) ;
 }
+
+template void spqrDebug_dump_Parent <int32_t> (int32_t n, int32_t *Parent, const char *filename) ;
+
+template void spqrDebug_dump_Parent <int64_t> (int64_t n, int64_t *Parent, const char *filename) ;
+
 #endif

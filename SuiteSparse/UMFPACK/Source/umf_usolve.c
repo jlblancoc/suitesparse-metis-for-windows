@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_usolve =========================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_usolve: solve Ux=b
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /*  solves Ux = b, where U is the upper triangular factor of a matrix. */
 /*  B is overwritten with the solution X. */
@@ -14,7 +14,7 @@
 #include "umf_internal.h"
 #include "umf_usolve.h"
 
-GLOBAL double UMF_usolve
+double UMF_usolve
 (
     NumericType *Numeric,
     Entry X [ ],		/* b on input, solution x on output */

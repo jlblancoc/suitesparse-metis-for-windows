@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_free ============================================================= */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_free: free a block of memory
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /*
     Free a block previously allocated by UMF_malloc and return NULL.
@@ -20,12 +20,12 @@
 #include "umf_malloc.h"
 #endif
 
-GLOBAL void *UMF_free
+void *UMF_free
 (
     void *p
 )
 {
-    DEBUG0 (("UMF_free: "ID"\n", (Int) p)) ;
+    DEBUG0 (("UMF_free: %p\n", p)) ;
     if (p)
     {
 

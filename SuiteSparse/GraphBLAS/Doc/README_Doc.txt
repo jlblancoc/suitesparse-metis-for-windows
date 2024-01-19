@@ -6,102 +6,74 @@ This folder contains the following files:
 
     CONTRIBUTOR-LICENSE.txt     how to contribute to GraphBLAS
     ChangeLog                   changes in GraphBLAS
-    GraphBLAS_API_C.pdf         the GraphBLAS C API Specification
+    GraphBLAS_API_C_2.0.0.pdf   v2.0 C API (see https://graphblas.org)
     GraphBLAS_API_version.tex   the version of the C API that this version
                                 of SuiteSparse:GraphBLAS conforms to.
-    GraphBLAS_UserGuide.pdf     the SuiteSparse:GraphBLAS User Guide 
+    GraphBLAS_UserGuide.pdf     the SuiteSparse:GraphBLAS User Guide
 
     GraphBLAS_UserGuide.tex     LaTeX source of the User Guide
     GraphBLAS_UserGuide.bib
     Makefile                    to create the User Gude
 
     GraphBLAS_version.tex       this version of SuiteSparse:GraphBLAS
-    License.txt                 the license: Apache 2.0
+    License.txt                 SPDX-License-Identifier: Apache-2.0
     README_Doc.txt              this file
-    toms_graphblas.pdf          current version of the ACM TOMS paper on
-                                SuiteSparse:GraphBLAS
-
-Note that Davis_HPEC18.pdf (IEEE HPEC'18) paper has been removed since it will
-be published by IEEE.  See http://faculty.cse.tamu.edu/davis/publications.html
-for a link to the paper.
-
-Additional installation notes are below.
 
 --------------------------------------------------------------------------------
+Papers on SuiteSparse:GraphBLAS:
+--------------------------------------------------------------------------------
 
-SuiteSparse:GraphBLAS is not yet parallel, but it needs POSIX pthreads or
-OpenMP to be thread-safe, for multithreaded user applications.  The Mac has
-POSIX pthreads built-in, which works fine, but if you want to use OpenMP on the
-Mac instead, try these instructions.
+toms_graphblas.pdf
 
-To use OpenMP in GraphBLAS on the Mac:
+    T. A. Davis. Algorithm 1000: SuiteSparse:GraphBLAS: Graph algorithms in the
+    language of sparse linear algebra. ACM Trans. Math. Softw., 45(4), December
+    2019. https://doi.org/10.1145/3322125.
 
-The following process was done on a MacBook Pro (Retina, 13-inch, Late 2013)
-with macOS Mojavae 10.14.1, on Nov 26, 2018::
+CSC20_OpenMP_GraphBLAS.pdf
 
-First, install Xcode 10.1 from the Apple App Store, and the Command Line Tools
-for macOS 10.14 for Xcode 10.1 from https://developer.apple.com/download/more/
+    M. Aznaveh, J. Chen, T. A. Davis, B.  Hegyi, S. P. Kolodziej, T. G.
+    Mattson, and G.  Szárnyas.  Parallel GraphBLAS with OpenMP.  In CSC20, SIAM
+    Workshop on Combinatorial Scientific Computing. SIAM, 2020.
+    https://www.siam.org/conferences/cm/conference/csc20.
 
-Next, install brew (https://brew.sh).
-THen install OpenMP and its library using brew:
+HPEC19.pdf
 
-brew install open-mp
-brew install libopmp
+    T. A. Davis, M. Aznaveh, and S. Kolodziej. Write quick, run fast: Sparse
+    deep neural network in 20 minutes of development time via
+    SuiteSparse:GraphBLAS. In IEEE HPEC’19. IEEE, 2019. Grand Challenge
+    Champion, for high performance. See http://www.ieee-hpec.org/.
 
-The latter reports the following Caveat:
+Davis_HPEC18.pdf
 
-    ==> Downloading https://homebrew.bintray.com/bottles/libomp-7.0.0.mojave.bottle.
-    ######################################################################## 100.0%
-    ==> Pouring libomp-7.0.0.mojave.bottle.tar.gz
-    ==> Caveats
-    On Apple Clang, you need to add several options to use OpenMP's front end
-    instead of the standard driver option. This usually looks like
-      -Xpreprocessor -fopenmp -lomp
-     
-    You might need to make sure the lib and include directories are discoverable
-    if /usr/local is not searched:
-     
-      -L/usr/local/opt/libomp/lib -I/usr/local/opt/libomp/include
-     
-    For CMake, the following flags will cause the OpenMP::OpenMP_CXX target to
-    be set up correctly:
-      -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY=/usr/local/opt/libomp/lib/libomp.dylib
-    ==> Summary
-    /usr/local/Cellar/libomp/7.0.0: 12 files, 1.2MB
+    T. A. Davis. Graph algorithms via SuiteSparse:GraphBLAS: triangle counting
+    and K-truss. In IEEE HPEC’18. IEEE, 2018. Grand Challenge Innovation
+    Award. See http://www.ieee-hpec.org/.
 
+lagraph-grapl19.pdf         "LAGraph: a community effort to collect graph
+                             algorithms built on top of the GraphBLAS"
 
-This installs gcc version 8.2 as well.
+    T. Mattson, T. A. Davis, M. Kumar, A. Buluç, S. McMillan, J. Moreira, and
+    C. Yang. LAGraph: a community effort to collect graph algorithms built on
+    top of the GraphBLAS.  In GrAPL’19: Work- shop on Graphs, Architectures,
+    Programming, and Learning. IEEE, May 2019.
+    https://hpc.pnl.gov/grapl/previous/2019, part of IPDPS’19, at
+    http://www.ipdps.org/ipdps2019.
 
-Use the cmake that comes with Xcode 10.1 (cmake version 3.4.1).  You could
-also use
+HPEC20_Python_and_MATLAB.pdf
 
-brew install cmake
+    "GraphBLAS programmability: Python and MATLAB Interfaces",
+    T. G. Mattson, M. Pelletier, and T. A. Davis.  IEEE HPEC'20.
 
-to use cmake 3.13.0, but I haven't tried that.  That step would need to
-remove the links in /usr/local/bin/ to the cmake in Xcode 10.1, and
-replace them with the brew verions.
+toms_parallel_grb2.pdf
 
-Then do the following, as instructed by the brew Caveat about libomp:
+    T. A. Davis. Algorithm 10xx: SuiteSparse:GraphBLAS: Parallel graph
+    algorithms in the language of sparse linear algebra. ACM Trans. Math.
+    Softw., 2023. https://doi.org/10.1145/3577195.
 
-cd SuiteSparse/GraphBLAS/build
-CC=gcc-8 cmake  -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY=/usr/local/opt/libomp/lib/libomp.dylib ..
+The_GraphBLAS_in_Julia_and_Python_the_PageRank_and_Triangle_Centralities.pdf
 
-which should report that OpenMP will be used to synchronize user threads.
-I got a warning that OpenMP_CXX_LIB_NAMES and OpenMP_omp_LIBRARY
-were specified but not used.  GraphBLAS/CMakeLists.txt probably needs
-to be modified to add these to the clang flags, but they are not needed
-if compiling with gcc-8.
+    M. Pelletier, W. Kimmerer, T. A. Davis and T. G. Mattson, "The GraphBLAS in
+    Julia and Python: the PageRank and Triangle Centralities," 2021 IEEE High
+    Performance Extreme Computing Conference (HPEC), Waltham, MA, USA, 2021,
+    pp. 1-7, doi: 10.1109/HPEC49654.2021.9622789.
 
-Then in GraphBLAS/build, do:
-
-make
-
-or for a faster build on a 4-core system:
-
-make -j4
-
-To test it, go to SuiteSparse/GraphBLAS/  and type
-
-make demo
-
-check out the openmp_demo.out file to see if OpenMP was used.

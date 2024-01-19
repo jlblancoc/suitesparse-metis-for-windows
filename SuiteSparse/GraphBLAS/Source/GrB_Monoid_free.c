@@ -2,8 +2,8 @@
 // GrB_Monoid_free:  free a monoid
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
@@ -17,20 +17,21 @@ GrB_Info GrB_Monoid_free            // free a user-created monoid
 
     if (monoid != NULL)
     {
+        // only free a dynamically-allocated monoid
         GrB_Monoid mon = *monoid ;
-        if (mon != NULL && mon->object_kind == GB_USER_RUNTIME)
+        if (mon != NULL)
         {
-            if (mon->magic == GB_MAGIC)
+            size_t header_size = mon->header_size ;
+            // free the monoid user_name
+            GB_FREE (&(mon->user_name), mon->user_name_size) ;
+            if (header_size > 0)
             { 
-                // only user-defined monoids are freed.  predefined monoids
-                // are statically allocated and cannot be freed.
-                mon->magic = GB_FREED ; // to help detect dangling pointers
-                // mon->op->ztype->size might not be safe if op or ztype are
-                // user-defined and have already been freed; use op_ztype_size.
-                GB_FREE_MEMORY (mon->identity, 1, mon->op_ztype_size) ;
-                GB_FREE_MEMORY (*monoid, 1, sizeof (struct GB_Monoid_opaque)) ;
+                mon->magic = GB_FREED ;  // to help detect dangling pointers
+                mon->header_size = 0 ;
+                GB_FREE (&(mon->identity), mon->identity_size) ;
+                GB_FREE (&(mon->terminal), mon->terminal_size) ;
+                GB_FREE (monoid, header_size) ;
             }
-            (*monoid) = NULL ;
         }
     }
 

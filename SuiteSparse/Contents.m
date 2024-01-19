@@ -122,6 +122,19 @@
 %   spqr_qmult      - y=Q*x, Q'*x, x*Q, or x*Q' using Q in Householder form
 %
 %-------------------------------------------------------------------------------
+% GraphBLAS: graph algorithms via sparse linear algebra (graphblas.org)
+%-------------------------------------------------------------------------------
+%
+%   GrB - the GraphBLAS matrix object; 100s of overloaded functions.
+%
+%-------------------------------------------------------------------------------
+% SPEX: solves sparse Ax=b exactly, with no roundoff error
+%-------------------------------------------------------------------------------
+%
+%   SPEX_Left_LU_backslash - solve Ax=b via sparse left-looking
+%                       integer-preserving LU
+%
+%-------------------------------------------------------------------------------
 % Other packages:
 %-------------------------------------------------------------------------------
 %
@@ -138,14 +151,13 @@
 %   SuiteSparseCollection    for managing the SuiteSparse Matrix Collection
 %   RBio            for reading/writing Rutherford/Boeing sparse matrices
 %   ssget           MATLAB interface to the SuiteSparse Matrix Collection
-%   GraphBLAS       graph algorithms via sparse linear algebra (graphblas.org),
-%                   does not yet have a MATLAB interface
 %
 %-------------------------------------------------------------------------------
 %
 % For help on compiling SuiteSparse or the demos, testing functions, etc.,
 % please see the help for each individual package.
 %
-% Copyright 2018, Timothy A. Davis, http://www.suitesparse.com.
+% Copyright (c) 1995-2023, Timothy A. Davis, http://suitesparse.com.
+% See each package for its license.
 
 help SuiteSparse

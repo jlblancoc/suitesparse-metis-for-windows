@@ -1,275 +1,557 @@
 //------------------------------------------------------------------------------
-// GB_AxB:  hard-coded C=A*B and C<M>=A*B
+// GB_AxB.c: matrix multiply for a single semiring
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
-
-// If this filename has a double underscore in its name ("__") then it has been
-// automatically constructed from Generator/GB_AxB.c, via the Source/axb*.m
-// scripts, and should not be editted.  Edit the original source file instead.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 #include "GB.h"
-#ifndef GBCOMPACT
-#include "GB_heap.h"
-#include "GB_AxB__semirings.h"
+#include "GB_control.h"
+#include "GB_AxB_kernels.h"
+GB_axb__include_h
 
-// The C=A*B semiring is defined by the following types and operators:
+// semiring operators:
+GB_multiply_add
+GB_multiply
+GB_add_op
+GB_add_update
+// identity: GB_identity
 
-// A*B function (Gustavon):  GB_AgusB
-// A'*B function (dot):      GB_AdotB
-// A*B function (heap):      GB_AheapB
-// Z type:   GB_ztype (the type of C)
-// X type:   GB_xtype (the type of x for z=mult(x,y))
-// Y type:   GB_ytype (the type of y for z=mult(x,y))
-// handle flipxy: GB_handle_flipxy (0 if mult(x,y) is commutative, 1 otherwise)
-// Identity: GB_identity (where GB_ADD(cij,identity) does not change cij)
-// Multiply: GB_MULT(z,x,y)
-// Add:      GB_ADD(cij, z)
+// A matrix, typecast to A2 for multiplier input
+GB_a_is_pattern
+GB_atype
+GB_a2type
+GB_declarea
+GB_geta
 
-#define GB_XTYPE \
-    GB_xtype
-#define GB_YTYPE \
-    GB_ytype
-#define GB_HANDLE_FLIPXY \
-    GB_handle_flipxy
+// B matrix, typecast to B2 for multiplier input
+GB_b_is_pattern
+GB_btype
+GB_b2type
+GB_declareb
+GB_getb
+GB_bsize
 
-#define GB_MULTOP(z,x,y) \
-    GB_MULT(z,x,y)
+// C matrix
+GB_c_iso
+GB_ctype
+GB_putc
+
+// special case semirings:
+GB_is_any_pair_semiring
+GB_is_lxor_pair_semiring
+GB_is_plus_pair_real_semiring
+GB_is_plus_pair_8_semiring
+GB_is_plus_pair_16_semiring
+GB_is_plus_pair_32_semiring
+GB_is_plus_pair_big_semiring
+GB_is_plus_pair_fc32_semiring
+GB_is_plus_pair_fc64_semiring
+GB_is_min_firstj_semiring
+GB_is_max_firstj_semiring
+GB_semiring_has_avx
+
+// monoid properties:
+GB_ztype
+GB_declare_identity
+GB_declare_const_identity
+GB_z_nbits
+GB_has_identity_byte
+GB_identity_byte
+GB_z_atomic_bits
+GB_z_atomic_type
+GB_z_has_atomic_update
+GB_z_has_omp_atomic_update
+GB_ztype_ignore_overflow
+GB_pragma_simd_reduction_monoid
+GB_is_any_monoid
+GB_is_imin_monoid
+GB_is_imax_monoid
+GB_is_fmin_monoid
+GB_is_fmax_monoid
+GB_is_plus_fc32_monoid
+GB_is_plus_fc64_monoid
+GB_monoid_is_terminal
+GB_terminal_condition
+GB_if_terminal_break
+GB_declare_const_terminal
+GB_ztype_is_complex
+
+// special case multipliers:
+GB_is_pair_multiplier
+GB_pair_one
+GB_offset
+GB_is_firsti_multiplier
+GB_is_firstj_multiplier
+GB_is_secondj_multiplier
+
+// disable this semiring and use the generic case if these conditions hold
+GB_disable
+
+#include "GB_mxm_shared_definitions.h"
 
 //------------------------------------------------------------------------------
-// C<M>=A*B and C=A*B: gather/scatter saxpy-based method (Gustavson)
+// GB_Adot2B: C=A'*B, C<M>=A'*B, or C<!M>=A'*B: dot product method, C is bitmap
 //------------------------------------------------------------------------------
 
-#define GB_IDENTITY \
-    GB_identity
+// if A_not_transposed is true, then C=A*B is computed where A is bitmap or full
 
-// x [i] = y
-#define GB_COPY_SCALAR_TO_ARRAY(x,i,y,s)                \
-    x [i] = y ;
-
-// x = y [i]
-#define GB_COPY_ARRAY_TO_SCALAR(x,y,i,s)                \
-    GB_btype x = y [i] ;
-
-// x [i] = y [i]
-#define GB_COPY_ARRAY_TO_ARRAY(x,i,y,j,s)               \
-    x [i] = y [j] ;
-
-// mult-add operation (no mask)
-#define GB_MULTADD_NOMASK                               \
-{                                                       \
-    /* Sauna_Work [i] += A(i,k) * B(k,j) */             \
-    GB_atype aik = Ax [pA] ;                            \
-    GB_ztype t ;                                        \
-    GB_MULTIPLY (t, aik, bkj) ;                         \
-    GB_ADD(Sauna_Work [i], t) ;                         \
+GrB_Info GB (_Adot2B)
+(
+    GrB_Matrix C,
+    const GrB_Matrix M, const bool Mask_comp, const bool Mask_struct,
+    const bool A_not_transposed,
+    const GrB_Matrix A, int64_t *restrict A_slice,
+    const GrB_Matrix B, int64_t *restrict B_slice,
+    int nthreads, int naslice, int nbslice
+)
+{ 
+    #if GB_DISABLE
+    return (GrB_NO_VALUE) ;
+    #else
+    #include "GB_AxB_dot2_meta.c"
+    return (GrB_SUCCESS) ;
+    #endif
 }
 
-// mult-add operation (with mask)
-#define GB_MULTADD_WITH_MASK                            \
-{                                                       \
-    /* Sauna_Work [i] += A(i,k) * B(k,j) */             \
-    GB_atype aik = Ax [pA] ;                            \
-    GB_ztype t ;                                        \
-    GB_MULTIPLY (t, aik, bkj) ;                         \
-    if (mark == hiwater)                                \
-    {                                                   \
-        /* first time C(i,j) seen */                    \
-        Sauna_Mark [i] = hiwater + 1 ;                  \
-        Sauna_Work [i] = t ;                            \
-    }                                                   \
-    else                                                \
-    {                                                   \
-        /* C(i,j) seen before, update it */             \
-        GB_ADD(Sauna_Work [i], t) ;                     \
-    }                                                   \
+//------------------------------------------------------------------------------
+// GB_Adot3B: C<M>=A'*B: masked dot product, C is sparse or hyper
+//------------------------------------------------------------------------------
+
+GrB_Info GB (_Adot3B)
+(
+    GrB_Matrix C,
+    const GrB_Matrix M, const bool Mask_struct,
+    const GrB_Matrix A,
+    const GrB_Matrix B,
+    const GB_task_struct *restrict TaskList,
+    const int ntasks,
+    const int nthreads
+)
+{ 
+    #if GB_DISABLE
+    return (GrB_NO_VALUE) ;
+    #else
+    #include "GB_AxB_dot3_meta.c"
+    return (GrB_SUCCESS) ;
+    #endif
 }
 
-GrB_Info GB_AgusB
+m4_divert(if_dot4_enabled)
+//------------------------------------------------------------------------------
+// GB_Adot4B:  C+=A'*B: dense dot product
+//------------------------------------------------------------------------------
+
+GrB_Info GB (_Adot4B)
+(
+    GrB_Matrix C,
+    const bool C_in_iso,
+    const GrB_Matrix A,
+    const GrB_Matrix B,
+    const int64_t *restrict A_slice,
+    const int64_t *restrict B_slice,
+    const int naslice,
+    const int nbslice,
+    const int nthreads,
+    GB_Werk Werk
+)
+{ 
+    #if GB_DISABLE
+    return (GrB_NO_VALUE) ;
+    #else
+    #include "GB_AxB_dot4_meta.c"
+    return (GrB_SUCCESS) ;
+    #endif
+}
+m4_divert(0)
+
+//------------------------------------------------------------------------------
+// GB_AsaxbitB: C=A*B, C<M>=A*B, C<!M>=A*B: saxpy method, C is bitmap only
+//------------------------------------------------------------------------------
+
+#include "GB_AxB_saxpy3_template.h"
+
+GrB_Info GB (_AsaxbitB)
 (
     GrB_Matrix C,
     const GrB_Matrix M,
+    const bool Mask_comp,
+    const bool Mask_struct,
     const GrB_Matrix A,
     const GrB_Matrix B,
-    bool flipxy,                // if true, A and B have been swapped
-    GB_Sauna Sauna,             // sparse accumulator
-    GB_Context Context
+    const int ntasks,
+    const int nthreads,
+    const int nfine_tasks_per_vector,
+    const bool use_coarse_tasks,
+    const bool use_atomics,
+    const int64_t *restrict M_ek_slicing,
+    const int M_nthreads,
+    const int M_ntasks,
+    const int64_t *restrict A_slice,
+    const int64_t *restrict H_slice,
+    GB_void *restrict Wcx,
+    int8_t *restrict Wf
 )
 { 
-
-    GB_ztype *restrict Sauna_Work = Sauna->Sauna_Work ;  // size C->vlen*zsize
-    GB_ztype *restrict Cx = C->x ;
-    GrB_Info info = GrB_SUCCESS ;
-
-    #include "GB_AxB_Gustavson_flipxy.c"
-
-    return (info) ;
+    #if GB_DISABLE
+    return (GrB_NO_VALUE) ;
+    #else
+    int nthreads_max = GB_Context_nthreads_max ( ) ;
+    double chunk = GB_Context_chunk ( ) ;
+    #include "GB_AxB_saxbit_template.c"
+    return (GrB_SUCCESS) ;
+    #endif
 }
 
+m4_divert(if_saxpy4_enabled)
 //------------------------------------------------------------------------------
-// C<M>=A'*B or C=A'*B: dot product
+// GB_Asaxpy4B: C += A*B when C is full
 //------------------------------------------------------------------------------
 
-// get A(k,i)
-#define GB_DOT_GETA(pA)                                 \
-    GB_atype aki = Ax [pA] ;
-
-// get B(k,j)
-#define GB_DOT_GETB(pB)                                 \
-    GB_btype bkj = Bx [pB] ;
-
-// t = aki*bkj
-#define GB_DOT_MULT(bkj)                                \
-    GB_ztype t ;                                        \
-    GB_MULTIPLY (t, aki, bkj) ;
-
-// cij += t
-#define GB_DOT_ADD                                      \
-    GB_ADD(cij, t) ;
-
-// cij = t
-#define GB_DOT_COPY                                     \
-    cij = t ;
-
-// cij is not a pointer but a scalar; nothing to do
-#define GB_DOT_REACQUIRE ;
-
-// clear cij
-#define GB_DOT_CLEAR                                    \
-    cij = GB_identity ;
-
-// save the value of C(i,j)
-#define GB_DOT_SAVE                                     \
-    Cx [cnz] = cij ;
-
-#define GB_DOT_WORK_TYPE \
-    GB_btype
-
-#define GB_DOT_WORK(k) Work [k]
-
-// Work [k] = Bx [pB]
-#define GB_DOT_SCATTER \
-    Work [k] = Bx [pB] ;
-
-GrB_Info GB_AdotB
+GrB_Info GB (_Asaxpy4B)
 (
-    GrB_Matrix *Chandle,
-    const GrB_Matrix M,
+    GrB_Matrix C,
     const GrB_Matrix A,
     const GrB_Matrix B,
-    bool flipxy,                  // if true, A and B have been swapped
-    GB_Context Context
+    const int ntasks,
+    const int nthreads,
+    const int nfine_tasks_per_vector,
+    const bool use_coarse_tasks,
+    const bool use_atomics,
+    const int64_t *A_slice,
+    const int64_t *H_slice,
+    GB_void *restrict Wcx,
+    int8_t *restrict Wf
 )
 { 
-
-    GrB_Matrix C = (*Chandle) ;
-    GB_ztype *restrict Cx = C->x ;
-    GB_ztype cij ;
-    GrB_Info info = GrB_SUCCESS ;
-    size_t bkj_size = B->type->size ;       // no typecasting here
-
-    #include "GB_AxB_dot_flipxy.c"
-
-    return (info) ;
+    #if GB_DISABLE
+    return (GrB_NO_VALUE) ;
+    #else
+    #include "GB_AxB_saxpy4_meta.c"
+    return (GrB_SUCCESS) ;
+    #endif
 }
+m4_divert(0)
 
+m4_divert(if_saxpy5_enabled)
 //------------------------------------------------------------------------------
-// C<M>=A*B and C=A*B: heap saxpy-based method
+// GB_Asaxpy5B: C += A*B when C is full, A is bitmap/full, B is sparse/hyper
 //------------------------------------------------------------------------------
 
-#define GB_CIJ_GETB(pB)                                \
-    GB_btype bkj = Bx [pB] ;
+    #if !GB_DISABLE && !GB_A_IS_PATTERN
 
-// C(i,j) = A(i,k) * bkj
-#define GB_CIJ_MULT(pA)                                \
-{                                                      \
-    GB_atype aik = Ax [pA] ;                           \
-    GB_MULTIPLY (cij, aik, bkj) ;                      \
-}
+m4_divert(if_semiring_has_avx)
+        //----------------------------------------------------------------------
+        // saxpy5 method with vectors of length 8 for double, 16 for single
+        //----------------------------------------------------------------------
 
-// C(i,j) += A(i,k) * B(k,j)
-#define GB_CIJ_MULTADD(pA,pB)                          \
-{                                                      \
-    GB_atype aik = Ax [pA] ;                           \
-    GB_btype bkj = Bx [pB] ;                           \
-    GB_ztype t ;                                       \
-    GB_MULTIPLY (t, aik, bkj) ;                        \
-    GB_ADD(cij, t) ;                                   \
-}
+        // AVX512F: vector registers are 512 bits, or 64 bytes, which can hold
+        // 16 floats or 8 doubles.
 
-// cij is not a pointer but a scalar; nothing to do
-#define GB_CIJ_REACQUIRE ;
+        #define GB_V16_512 (16 * GB_Z_NBITS <= 512)
+        #define GB_V8_512  ( 8 * GB_Z_NBITS <= 512)
+        #define GB_V4_512  ( 4 * GB_Z_NBITS <= 512)
 
-// cij = identity
-#define GB_CIJ_CLEAR                                   \
-    cij = GB_identity ;
+        #define GB_V16 GB_V16_512
+        #define GB_V8  GB_V8_512
+        #define GB_V4  GB_V4_512
 
-// save the value of C(i,j)
-#define GB_CIJ_SAVE                                    \
-    Cx [cnz] = cij ;
+        #if GB_COMPILER_SUPPORTS_AVX512F && GB_V4_512
 
-GrB_Info GB_AheapB
+            GB_TARGET_AVX512F static inline void GB_AxB_saxpy5_unrolled_avx512f
+            (
+                GrB_Matrix C,
+                const GrB_Matrix A,
+                const GrB_Matrix B,
+                const int ntasks,
+                const int nthreads,
+                const int64_t *B_slice
+            )
+            {
+                #include "GB_AxB_saxpy5_unrolled.c"
+            }
+
+        #endif
+
+        //----------------------------------------------------------------------
+        // saxpy5 method with vectors of length 4 for double, 8 for single
+        //----------------------------------------------------------------------
+
+        // AVX2: vector registers are 256 bits, or 32 bytes, which can hold
+        // 8 floats or 4 doubles.
+
+        #define GB_V16_256 (16 * GB_Z_NBITS <= 256)
+        #define GB_V8_256  ( 8 * GB_Z_NBITS <= 256)
+        #define GB_V4_256  ( 4 * GB_Z_NBITS <= 256)
+
+        #undef  GB_V16
+        #undef  GB_V8
+        #undef  GB_V4
+
+        #define GB_V16 GB_V16_256
+        #define GB_V8  GB_V8_256
+        #define GB_V4  GB_V4_256
+
+        #if GB_COMPILER_SUPPORTS_AVX2 && GB_V4_256
+
+            GB_TARGET_AVX2 static inline void GB_AxB_saxpy5_unrolled_avx2
+            (
+                GrB_Matrix C,
+                const GrB_Matrix A,
+                const GrB_Matrix B,
+                const int ntasks,
+                const int nthreads,
+                const int64_t *B_slice
+            )
+            {
+                #include "GB_AxB_saxpy5_unrolled.c"
+            }
+
+        #endif
+m4_divert(if_saxpy5_enabled)
+
+        //----------------------------------------------------------------------
+        // saxpy5 method unrolled, with no vectors
+        //----------------------------------------------------------------------
+
+        #undef  GB_V16
+        #undef  GB_V8
+        #undef  GB_V4
+
+        #define GB_V16 0
+        #define GB_V8  0
+        #define GB_V4  0
+
+        static inline void GB_AxB_saxpy5_unrolled_vanilla
+        (
+            GrB_Matrix C,
+            const GrB_Matrix A,
+            const GrB_Matrix B,
+            const int ntasks,
+            const int nthreads,
+            const int64_t *B_slice
+        )
+        {
+            #include "GB_AxB_saxpy5_unrolled.c"
+        }
+
+    #endif
+
+    GrB_Info GB (_Asaxpy5B)
+    (
+        GrB_Matrix C,
+        const GrB_Matrix A,
+        const GrB_Matrix B,
+        const int ntasks,
+        const int nthreads,
+        const int64_t *B_slice
+    )
+    { 
+        #if GB_DISABLE
+        return (GrB_NO_VALUE) ;
+        #else
+        #include "GB_AxB_saxpy5_meta.c"
+        return (GrB_SUCCESS) ;
+        #endif
+    }
+m4_divert(0)
+
+//------------------------------------------------------------------------------
+// GB_Asaxpy3B: C=A*B, C<M>=A*B, C<!M>=A*B: saxpy method (Gustavson + Hash)
+//------------------------------------------------------------------------------
+
+GrB_Info GB (_Asaxpy3B)
 (
-    GrB_Matrix *Chandle,
-    const GrB_Matrix M,
+    GrB_Matrix C,   // C<any M>=A*B, C sparse or hypersparse
+    const GrB_Matrix M, const bool Mask_comp, const bool Mask_struct,
+    const bool M_in_place,
     const GrB_Matrix A,
     const GrB_Matrix B,
-    bool flipxy,                  // if true, A and B have been swapped
-    int64_t *restrict List,
-    GB_pointer_pair *restrict pA_pair,
-    GB_Element *restrict Heap,
-    const int64_t bjnz_max,
-    GB_Context Context
+    GB_saxpy3task_struct *restrict SaxpyTasks,
+    const int ntasks, const int nfine, const int nthreads, const int do_sort,
+    GB_Werk Werk
 )
 { 
-
-    GrB_Matrix C = (*Chandle) ;
-    GB_ztype *restrict Cx = C->x ;
-    GB_ztype cij ;
-    int64_t cvlen = C->vlen ;
-    GrB_Info info = GrB_SUCCESS ;
-    GB_CIJ_CLEAR ;
-
-    #include "GB_AxB_heap_flipxy.c"
-
-    return (info) ;
+    #if GB_DISABLE
+    return (GrB_NO_VALUE) ;
+    #else
+    ASSERT (GB_IS_SPARSE (C) || GB_IS_HYPERSPARSE (C)) ;
+    if (M == NULL)
+    {
+        // C = A*B, no mask
+        return (GB (_Asaxpy3B_noM) (C, A, B,
+            SaxpyTasks, ntasks, nfine, nthreads, do_sort, Werk)) ;
+    }
+    else if (!Mask_comp)
+    {
+        // C<M> = A*B
+        return (GB (_Asaxpy3B_M) (C,
+            M, Mask_struct, M_in_place, A, B,
+            SaxpyTasks, ntasks, nfine, nthreads, do_sort, Werk)) ;
+    }
+    else
+    {
+        // C<!M> = A*B
+        return (GB (_Asaxpy3B_notM) (C,
+            M, Mask_struct, M_in_place, A, B,
+            SaxpyTasks, ntasks, nfine, nthreads, do_sort, Werk)) ;
+    }
+    #endif
 }
 
 //------------------------------------------------------------------------------
-// clear macro definitions
+// GB_Asaxpy3B_M: C<M>=A*B: saxpy method (Gustavson + Hash)
 //------------------------------------------------------------------------------
 
-#undef GB_XTYPE
-#undef GB_YTYPE
-#undef GB_HANDLE_FLIPXY
-#undef GB_MULTOP
-#undef GB_IDENTITY
-#undef GB_COPY_SCALAR_TO_ARRAY
-#undef GB_COPY_ARRAY_TO_SCALAR
-#undef GB_COPY_ARRAY_TO_ARRAY
-#undef GB_MULTADD_NOMASK
-#undef GB_MULTADD_WITH_MASK
-#undef GB_DOT_GETA
-#undef GB_DOT_GETB
-#undef GB_DOT_MULT
-#undef GB_DOT_ADD
-#undef GB_DOT_COPY
-#undef GB_DOT_REACQUIRE
-#undef GB_DOT_CLEAR
-#undef GB_DOT_SAVE
-#undef GB_DOT_WORK_TYPE
-#undef GB_DOT_WORK
-#undef GB_DOT_SCATTER
-#undef GB_CIJ_GETB
-#undef GB_CIJ_MULT
-#undef GB_CIJ_MULTADD
-#undef GB_CIJ_REACQUIRE
-#undef GB_CIJ_CLEAR
-#undef GB_CIJ_SAVE
-#undef GB_MULTIPLY
+#if ( !GB_DISABLE )
+
+    GrB_Info GB (_Asaxpy3B_M)
+    (
+        GrB_Matrix C,   // C<M>=A*B, C sparse or hypersparse
+        const GrB_Matrix M, const bool Mask_struct,
+        const bool M_in_place,
+        const GrB_Matrix A,
+        const GrB_Matrix B,
+        GB_saxpy3task_struct *restrict SaxpyTasks,
+        const int ntasks, const int nfine, const int nthreads,
+        const int do_sort,
+        GB_Werk Werk
+    )
+    {
+        int nthreads_max = GB_Context_nthreads_max ( ) ;
+        double chunk = GB_Context_chunk ( ) ;
+        if (GB_IS_SPARSE (A) && GB_IS_SPARSE (B))
+        {
+            // both A and B are sparse
+            #define GB_META16
+            #define GB_NO_MASK 0
+            #define GB_MASK_COMP 0
+            #define GB_A_IS_SPARSE 1
+            #define GB_A_IS_HYPER  0
+            #define GB_A_IS_BITMAP 0
+            #define GB_A_IS_FULL   0
+            #define GB_B_IS_SPARSE 1
+            #define GB_B_IS_HYPER  0
+            #define GB_B_IS_BITMAP 0
+            #define GB_B_IS_FULL   0
+            #include "GB_meta16_definitions.h"
+            #include "GB_AxB_saxpy3_template.c"
+        }
+        else
+        {
+            // general case
+            #undef GB_META16
+            #define GB_NO_MASK 0
+            #define GB_MASK_COMP 0
+            #include "GB_meta16_definitions.h"
+            #include "GB_AxB_saxpy3_template.c"
+        }
+        return (GrB_SUCCESS) ;
+    }
+
+#endif
+
+//------------------------------------------------------------------------------
+// GB_Asaxpy3B_noM: C=A*B: saxpy method (Gustavson + Hash)
+//------------------------------------------------------------------------------
+
+#if ( !GB_DISABLE )
+
+    GrB_Info GB (_Asaxpy3B_noM)
+    (
+        GrB_Matrix C,   // C=A*B, C sparse or hypersparse
+        const GrB_Matrix A,
+        const GrB_Matrix B,
+        GB_saxpy3task_struct *restrict SaxpyTasks,
+        const int ntasks, const int nfine, const int nthreads,
+        const int do_sort,
+        GB_Werk Werk
+    )
+    {
+        int nthreads_max = GB_Context_nthreads_max ( ) ;
+        double chunk = GB_Context_chunk ( ) ;
+        if (GB_IS_SPARSE (A) && GB_IS_SPARSE (B))
+        {
+            // both A and B are sparse
+            #define GB_META16
+            #define GB_NO_MASK 1
+            #define GB_MASK_COMP 0
+            #define GB_A_IS_SPARSE 1
+            #define GB_A_IS_HYPER  0
+            #define GB_A_IS_BITMAP 0
+            #define GB_A_IS_FULL   0
+            #define GB_B_IS_SPARSE 1
+            #define GB_B_IS_HYPER  0
+            #define GB_B_IS_BITMAP 0
+            #define GB_B_IS_FULL   0
+            #include "GB_meta16_definitions.h"
+            #include "GB_AxB_saxpy3_template.c"
+        }
+        else
+        {
+            // general case
+            #undef GB_META16
+            #define GB_NO_MASK 1
+            #define GB_MASK_COMP 0
+            #include "GB_meta16_definitions.h"
+            #include "GB_AxB_saxpy3_template.c"
+        }
+        return (GrB_SUCCESS) ;
+    }
+
+#endif
+
+//------------------------------------------------------------------------------
+// GB_Asaxpy3B_notM: C<!M>=A*B: saxpy method (Gustavson + Hash)
+//------------------------------------------------------------------------------
+
+#if ( !GB_DISABLE )
+
+    GrB_Info GB (_Asaxpy3B_notM)
+    (
+        GrB_Matrix C,   // C<!M>=A*B, C sparse or hypersparse
+        const GrB_Matrix M, const bool Mask_struct,
+        const bool M_in_place,
+        const GrB_Matrix A,
+        const GrB_Matrix B,
+        GB_saxpy3task_struct *restrict SaxpyTasks,
+        const int ntasks, const int nfine, const int nthreads,
+        const int do_sort,
+        GB_Werk Werk
+    )
+    {
+        int nthreads_max = GB_Context_nthreads_max ( ) ;
+        double chunk = GB_Context_chunk ( ) ;
+        if (GB_IS_SPARSE (A) && GB_IS_SPARSE (B))
+        {
+            // both A and B are sparse
+            #define GB_META16
+            #define GB_NO_MASK 0
+            #define GB_MASK_COMP 1
+            #define GB_A_IS_SPARSE 1
+            #define GB_A_IS_HYPER  0
+            #define GB_A_IS_BITMAP 0
+            #define GB_A_IS_FULL   0
+            #define GB_B_IS_SPARSE 1
+            #define GB_B_IS_HYPER  0
+            #define GB_B_IS_BITMAP 0
+            #define GB_B_IS_FULL   0
+            #include "GB_meta16_definitions.h"
+            #include "GB_AxB_saxpy3_template.c"
+        }
+        else
+        {
+            // general case
+            #undef GB_META16
+            #define GB_NO_MASK 0
+            #define GB_MASK_COMP 1
+            #include "GB_meta16_definitions.h"
+            #include "GB_AxB_saxpy3_template.c"
+        }
+        return (GrB_SUCCESS) ;
+    }
 
 #endif
 

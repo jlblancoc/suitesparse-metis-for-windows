@@ -1,6 +1,11 @@
 function test82
 %TEST82 test GrB_Matrix_extract with index range (hypersparse)
 
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+% SPDX-License-Identifier: Apache-2.0
+
+fprintf ('test82: test GrB_Matrix_extract with index range (hypersparse)\n') ;
+
 rng ('default') ;
 
 n = 100 ;
@@ -49,9 +54,7 @@ for j = 1:n
     assert (isequal (C1, C2.matrix)) ;
 end
 
-% A hypersparse, but C is not.  C->plen underestimated
-% and C->h needs reallocation in GB_jappend, in 
-% Template/GB_subref_template.c
+% A hypersparse, but C is not.
 d = sum (spones (A.matrix)) ;
 j = find (d > 0, 1, 'first') ;
 

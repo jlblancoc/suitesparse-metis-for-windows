@@ -2,8 +2,8 @@
 // GB_Semiring_check: check and print a semiring
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
@@ -13,23 +13,20 @@ GrB_Info GB_Semiring_check          // check a GraphBLAS semiring
 (
     const GrB_Semiring semiring,    // GraphBLAS semiring to print and check
     const char *name,               // name of the semiring, optional
-    int pr,                         // 0: print nothing, 1: print header and
-                                    // errors, 2: print brief, 3: print all
-    FILE *f,                        // file for output
-    GB_Context Context
+    int pr,                         // print level
+    FILE *f                         // file for output
 )
-{ 
+{
 
     //--------------------------------------------------------------------------
     // check inputs
     //--------------------------------------------------------------------------
 
-    if (pr > 0) GBPR ("\nGraphBLAS Semiring: %s ", GB_NAME) ;
+    GBPR0 ("\n    GraphBLAS Semiring: %s ", ((name != NULL) ? name : "")) ;
 
     if (semiring == NULL)
     { 
-        // GrB_error status not modified since this may be an optional argument
-        if (pr > 0) GBPR ("NULL\n") ;
+        GBPR0 ("NULL\n") ;
         return (GrB_NULL_POINTER) ;
     }
 
@@ -37,53 +34,51 @@ GrB_Info GB_Semiring_check          // check a GraphBLAS semiring
     // check object
     //--------------------------------------------------------------------------
 
-    GB_CHECK_MAGIC (semiring, "Semiring") ;
+    GB_CHECK_MAGIC (semiring) ;
+    GBPR0 (semiring->header_size > 0 ? "(user-defined):" : "(built-in):") ;
 
-    switch (semiring->object_kind)
-    {
-        case GB_BUILTIN:
-            if (pr > 0) GBPR ("(built-in)") ;
-            break ;
+    GrB_Monoid add = semiring->add ;
+    GrB_BinaryOp mult = semiring->multiply ;
 
-        case GB_USER_COMPILED:
-            if (pr > 0) GBPR ("(user-defined at compile-time)") ;
-            break ;
-
-        case GB_USER_RUNTIME:
-            if (pr > 0) GBPR ("(user-defined at run-time)") ;
-            break ;
-
-        default:
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "Semiring->object_kind is invalid: [%s]", GB_NAME))) ;
+    if (semiring->name == NULL)
+    { 
+        // semiring contains a built-in monoid and multiply operator
+        char *add_name  = (add  == NULL) ? "nil" : add->op->name ;
+        char *mult_name = (mult == NULL) ? "nil" : mult->name ;
+        GBPR0 (" (%s,%s)", add_name, mult_name) ;
+    }
+    else
+    { 
+        // semiring contains user-defined monoid and/or multiply operator
+        GBPR0 (" (%s)", semiring->name) ;
+        if (semiring->name_len != strlen (semiring->name))
+        { 
+            GBPR0 ("    Semiring->name invalid\n") ;
+            return (GrB_INVALID_OBJECT) ;
+        }
     }
 
     GrB_Info info ;
-    info = GB_Monoid_check (semiring->add, "semiring->add", pr, f, Context) ;
+    info = GB_Monoid_check (add, "semiring->add", pr, f) ;
     if (info != GrB_SUCCESS)
     { 
-        if (pr > 0) GBPR ("Semiring->add invalid\n") ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "Semiring->add is an invalid monoid: [%s]", GB_NAME))) ;
+        GBPR0 ("    Semiring->add invalid\n") ;
+        return (GrB_INVALID_OBJECT) ;
     }
 
-    info = GB_BinaryOp_check (semiring->multiply, "semiring->multiply", pr, f,
-        Context) ;
+    info = GB_BinaryOp_check (mult, "semiring->multiply", pr, f) ;
     if (info != GrB_SUCCESS)
     { 
-        if (pr > 0) GBPR ("Semiring->multiply invalid\n") ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "Semiring->multiply is an invalid operator: [%s]", GB_NAME))) ;
+        GBPR0 ("    Semiring->multiply invalid\n") ;
+        return (GrB_INVALID_OBJECT) ;
     }
 
     // z = multiply(x,y); type of z must match monoid type
-    if (semiring->multiply->ztype != semiring->add->op->ztype)
+    if (mult->ztype != add->op->ztype)
     { 
-        if (pr > 0) GBPR ("Semiring multiply output domain must match"
-            "monoid domain\n") ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "Semiring multiply output domain must match monoid domain: [%s]",
-            GB_NAME))) ;
+        GBPR0 ("    Semiring multiply output domain must match monoid"
+            " domain\n") ;
+        return (GrB_INVALID_OBJECT) ;
     }
 
     return (GrB_SUCCESS) ;

@@ -1,28 +1,26 @@
-/* ========================================================================= */
-/* === CAMD demo main program (long integer version) ======================= */
-/* ========================================================================= */
+//------------------------------------------------------------------------------
+// CAMD/Demo/camd_l_demo.c: int64_t demo program for CAMD
+//------------------------------------------------------------------------------
 
-/* ------------------------------------------------------------------------- */
-/* CAMD, Copyright (c) Timothy A. Davis, Yanqing Chen,			     */
-/* Patrick R. Amestoy, and Iain S. Duff.  See ../README.txt for License.     */
-/* email: DrTimothyAldenDavis@gmail.com                                      */
-/* ------------------------------------------------------------------------- */
+// CAMD, Copyright (c) 2007-2022, Timothy A. Davis, Yanqing Chen, Patrick R.
+// Amestoy, and Iain S. Duff.  All Rights Reserved.
+// SPDX-License-Identifier: BSD-3-clause
+
+//------------------------------------------------------------------------------
 
 /* A simple C main program that illustrates the use of the ANSI C interface
  * to CAMD.
  */
 
 #include "camd.h"
-#include <stdio.h>
-#include <stdlib.h>
-#define Long SuiteSparse_long
+#define ID PRId64
 
 int main (void)
 {
     /* The symmetric can_24 Harwell/Boeing matrix, including upper and lower
      * triangular parts, and the diagonal entries.  Note that this matrix is
      * 0-based, with row and column indices in the range 0 to n-1. */
-    Long n = 24, nz,
+    int64_t n = 24, nz,
     Ap [ ] = { 0, 9, 15, 21, 27, 33, 39, 48, 57, 61, 70, 76, 82, 88, 94, 100,
 	106, 110, 119, 128, 137, 143, 152, 156, 160 },
     Ai [ ] = {
@@ -51,14 +49,24 @@ int main (void)
 	/* column 22: */    2, 20, 21, 22,
 	/* column 23: */    6, 11, 12, 23 } ;
 
-    Long P [24], Pinv [24], i, j, k, jnew, p, inew, result ;
+    int64_t P [24], Pinv [24], i, j, k, jnew, p, inew, result ;
     double Control [CAMD_CONTROL], Info [CAMD_INFO] ;
     char A [24][24] ;
-    Long C [ ] = { 0, 0, 4, 0, 1, 0, 2, 2, 1, 1, 3, 4, 5, 5, 3, 4,
+    int64_t C [ ] = { 0, 0, 4, 0, 1, 0, 2, 2, 1, 1, 3, 4, 5, 5, 3, 4,
 	5, 2, 5, 3, 4, 2, 1, 0 };
 
-    printf ("CAMD version %d.%d, date: %s\n", CAMD_MAIN_VERSION,
-	CAMD_SUB_VERSION, CAMD_DATE) ;
+    printf ("CAMD version %d.%d.%d, date: %s\n",
+        CAMD_MAIN_VERSION, CAMD_SUB_VERSION, CAMD_SUBSUB_VERSION, CAMD_DATE) ;
+    int version [3] ;
+    camd_version (version) ;
+    if ((version [0] != CAMD_MAIN_VERSION) ||
+        (version [1] != CAMD_SUB_VERSION) ||
+        (version [2] != CAMD_SUBSUB_VERSION))
+    {
+        fprintf (stderr, "version in header does not match library\n") ;
+        abort ( ) ;
+    }
+
     printf ("CAMD demo, with the 24-by-24 Harwell/Boeing matrix, can_24:\n") ;
 
     /* get the default parameters, and print them */
@@ -67,7 +75,7 @@ int main (void)
 
     /* print the input matrix */
     nz = Ap [n] ;
-    printf ("\nInput matrix:  %ld-by-%ld, with %ld entries.\n"
+    printf ("\nInput matrix:  %"ID"-by-%"ID", with %"ID" entries.\n"
 	   "   Note that for a symmetric matrix such as this one, only the\n"
 	   "   strictly lower or upper triangular parts would need to be\n"
 	   "   passed to CAMD, since CAMD computes the ordering of A+A'.  The\n"
@@ -75,13 +83,13 @@ int main (void)
 	   , n, n, nz) ;
     for (j = 0 ; j < n ; j++)
     {
-	printf ("\nColumn: %ld, number of entries: %ld, with row indices in"
-		" Ai [%ld ... %ld]:\n    row indices:",
+	printf ("\nColumn: %"ID", number of entries: %"ID", with row indices in"
+		" Ai [%"ID" ... %"ID"]:\n    row indices:",
 		j, Ap [j+1] - Ap [j], Ap [j], Ap [j+1]-1) ;
 	for (p = Ap [j] ; p < Ap [j+1] ; p++)
 	{
 	    i = Ai [p] ;
-	    printf (" %ld", i) ;
+	    printf (" %"ID"", i) ;
 	}
 	printf ("\n") ;
     }
@@ -99,11 +107,11 @@ int main (void)
 	}
     }
     printf ("    ") ;
-    for (j = 0 ; j < n ; j++) printf (" %1ld", j % 10) ;
+    for (j = 0 ; j < n ; j++) printf (" %1"ID"", j % 10) ;
     printf ("\n") ;
     for (i = 0 ; i < n ; i++)
     {
-	printf ("%2ld: ", i) ;
+	printf ("%2"ID": ", i) ;
 	for (j = 0 ; j < n ; j++)
 	{
 	    printf (" %c", A [i][j]) ;
@@ -113,7 +121,7 @@ int main (void)
 
     /* order the matrix */
     result = camd_l_order (n, Ap, Ai, P, Control, Info, C) ;
-    printf ("return value from camd_l_order: %ld (should be %d)\n",
+    printf ("return value from camd_l_order: %"ID" (should be %d)\n",
 	result, CAMD_OK) ;
 
     /* print the statistics */
@@ -132,7 +140,7 @@ int main (void)
 	/* row/column j is the kth row/column in the permuted matrix */
 	j = P [k] ;
 	Pinv [j] = k ;
-	printf (" %2ld", j) ;
+	printf (" %2"ID"", j) ;
     }
     printf ("\n\n") ;
 
@@ -140,7 +148,7 @@ int main (void)
     for (j = 0 ; j < n ; j++)
     {
 	k = Pinv [j] ;
-	printf (" %2ld", k) ;
+	printf (" %2"ID"", k) ;
     }
     printf ("\n\n") ;
 
@@ -157,11 +165,11 @@ int main (void)
 	}
     }
     printf ("    ") ;
-    for (j = 0 ; j < n ; j++) printf (" %1ld", j % 10) ;
+    for (j = 0 ; j < n ; j++) printf (" %1"ID"", j % 10) ;
     printf ("\n") ;
     for (i = 0 ; i < n ; i++)
     {
-	printf ("%2ld: ", i) ;
+	printf ("%2"ID": ", i) ;
 	for (j = 0 ; j < n ; j++)
 	{
 	    printf (" %c", A [i][j]) ;

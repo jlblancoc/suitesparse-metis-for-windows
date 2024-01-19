@@ -1,12 +1,12 @@
-/* ========================================================================= */
-/* === CAMD_order ========================================================== */
-/* ========================================================================= */
+//------------------------------------------------------------------------------
+// CAMD/Source/camd_order: user-callable CAMD ordering method
+//------------------------------------------------------------------------------
 
-/* ------------------------------------------------------------------------- */
-/* CAMD, Copyright (c) Timothy A. Davis, Yanqing Chen,			     */
-/* Patrick R. Amestoy, and Iain S. Duff.  See ../README.txt for License.     */
-/* email: DrTimothyAldenDavis@gmail.com                                      */
-/* ------------------------------------------------------------------------- */
+// CAMD, Copyright (c) 2007-2022, Timothy A. Davis, Yanqing Chen, Patrick R.
+// Amestoy, and Iain S. Duff.  All Rights Reserved.
+// SPDX-License-Identifier: BSD-3-clause
+
+//------------------------------------------------------------------------------
 
 /* User-callable CAMD minimum degree ordering routine.  See camd.h for
  * documentation.
@@ -18,7 +18,7 @@
 /* === CAMD_order ========================================================== */
 /* ========================================================================= */
 
-GLOBAL Int CAMD_order
+int CAMD_order
 (
     Int n,
     const Int Ap [ ],
@@ -72,9 +72,9 @@ GLOBAL Int CAMD_order
 	return (CAMD_INVALID) ;
     }
 
-    /* check if n or nz will cause size_t overflow */
-    if ((size_t) n >= SIZE_T_MAX / sizeof (Int)
-     || (size_t) nz >= SIZE_T_MAX / sizeof (Int))
+    /* check if n or nz will cause integer overflow */
+    if (((size_t) n) >= Int_MAX / sizeof (Int)
+     || ((size_t) nz) >= Int_MAX / sizeof (Int))
     {
 	if (info) Info [CAMD_STATUS] = CAMD_OUT_OF_MEMORY ;
 	return (CAMD_OUT_OF_MEMORY) ;	    /* problem too large */
@@ -158,7 +158,6 @@ GLOBAL Int CAMD_order
     }
     mem += slen ;
     ok = ok && (slen < SIZE_T_MAX / sizeof (Int)) ; /* check for overflow */
-    ok = ok && (slen < Int_MAX) ;	/* S[i] for Int i must be OK */
     if (ok)
     {
 	S = SuiteSparse_malloc (slen, sizeof (Int)) ;

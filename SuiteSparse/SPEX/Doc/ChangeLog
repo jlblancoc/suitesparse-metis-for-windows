@@ -1,0 +1,41 @@
+Jan 10, 2024: version 2.3.1
+
+    * minor updates to build system
+
+Dec 30, 2023: version 2.3.0
+
+    * major change to build system: by Markus Mützel
+    * SPEX_version: added to return version of SPEX
+
+Sept 18, 2023: version 2.2.1
+
+    * cmake update: add "None" build type, from Antonio Rojas, for Arch Linux
+
+Sept 8, 2023: version 2.2.0
+
+    * cmake updates: SuiteSparse:: namespace by Markus Muetzel
+
+June 16, 2023: version 2.0.4
+
+    * cmake build system updates: update by Markus Muetzel.
+        Includes changes to FindMPFR.cmake and FindGMP.cmake.
+
+Jan 17, 2023: version 2.0.3
+
+    * SuiteSparse_config: now v7.0.0
+
+Dec 9, 2022: version 2.0.2
+
+    * minor change to build system
+
+Nov 12, 2022: version 2.0.0
+
+    * using CMake build system
+    * SuiteSparse_long: replaced with int64_t
+    * SPEX.h: single include file
+    * SPEX_VERSION: single set of version and date macros
+
+July 7, 2022: version 1.1.5
+
+    * version published in ACM TOMS
+

@@ -1,13 +1,12 @@
-/* ========================================================================== */
-/* === umfpack_di_demo ====================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Demo/umfpack_di_demo: C demo for UMFPACK
+//------------------------------------------------------------------------------
 
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
 
-/* -------------------------------------------------------------------------- */
-/* UMFPACK Copyright (c) 2005-2012 by Timothy A. Davis,                       */
-/* http://www.suitesparse.com. All Rights Reserved.                           */
-/* See ../Doc/License.txt for License.                                        */
-/* -------------------------------------------------------------------------- */
+//------------------------------------------------------------------------------
+
 
 /*
   A demo of UMFPACK:   umfpack_di_* version.
@@ -57,9 +56,9 @@
 /* triplet form of the matrix.  The triplets can be in any order. */
 /* -------------------------------------------------------------------------- */
 
-static int n = 5, nz = 12 ;
-static int Arow [ ] = { 0,  4,  1,  1,   2,   2,  0,  1,  2,  3,  4,  4} ;
-static int Acol [ ] = { 0,  4,  0,  2,   1,   2,  1,  4,  3,  2,  1,  2} ;
+static int32_t n = 5, nz = 12 ;
+static int32_t Arow [ ] = { 0,  4,  1,  1,   2,   2,  0,  1,  2,  3,  4,  4} ;
+static int32_t Acol [ ] = { 0,  4,  0,  2,   1,   2,  1,  4,  3,  2,  1,  2} ;
 static double Aval [ ] = {2., 1., 3., 4., -1., -3., 3., 6., 2., 1., 4., 2.} ;
 static double b [ ] = {8., 45., -3., 3., 19.}, x [5], r [5] ;
 
@@ -85,12 +84,12 @@ static void error
 static double resid
 (
     int transpose,
-    int Ap [ ],
-    int Ai [ ],
+    int32_t Ap [ ],
+    int32_t Ai [ ],
     double Ax [ ]
 )
 {
-    int i, j, p ;
+    int32_t i, j, p ;
     double norm ;
 
     for (i = 0 ; i < n ; i++)
@@ -136,11 +135,11 @@ int main (int argc, char **argv)
 {
     double Info [UMFPACK_INFO], Control [UMFPACK_CONTROL], *Ax, *Cx, *Lx, *Ux,
 	*W, t [2], *Dx, rnorm, *Rb, *y, *Rs ;
-    int *Ap, *Ai, *Cp, *Ci, row, col, p, lnz, unz, nr, nc, *Lp, *Li, *Ui, *Up,
+    int32_t *Ap, *Ai, *Cp, *Ci, row, col, p, lnz, unz, nr, nc, *Lp, *Li, *Ui, *Up,
 	*P, *Q, *Lj, i, j, k, anz, nfr, nchains, *Qinit, fnpiv, lnz1, unz1, nz1,
 	status, *Front_npivcol, *Front_parent, *Chain_start, *Wi, *Pinit, n1,
 	*Chain_maxrows, *Chain_maxcols, *Front_1strow, *Front_leftmostdesc,
-	nzud, do_recip ;
+	nzud, do_recip, *Dmap ;
     void *Symbolic, *Numeric ;
 
     /* ---------------------------------------------------------------------- */
@@ -181,8 +180,8 @@ int main (int argc, char **argv)
 
     /* convert to column form */
     nz1 = MAX (nz,1) ;	/* ensure arrays are not of size zero. */
-    Ap = (int *) malloc ((n+1) * sizeof (int)) ;
-    Ai = (int *) malloc (nz1 * sizeof (int)) ;
+    Ap = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Ai = (int32_t *) malloc (nz1 * sizeof (int32_t)) ;
     Ax = (double *) malloc (nz1 * sizeof (double)) ;
     if (!Ap || !Ai || !Ax)
     {
@@ -190,7 +189,7 @@ int main (int argc, char **argv)
     }
 
     status = umfpack_di_triplet_to_col (n, n, nz, Arow, Acol, Aval,
-	Ap, Ai, Ax, (int *) NULL) ;
+	Ap, Ai, Ax, (int32_t *) NULL) ;
 
     if (status < 0)
     {
@@ -454,15 +453,15 @@ int main (int argc, char **argv)
     /* C = transpose of A */
     /* ---------------------------------------------------------------------- */
 
-    Cp = (int *) malloc ((n+1) * sizeof (int)) ;
-    Ci = (int *) malloc (nz1 * sizeof (int)) ;
+    Cp = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Ci = (int32_t *) malloc (nz1 * sizeof (int32_t)) ;
     Cx = (double *) malloc (nz1 * sizeof (double)) ;
     if (!Cp || !Ci || !Cx)
     {
 	error ("out of memory") ;
     }
     status = umfpack_di_transpose (n, n, Ap, Ai, Ax,
-	(int *) NULL, (int *) NULL, Cp, Ci, Cx) ;
+	(int32_t *) NULL, (int32_t *) NULL, Cp, Ci, Cx) ;
     if (status < 0)
     {
 	umfpack_di_report_status (Control, status) ;
@@ -492,17 +491,18 @@ int main (int argc, char **argv)
 
     printf ("\nGet the contents of the Symbolic object for C:\n") ;
     printf ("(compare with umfpack_di_report_symbolic output, above)\n") ;
-    Pinit = (int *) malloc ((n+1) * sizeof (int)) ;
-    Qinit = (int *) malloc ((n+1) * sizeof (int)) ;
-    Front_npivcol = (int *) malloc ((n+1) * sizeof (int)) ;
-    Front_1strow = (int *) malloc ((n+1) * sizeof (int)) ;
-    Front_leftmostdesc = (int *) malloc ((n+1) * sizeof (int)) ;
-    Front_parent = (int *) malloc ((n+1) * sizeof (int)) ;
-    Chain_start = (int *) malloc ((n+1) * sizeof (int)) ;
-    Chain_maxrows = (int *) malloc ((n+1) * sizeof (int)) ;
-    Chain_maxcols = (int *) malloc ((n+1) * sizeof (int)) ;
+    Pinit = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Qinit = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Front_npivcol = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Front_1strow = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Front_leftmostdesc = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Front_parent = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Chain_start = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Chain_maxrows = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Chain_maxcols = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Dmap = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
     if (!Pinit || !Qinit || !Front_npivcol || !Front_parent || !Chain_start ||
-	!Chain_maxrows || !Chain_maxcols || !Front_1strow ||
+	!Chain_maxrows || !Chain_maxcols || !Front_1strow || !Dmap ||
 	!Front_leftmostdesc)
     {
 	error ("out of memory") ;
@@ -511,7 +511,7 @@ int main (int argc, char **argv)
     status = umfpack_di_get_symbolic (&nr, &nc, &n1, &anz, &nfr, &nchains,
 	Pinit, Qinit, Front_npivcol, Front_parent, Front_1strow,
 	Front_leftmostdesc, Chain_start, Chain_maxrows, Chain_maxcols,
-	Symbolic) ;
+	Dmap, Symbolic) ;
 
     if (status < 0)
     {
@@ -554,6 +554,62 @@ int main (int argc, char **argv)
 	    Chain_maxrows [j], Chain_maxcols [j]) ;
     }
 
+    //--------------------------------------------------------------------------
+    // copy the Symbolic object
+    //--------------------------------------------------------------------------
+
+    void *Symbolic_copy = NULL ;
+    printf ("\nCopying symbolic object:\n") ;
+    status = umfpack_di_copy_symbolic (&Symbolic_copy, Symbolic) ;
+    if (status < 0)
+    {
+	umfpack_di_report_status (Control, status) ;
+	error ("umfpack_di_copy_symbolic failed") ;
+    }
+    printf ("\nSymbolic factorization of C (copy): ") ;
+    (void) umfpack_di_report_symbolic (Symbolic_copy, Control) ;
+    umfpack_di_free_symbolic (&Symbolic) ;
+    Symbolic = Symbolic_copy ;
+    printf ("\nDone copying symbolic object\n") ;
+
+    //--------------------------------------------------------------------------
+    // serialize/deserialize the Symbolic object
+    //--------------------------------------------------------------------------
+
+    // determine the required blobsize
+    int64_t S_blobsize ;
+    status = umfpack_di_serialize_symbolic_size (&S_blobsize, Symbolic) ;
+    if (status < 0)
+    {
+	umfpack_di_report_status (Control, status) ;
+	error ("umfpack_di_serialize_symbolic_size failed") ;
+    }
+    printf ("\nSymbolic blob size: %"PRId64"\n", S_blobsize) ;
+    // allocate the blob
+    void *S_blob = malloc (S_blobsize) ;
+    if (!S_blob)
+    {
+	error ("out of memory") ;
+    }
+    // serialize the blob
+    status = umfpack_di_serialize_symbolic (S_blob, S_blobsize, Symbolic) ;
+    if (status < 0)
+    {
+	umfpack_di_report_status (Control, status) ;
+	error ("umfpack_di_serialize_symbolic failed") ;
+    }
+    // free the Symbolic object; its contents are preserved in the blob
+    umfpack_di_free_symbolic (&Symbolic) ;
+    // deserialize the blob back into the Symbolic object
+    status = umfpack_di_deserialize_symbolic (&Symbolic, S_blob, S_blobsize) ;
+    if (status < 0)
+    {
+	umfpack_di_report_status (Control, status) ;
+	error ("umfpack_di_deserialize_symbolic failed") ;
+    }
+    printf ("\nDone serialize/deserialize of symbolic object\n") ;
+    free (S_blob) ;
+
     /* ---------------------------------------------------------------------- */
     /* numeric factorization of C */
     /* ---------------------------------------------------------------------- */
@@ -578,14 +634,14 @@ int main (int argc, char **argv)
     /* ensure arrays are not of zero size */
     lnz1 = MAX (lnz,1) ;
     unz1 = MAX (unz,1) ;
-    Lp = (int *) malloc ((n+1) * sizeof (int)) ;
-    Lj = (int *) malloc (lnz1 * sizeof (int)) ;
+    Lp = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Lj = (int32_t *) malloc (lnz1 * sizeof (int32_t)) ;
     Lx = (double *) malloc (lnz1 * sizeof (double)) ;
-    Up = (int *) malloc ((n+1) * sizeof (int)) ;
-    Ui = (int *) malloc (unz1 * sizeof (int)) ;
+    Up = (int32_t *) malloc ((n+1) * sizeof (int32_t)) ;
+    Ui = (int32_t *) malloc (unz1 * sizeof (int32_t)) ;
     Ux = (double *) malloc (unz1 * sizeof (double)) ;
-    P = (int *) malloc (n * sizeof (int)) ;
-    Q = (int *) malloc (n * sizeof (int)) ;
+    P = (int32_t *) malloc (n * sizeof (int32_t)) ;
+    Q = (int32_t *) malloc (n * sizeof (int32_t)) ;
     Dx = (double *) NULL ;	/* D vector not requested */
     Rs  = (double *) malloc (n * sizeof (double)) ;
     if (!Lp || !Lj || !Lx || !Up || !Ui || !Ux || !P || !Q || !Rs)
@@ -626,7 +682,7 @@ int main (int argc, char **argv)
     /* by umfpack_di_col_to_triplet. */
 
     printf ("\nConverting L to triplet form, and printing it:\n") ;
-    Li = (int *) malloc (lnz1 * sizeof (int)) ;
+    Li = (int32_t *) malloc (lnz1 * sizeof (int32_t)) ;
     if (!Li)
     {
 	error ("out of memory") ;
@@ -678,12 +734,86 @@ int main (int argc, char **argv)
     rnorm = resid (TRUE, Cp, Ci, Cx) ;
     printf ("maxnorm of residual: %g\n\n", rnorm) ;
 
+    //--------------------------------------------------------------------------
+    // copy the Numeric object
+    //--------------------------------------------------------------------------
+
+    void *Numeric_copy = NULL ;
+    printf ("\nCopying numeric object:\n") ;
+    status = umfpack_di_copy_numeric (&Numeric_copy, Numeric) ;
+    if (status < 0)
+    {
+	umfpack_di_report_status (Control, status) ;
+	error ("umfpack_di_copy_numeric failed") ;
+    }
+    printf ("\nNumeric factorization of C (copy): ") ;
+    (void) umfpack_di_report_numeric (Numeric_copy, Control) ;
+    umfpack_di_free_numeric (&Numeric) ;
+    Numeric = Numeric_copy ;
+    Numeric_copy = NULL ;
+    printf ("\nDone copying numeric object\n") ;
+
+    //--------------------------------------------------------------------------
+    // serialize/deserialize the Numeric object
+    //--------------------------------------------------------------------------
+
+    // determine the required blobsize
+    int64_t N_blobsize ;
+    status = umfpack_di_serialize_numeric_size (&N_blobsize, Numeric) ;
+    if (status < 0)
+    {
+	umfpack_di_report_status (Control, status) ;
+	error ("umfpack_di_serialize_numeric_size failed") ;
+    }
+    printf ("\nNumeric blob size: %"PRId64"\n", N_blobsize) ;
+    // allocate the blob
+    void *N_blob = malloc (N_blobsize) ;
+    if (!N_blob)
+    {
+	error ("out of memory") ;
+    }
+    // serialize the blob
+    status = umfpack_di_serialize_numeric (N_blob, N_blobsize, Numeric) ;
+    if (status < 0)
+    {
+	umfpack_di_report_status (Control, status) ;
+	error ("umfpack_di_serialize_numeric failed") ;
+    }
+    // free the Numeric object; its contents are preserved in the blob
+    umfpack_di_free_numeric (&Numeric) ;
+    // deserialize the blob back into the Numeric object
+    status = umfpack_di_deserialize_numeric (&Numeric, N_blob, N_blobsize) ;
+    if (status < 0)
+    {
+	umfpack_di_report_status (Control, status) ;
+	error ("umfpack_di_deserialize_numeric failed") ;
+    }
+    printf ("\nDone serialize/deserialize of numeric object\n") ;
+    free (N_blob) ;
+
+    //--------------------------------------------------------------------------
+    // solve C'x=b again, with the new copy
+    //--------------------------------------------------------------------------
+
+    status = umfpack_di_solve (UMFPACK_At, Cp, Ci, Cx, x, b,
+	Numeric, Control, Info) ;
+    umfpack_di_report_info (Control, Info) ;
+    if (status < 0)
+    {
+	umfpack_di_report_status (Control, status) ;
+	error ("umfpack_di_solve failed") ;
+    }
+    printf ("\nx (solution of C'x=b): (using the copy) ") ;
+    (void) umfpack_di_report_vector (n, x, Control) ;
+    rnorm = resid (TRUE, Cp, Ci, Cx) ;
+    printf ("maxnorm of residual: %g\n\n", rnorm) ;
+
     /* ---------------------------------------------------------------------- */
     /* solve C'x=b again, using umfpack_di_wsolve instead */
     /* ---------------------------------------------------------------------- */
 
     printf ("\nSolving C'x=b again, using umfpack_di_wsolve instead:\n") ;
-    Wi = (int *) malloc (n * sizeof (int)) ;
+    Wi = (int32_t *) malloc (n * sizeof (int32_t)) ;
     W = (double *) malloc (5*n * sizeof (double)) ;
     if (!Wi || !W)
     {
@@ -729,6 +859,7 @@ int main (int argc, char **argv)
     free (Chain_start) ;
     free (Chain_maxrows) ;
     free (Chain_maxcols) ;
+    free (Dmap) ;
 
     free (Lp) ;
     free (Lj) ;
@@ -745,6 +876,7 @@ int main (int argc, char **argv)
 
     free (Wi) ;
     free (W) ;
+    free (Rs) ;
 
     umfpack_di_free_symbolic (&Symbolic) ;
     umfpack_di_free_numeric (&Numeric) ;

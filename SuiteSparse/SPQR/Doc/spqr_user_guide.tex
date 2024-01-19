@@ -1,4 +1,5 @@
 \documentclass[12pt]{article}
+\batchmode
 \usepackage{hyperref}
 
 \topmargin -0.5in
@@ -29,7 +30,7 @@ Portions of this work were supported by the National
 Science Foundation, under grants 0203270, 0620286, and 0619080.},
 Sencer Nuri Yeralan, Sanjay Ranka, Wissam Sid-Lakhdar}
 
-\date{VERSION 2.0.9, Dec 28, 2018}
+\input{spqr_version.tex}
 
 %-------------------------------------------------------------------------------
 \begin{document}
@@ -60,6 +61,15 @@ The algorithms used in SuiteSparseQR are discussed in a companion paper,
 \cite{Davis08b}.  This document gives detailed information on the installation
 and use of SuiteSparseQR.
 
+SPQR, Copyright (c) 2008-2023, Timothy A Davis. All Rights Reserved.
+
+SPDX-License-Identifier: GPL-2.0+
+
+The GPU modules in SPQRGPU are under a different copyright:
+
+    SPQRGPU, Copyright (c) 2008-2023, Timothy A Davis, Sanjay Ranka,
+    Sencer Nuri Yeralan, and Wissam Sid-Lakhdar, All Rights Reserved.
+
 %-------------------------------------------------------------------------------
 \section{Using SuiteSparseQR in MATLAB}
 %-------------------------------------------------------------------------------
@@ -83,146 +93,7 @@ All packages in SuiteSparse, including SuiteSparseQR and the codes it relies on
 command typed into the MATLAB Command Window.  SuiteSparseQR uses the LAPACK
 and BLAS libraries provided with MATLAB; you do not need to do anything to use
 these.  Below are step-by-step instructions for compiling all of SuiteSparse
-(including SuiteSparseQR), and optional instructions on using METIS and/or
-Intel's Threading Building Blocks (TBB).
-
-%-------------------------------------------------------------------------------
-\subsubsection{Required instructions for Windows}
-%-------------------------------------------------------------------------------
-
-For Windows, you cannot use the \verb'lcc' compiler that ships with MATLAB; it
-is not a C++ compiler.  To compile SuiteSparseQR, you must obtain a C++
-compiler; Microsoft Visual Studio C++ Express Edition will work fine.  Install
-this compiler from \newline
-\htmladdnormallink{http://www.microsoft.com/express/vc/}{http://www.microsoft.com/express/vc/}
-and then type \verb'mex -setup' in the MATLAB Command Window.
-
-%-------------------------------------------------------------------------------
-\subsubsection{Optional instructions on using METIS for any operating system}
-%-------------------------------------------------------------------------------
-
-SuiteSparse now relies on METIS 5.1.0, which is distributed along with
-SuiteSparse itself.  Its use is optional, however.  If you compile with
-{\tt -DNPARTITION}, or if you delete or move the {\tt SuiteSparse/metis-5.1.0}
-folder, then SuiteSparse will be compiled without it.
-
-METIS tends to give orderings that are good for the parallelism exploited by
-TBB, so its use with TBB is recommended.  Note however that METIS is not
-bug-free; it can occasionally cause segmentation faults, particularly if used
-when finding basic solutions to underdetermined systems with many more columns
-than rows (SuiteSparseQR does not use METIS, by default, for those systems).
-This (rare) faulty behavior has been confirmed with valid inputs to the METIS
-test programs themselves; it is not a bug in the SuiteSparse interface to
-METIS.  Use METIS at your own risk.
-
-%-------------------------------------------------------------------------------
-\subsubsection{Optional instructions for using TBB on Linux/Unix/Mac}
-%-------------------------------------------------------------------------------
-
-If you are using a Debian-based Linux system (such as Ubuntu), you're in luck!
-You can install TBB via the Synaptic Package Manager.  Just search for TBB,
-select it, and click Apply.  This will place the right files in \verb'/usr/lib'
-and it will create the \verb'/usr/include/tbb' directory.  It's by far the
-simplest way to install TBB.  If you do this, skip the rest of this section.
-
-Alternatively, obtain a copy of TBB from
-\htmladdnormallink{http://www.threadingbuildingblocks.org}{http://www.threadingbuildingblocks.org}
-as a \verb'tbb*.tgz' file appropriate for your version of Linux/Unix.  If you
-install via the \verb'tbb_*.tgz' file, make sure the \verb'libtbb*.so*' and
-\verb'libtbbmalloc*.so*' files are placed in the \verb'/usr/lib' directory.
-Make sure the \verb'tbb' directory containing all of the include files is
-placed in \verb'/usr/include' (for example, the
-\verb'/usr/include/tbb/task_scheduler_init.h' file must exist).
-
-If you do not have permission to install TBB properly into the \verb'/usr/lib'
-and \verb'/usr/include' directories, you can place it in your own directory and
-modify the \verb'tbb_path' variable in \verb'spqr_make.m' to specify
-the location of your own copy of TBB (refer to that file for instructions).
-You must also set your \verb'LD_LIBRARY_PATH' environment variable to include
-the directory containing the \verb'libtbb*so' files.  You need to first
-determine which subdirectory of the TBB distribution contains the libraries
-appropriate for your system; in the examples below this is just called
-\verb'/path'.  It must be an absolute path, starting with the \verb'/'
-character.  There must be no spaces in the path name.
-
-For Linux use this command at the system command line before starting MATLAB,
-where \verb'/path' should be replaced with the actual full path of the TBB
-\verb'lib' directory:
-
-\begin{verbatim}
-    setenv LD_LIBRARY_PATH /path:$LD_LIBRARY_PATH
-\end{verbatim}
-
-If you use the \verb'csh' shell, place the command in your \verb'~/.cshrc'
-file so you don't have to type it each time you start MATLAB.
-
-For the Mac, edit the \verb'/etc/profile' file and add this line to the end of
-the file:
-
-\begin{verbatim}
-    export DYLD_LIBRARY_PATH=/path:$DYLD_LIBRARY_PATH
-\end{verbatim}
-
-For example, using the 64-bit Linux version placed in my home directory, this
-command would be placed in my \verb'~/.cshrc' file, prior to starting MATLAB.
-
-{\scriptsize
-\begin{verbatim}
-    setenv LD_LIBRARY_PATH /home/davis/tbb21_009oss/em64t/cc4.1.0_libc2.4_kernel2.6.16.21/lib:$LD_LIBRARY_PATH
-\end{verbatim}
-}
-
-Then, before starting MATLAB, make sure this variable is set by typing this
-command at the system command line (you only have to do this for this session;
-whenever you start a new command shell this will be done automatically): 
-
-\begin{verbatim}
-    source ~/.cshrc
-\end{verbatim}
-
-For this example, my \verb'spqr_make.m' file would contain this line:
-
-\begin{verbatim}
-    tbb_path = '/home/davis/tbb21_009oss' ;
-\end{verbatim}
-
-%-------------------------------------------------------------------------------
-\subsubsection{Optional instructions for using TBB on Windows}
-%-------------------------------------------------------------------------------
-
-Obtain a copy of TBB from
-\htmladdnormallink{http://www.threadingbuildingblocks.org}{http://www.threadingbuildingblocks.org}
-; for TBB Version 2.1 this file is \verb'tbb21_009oss_win.zip'.
-
-Create a folder and place the \verb'tbb21_009oss_win.zip' file there, and
-extract the file.  In the example below, I extracted to
-\verb'C:\TBB\tbb21_009oss' (if you do the same then you do not have to edit
-\verb'spqr_make.m').  There should be no spaces in the path (for example,
-placing TBB under the \verb'Program Files' directory will not work).
-
-In Windows XP, right-click \verb'My Computer' and select \verb'Properties'.
-Click the \verb'Advanced' tab.  Click \verb'Environment Variables'.  Under
-\verb'System' variables, edit the \verb'Path' to append the name of the folder
-containing the TBB \verb'bin' folder appropriate for your system, preceded by a
-semicolon.  For example, in a 32-bit Windows system if TBB is installed in
-\verb'C:\TBB' you would append the string
-\verb';C:\TBB\tbb21_009oss\ia32\vc9\bin\' to the end of your system \verb'Path'
-variable.
-
-For Vista, the instructions are the same, except that you choose
-\verb'Computer' instead of \verb'My Computer', and you click the
-\verb'Advanced System Settings' tab instead of the \verb'Advanced' tab.
-
-Next, edit the \verb'SPQR\MATLAB\spqr_make.m' file.  Change the \verb'tbb_path'
-variable to point to your copy of TBB.  For example, if you installed TBB into
-\verb'C:\TBB' your \verb'spqr_make.m' file would contain this line:
-
-\begin{verbatim}
-    tbb_path = 'C:\TBB\tbb21_009oss' ;
-\end{verbatim}
-
-That line is already in \verb'spqr_make.m', so if you choose to install TBB
-in that location, you do not have to edit the file.
+(including SuiteSparseQR), and optional instructions on using METIS.
 
 %-------------------------------------------------------------------------------
 \subsubsection{Now you're ready to compile (on any operating system)}
@@ -241,54 +112,16 @@ to ensure your functions have been installed correctly.  Next type the command
 and examine your MATLAB path.  The various SuiteSparse directories have been
 placed in your path.  Click ``save'' to save this path for future MATLAB
 sessions.  If this fails, you do not have permission to modify the
-\verb'pathdef.m' file (it is shared by all users).  An alternative is to type
-the command:
+\verb'pathdef.m' file (it is shared by all users).
+
+SuiteSparse now has a \verb'SuiteSparse_paths.m' that you can add to
+your \verb'startup.m'.
+An alternative is to type the command:
 \begin{verbatim}
     path
 \end{verbatim}
 and cut-and-paste the paths displayed there into your own \verb'startup.m'
-file, prepending the command \verb'addpath' to each line.  For example, if I
-installed SuiteSparse into my home directory (\verb'/home/davis') then my
-\verb'startup.m' file should look like this:
-
-{\footnotesize
-\begin{verbatim}
-    addpath  /home/davis/SuiteSparse/SPQR/MATLAB
-    addpath  /home/davis/SuiteSparse/RBio
-    addpath  /home/davis/SuiteSparse/MATLAB_Tools/spok
-    addpath  /home/davis/SuiteSparse/MATLAB_Tools/waitmex
-    addpath  /home/davis/SuiteSparse/MATLAB_Tools/shellgui
-    addpath  /home/davis/SuiteSparse/MATLAB_Tools/GEE
-    addpath  /home/davis/SuiteSparse/LINFACTOR
-    addpath  /home/davis/SuiteSparse/MESHND
-    addpath  /home/davis/SuiteSparse/UFcollection
-    addpath  /home/davis/SuiteSparse/SSMULT
-    addpath  /home/davis/SuiteSparse/KLU/MATLAB
-    addpath  /home/davis/SuiteSparse/BTF/MATLAB
-    addpath  /home/davis/SuiteSparse/LDL/MATLAB
-    addpath  /home/davis/SuiteSparse/CXSparse/MATLAB/UFget
-    addpath  /home/davis/SuiteSparse/CXSparse/MATLAB/Demo
-    addpath  /home/davis/SuiteSparse/CXSparse/MATLAB/CSparse
-    addpath  /home/davis/SuiteSparse/CAMD/MATLAB
-    addpath  /home/davis/SuiteSparse/CCOLAMD/MATLAB
-    addpath  /home/davis/SuiteSparse/COLAMD/MATLAB
-    addpath  /home/davis/SuiteSparse/AMD/MATLAB
-    addpath  /home/davis/SuiteSparse/CHOLMOD/MATLAB
-    addpath  /home/davis/SuiteSparse/UMFPACK/MATLAB
-    addpath  /home/davis/SuiteSparse
-    addpath  /home/davis/SuiteSparse/MATLAB_Tools
-\end{verbatim}
-}
-
-On a Windows system, I might see paths like this instead in my \verb'startup.m'
-file:
-
-{\footnotesize
-\begin{verbatim}
-    addpath C:\Documents and Settings\davis\My Documents\SuiteSparse\SPQR\MATLAB
-    ...
-\end{verbatim}
-}
+file, prepending the command \verb'addpath' to each line.
 
 Your \verb'startup.m' file should appear in the directory in which MATLAB
 starts.  Failing that, every time you start MATLAB, find your \verb'startup.m'
@@ -299,30 +132,6 @@ The \verb'SuiteSparse_install' script works on any version of MATLAB
 will detect if you have placed the METIS directory in the right place, and will
 compile it for use with SuiteSparseQR if it finds it there.  Otherwise METIS
 will be skipped (the install script will tell you if it finds METIS or not).
-
-%-------------------------------------------------------------------------------
-\subsubsection{Optional instructions for using TBB on any system}
-%-------------------------------------------------------------------------------
-
-If you have followed the steps above (as I recommend that you do), you have
-just compiled SuiteSparseQR, but it will not yet be using TBB.  To use TBB with
-SuiteSparseQR, first install TBB as described above.  Once TBB is installed,
-type the following commands in the MATLAB Command Window (assuming you have
-METIS):
-
-\begin{verbatim}
-    cd SuiteSparse/SPQR/MATLAB
-    spqr_make metis tbb
-\end{verbatim}
-
-Or if you do not have METIS, do this instead:
-
-\begin{verbatim}
-    cd SuiteSparse/SPQR/MATLAB
-    spqr_make nometis tbb
-\end{verbatim}
-
-For more options, type \verb'help spqr_make'.
 
 %-------------------------------------------------------------------------------
 \subsection{Functions provided to the MATLAB user}
@@ -379,7 +188,7 @@ which is far sparser than returning \verb'Q' as a sparse matrix.
 \verb'x = spqr_solve (A,B)'     & \verb'x=A\B' \\
 \verb'[x,info] = spqr_solve (A,B,opts)' & as above, with statistics and non-default parameters \\
 \hline
-\verb'Y = spqr_qmult (Q,X,k)'   & computes \verb"Q'*X", \verb"Q*X", \verb"X*Q'", or \verb"X*Q" 
+\verb'Y = spqr_qmult (Q,X,k)'   & computes \verb"Q'*X", \verb"Q*X", \verb"X*Q'", or \verb"X*Q"
 (selected with \verb'k') \\
 \hline
 \end{tabular}
@@ -405,7 +214,7 @@ SuiteSparseQR.  Entries not present in \verb'opts' are set to their defaults.
     the ``rank-sized'' factorization, where \verb'size(R,1)==nnz(diag(R))==r'.
 
     \item \verb'opts.ordering': a string describing which column ordering
-    method to use.  Let \newline 
+    method to use.  Let \newline
     \verb'[m2 n2]=size(S)' where \verb'S' is obtained by
     removing singletons from \verb'A'.  The singleton permutation places
     \verb'A*P' in the form \verb'[A11 A12 ; 0 S]' where \verb'A11' is upper
@@ -449,7 +258,7 @@ SuiteSparseQR.  Entries not present in \verb'opts' are set to their defaults.
     sparse matrix where \verb'A=Q*R' or \verb"A*P=Q*R".  Using
     \verb"opts.Q='Householder'" returns \verb'Q' as a struct containing the
     Householder reflections applied to \verb'A' to obtain \verb'R', resulting
-    in a far sparser \verb'Q' than the \verb"'matrix'" option.  
+    in a far sparser \verb'Q' than the \verb"'matrix'" option.
 
     \item \verb'opts.permutation': a string describing how \verb'P' is to be
     returned.  The default is \verb"'matrix'", so that \verb"A*P=Q*R".  Using
@@ -462,27 +271,6 @@ SuiteSparseQR.  Entries not present in \verb'opts' are set to their defaults.
     \verb"'basic'" (the default), or \verb"'min2norm'".  Determines the kind of
     solution that \verb'spqr_solve' computes for underdetermined systems.  Has
     no effect for least-squares problems; ignored by \verb'spqr' itself.
-
-    \item \verb'opts.grain', \verb'opts.small', \verb'opts.nthreads':
-    multitasking control (if compiled with TBB).  Let \verb'f' be the total
-    flop count.  The analysis phase tries to ensure that all parallel tasks
-    have at least \verb'max(total_flops/opts.grain,opts.small)' flops.  No TBB
-    parallelism is exploited if \verb'opts.grain <= 1'.  The parameter
-    \verb'opts.nthreads' gives the number of threads to use for TBB (which is
-    different than the number of threads used by the BLAS).  Setting
-    \verb'opts.nthreads <= 0' means to let TBB determine the number of threads
-    (normally equal to the number of cores); otherwise, exactly
-    \verb'opts.nthreads' threads are used.  The defaults are
-    \verb'opts.grain=1', \verb'opts.small=1e6', and \verb'opts.nthreads=0',
-    respectively.  That is, TBB is disabled by default since it conflicts with
-    BLAS multithreading.  If you enable TBB, be sure to disable BLAS
-    multithreading with the MATLAB command \verb'maxNumCompThreads(1)', or
-    choose \newline \verb'opts.nthreads=k' and \verb'maxNumCompThreads(b)' so
-    that the product \verb'k*b' is equal to the number of cores.  Note that
-    these recommendations may change for future versions of TBB.  A good value
-    of \verb'opts.grain' is twice that of \verb'opts.nthreads'.  If TBB
-    parallelism is enabled, the METIS ordering normally gives the best speedup
-    for large problems.
 
 \end{itemize}
 
@@ -597,53 +385,24 @@ reading a matrix from a file, writing a matrix to a file, and many other
 functions.
 
 %-------------------------------------------------------------------------------
-\subsection{Installing the C/C++ library on Linux/Unix}
+\subsection{Installing the C/C++ library}
 %-------------------------------------------------------------------------------
 
-Before you compile the SuiteSparseQR library and demo programs, you may wish to
-edit the \verb'SuiteSparse/SuiteSparse_config/SuiteSparse_config.mk' configuration file.  The
-defaults should be fine on most Linux/Unix systems and on the Mac.
-It automatically detects what system you have and sets compile parameters
-accordingly.
-
-Next, type \verb'make' at
-the Linux/Unix command line, in either the \verb'SuiteSparse' directory (which
+In Linux/MacOs, type \verb'make' at
+the command line, in either the \verb'SuiteSparse' directory (which
 compiles all of SuiteSparse) or in the \verb'SuiteSparse/SPQR' directory (which
 just compiles SuiteSparseQR and the libraries it requires).  SuiteSparseQR will
 be compiled, and a set of simple demos will be run (including the one in the
 next section).
 
-The configuration file defines where the LAPACK and BLAS libraries are to be
-found.  Selecting the right BLAS is critical.  There is no standard naming
-scheme for the name and location of these libraries.  The defaults in the
-\verb'SuiteSparse_config.mk' file use \verb'-llapack' and \verb'-lblas'; the latter may
-link against the standard Fortran reference BLAS, which will not provide
-optimal performance.  For best results, you should use the OpenBLAS
-at openblas.net
-(based on the Goto BLAS)
-\cite{GotoVanDeGeijn08}, or high-performance vendor-supplied BLAS such as the
-Intel MKL, AMD ACML, or the Sun Performance Library.  Selection of LAPACK and
-the BLAS is done with the \verb'LAPACK=' and \verb'BLAS=' lines in the
-\verb'SuiteSparse_config.mk' file.
+The use of \verb'make' is optional.  The top-level \verb'SPQR/Makefile' is
+a simple wrapper that uses \verb'cmake' to do the actual build.
+The \verb'CMakeLists.txt' file can be imported into MS Visual Studio,
+for example.
 
-Four compile-time options can be used to modify how SuiteSparseQR is compiled.
-Select these via the \verb'SPQR_CONFIG=' line in the \verb'SuiteSparse_config.mk' file.
-
-\begin{itemize}
-
-    \item \verb'-DNPARTITION': do not compile with METIS, CAMD, or CCOLAMD.
-    These packages are included by default.
-
-    \item \verb'-DNEXPERT': do not compile with the ``expert'' routines in
-    \verb'SuiteSparseQR_expert.cpp'.  The expert routines are included by
-    default.
-
-    \item \verb'-DHAVE_TBB': enable the Intel Threading Building Blocks, TBB.
-    The use of TBB is disabled by default.  It is disabled because not all
-    installations have TBB available.  The use of TBB is recommended, however,
-    if you have a multicore computer.
-
-\end{itemize}
+If SuiteSparseQR is compiled with \verb'-DNEXPERT', the ``expert'' routines in
+\verb'SuiteSparseQR_expert.cpp' are not compiled.  The expert routines are
+included by default.
 
 To fully test 100\% of the lines of SuiteSparseQR, go to the \verb'Tcov'
 directory and type \verb'make'.  This will work for Linux only.
@@ -674,7 +433,8 @@ The C version of this function is almost identical:
 \end{verbatim}
 }
 
-Below is a simple C++ program that illustrates the use of SuiteSparseQR.  The
+Below is a simple C++ program that illustrates the use of SuiteSparseQR
+(with 64-bit integer indices).  The
 program reads in a least-squares problem from \verb'stdin' in MatrixMarket
 format \cite{BoisvertPozoRemingtonBarrettDongarra97}, solves it, and prints the
 norm of the residual and the estimated rank of \verb'A'.  The comments reflect
@@ -724,6 +484,16 @@ replaced with the C version of the statement above, and C-style comments.
 \end{verbatim}
 }
 
+To use SuiteSparseQR with 32-bit integer indices in all of its matrices,
+simply replace all \verb'cholmod_l_*' calls abovce to \verb'cholmod_*',
+and use this for SPQR:
+
+{\footnotesize
+\begin{verbatim}
+        X = SuiteSparseQR <double,int32_t> (A, B, cc) ;
+\end{verbatim}
+}
+
 %-------------------------------------------------------------------------------
 \subsection{C++ Syntax}
 %-------------------------------------------------------------------------------
@@ -763,11 +533,14 @@ can do:
 
     \item \verb'SuiteSparseQR_qmult': provides the same function as
     \verb'spqr_qmult' in the MATLAB interface, computing
-    \verb"Q'*x", \verb"Q*x", \verb"x*Q'", or \verb"x*Q".
-    It uses either a QR factorization
-    in MATLAB-style sparse matrix format, or the QR factorization object
-    returned by \newline \verb'SuiteSparseQR_factorize' or
-    \verb'SuiteSparseQR_numeric'.
+    \verb"y=Q'*x", \verb"y=Q*x", \verb"y=x*Q'", or \verb"y=x*Q".
+    It uses the efficient Householder reprensentation of \verb'Q', which
+    represents a square orthonormal matrix computed by
+    \verb'SuiteSparseQR_factorize' or \verb'SuiteSparseQR_numeric'.  The
+    Householder representation always represents a square orthonormal matrix,
+    regardless of whether \verb'Q' is a full or economy factor.
+    \verb'SuiteSparseQR_qmult' applies this square matrix to compute its result
+    \verb'y'.
 
     \item \verb'SuiteSparseQR_min2norm': finds the minimum 2-norm solution to
     an underdetermined linear system.
@@ -799,24 +572,17 @@ the C-callable functions.
 
 \end{enumerate}
 
-Most of the packages in SuiteSparse come in multiple versions with different
-sized integers.  The first is the plain C/C++ \verb'int'.  The second the
-\verb'SuiteSparse_long' integer, defined in the
-\verb'SuiteSparse/SuiteSparse_config/SuiteSparse_config.h'
-file.  This integer is \verb'long' except on a Windows-64 platform for which it
-is the  \verb'__int64' type.  The intent of \verb'SuiteSparse_long'
-is that it should be
-32-bits on a 32-bit platform, and 64-bits on a 64-bit platform.  
-
-By contrast, SuiteSparseQR only provides a \verb'SuiteSparse_long' version.
-Most users (except Windows-64) can simply use \verb'long' as the basic integer
-type passed to and returned from SuiteSparseQR.
+Version 4.0 of SuiteSparseQR adds a 32-bit version, where the indices of its
+sparse matrices are all \verb'int32_t', contributed by Raye Kimmerer.  To use
+this version, add \verb'int32_t' as the second template parameter to all C++
+methods, and use the \verb'cholmod_*' methods instead of \verb'cholmod_l_*'
+to create and access its input/output matrices.
 
 The C/C++ options corresponding to the MATLAB \verb'opts' parameters and the
 contents of the optional \verb'info' output of \verb'spqr_solve' are described
 below.  Let \verb'cc' be the CHOLMOD \verb'Common' object, containing parameter
 settings and statistics.  All are of type \verb'double', except for
-\verb'SPQR_istat' which is \verb'SuiteSparse_long',
+\verb'SPQR_istat' which is \verb'int64_t',
 \verb'cc->memory_usage' which is
 \verb'size_t', and \verb'cc->SPQR_nthreads' which is \verb'int'.  Parameters
 include:
@@ -850,7 +616,7 @@ Output statistics include:
 \verb'cc->SPQR_istat [0]' & upper bound on \verb'nnz(R)' \\
 \verb'cc->SPQR_istat [1]' & upper bound on \verb'nnz(H)' \\
 \verb'cc->SPQR_istat [2]' & number of frontal matrices \\
-\verb'cc->SPQR_istat [3]' & number of TBB tasks \\
+\verb'cc->SPQR_istat [3]' & unused \\
 \verb'cc->SPQR_istat [4]' & estimate of the rank of \verb'A' \\
 \verb'cc->SPQR_istat [5]' & number of column singletons \\
 \verb'cc->SPQR_istat [6]' & number of row singletons \\
@@ -873,11 +639,9 @@ this statistic by 4.
 %-------------------------------------------------------------------------------
 
 As of version 2.0.0, SuiteSparseQR now includes GPU acceleration.
-It can exploit a single NVIDIA GPU, via CUDA.  To enable GPU acceleration,
-you must compile SuiteSparseQR with non-default options.  See the
-\verb'SuiteSparse_config_GPU_gcc.mk' file in the \verb'SuiteSparse_config'
-directory for details.  The packages SuiteSparse\_GPURuntime and
-GPUQREngine are also required (they should appear in the SuiteSparse 
+It can exploit a single NVIDIA GPU, via CUDA.
+The packages SuiteSparse\_GPURuntime and
+GPUQREngine are also required (they should appear in the SuiteSparse
 directory, along with SPQR).
 
 At run time, you must also enable the GPU by setting \verb'Common->useGPU'
@@ -904,7 +668,7 @@ that initializes CHOLMOD and then polls the GPU for use in SuiteSparseQR.
 See \verb'Demo/qrdemo_gpu.cpp' for an extended example, which can be
 compiled via \verb'make gpu' in the \verb'Demo' directory.
 
-GPU acceleration is not yet available via the MATLAB mexFunction interface. 
+GPU acceleration is not yet available via the MATLAB mexFunction interface.
 We expect to include this in a future release.
 
 For a detailed technical report on the GPU-accelerated algorithm,
@@ -931,15 +695,11 @@ without it, only parallelism within the BLAS can be exploited (if available).
 Suite\-SparseQR can optionally use METIS 4.0.1 \cite{KarypisKumar98e} and two
 constrained minimum degree ordering algorithms, CCOLAMD and CAMD
 \cite{ChenDavisHagerRajamanickam09}, for its fill-reducing ordering options.
-SuiteSparseQR can be compiled without these ordering methods and without TBB.
+SuiteSparseQR can be compiled without these ordering methods.
 
 In addition to appearing as Collected Algorithm 8xx of the ACM, SuiteSparseQR
 is available at
-\htmladdnormallink{http://www.suitesparse.com}{http://www.suitesparse.com}
-and at MATLAB Central
-in the user-contributed File Exchange (
-\htmladdnormallink{http://www.mathworks.com/matlabcentral}{http://www.mathworks.com/matlabcentral}
-).
+\url{http://www.suitesparse.com}.
 See SPQR/Doc/License.txt for the license.
 Alternative licenses are also
 available; contact the author for details.

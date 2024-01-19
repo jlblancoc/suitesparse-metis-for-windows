@@ -1,55 +1,83 @@
-#------------------------------------------------------------------------------
-# COLAMD Makefile
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# SuiteSparse/COLAMD/Makefile
+#-------------------------------------------------------------------------------
 
-SUITESPARSE ?= $(realpath $(CURDIR)/..)
-export SUITESPARSE
+# COLAMD: Copyright (c) 1998-2022, Timothy A. Davis and Stefan Larimore,
+# All Rights Reserved.
+# SPDX-License-Identifier: BSD-3-clause
 
-default: all
+#-------------------------------------------------------------------------------
 
-include ../SuiteSparse_config/SuiteSparse_config.mk
+# A simple Makefile for COLAMD, which relies on cmake to do the
+# actual build.  All the work is done in cmake so this Makefile is just for
+# convenience.
 
-demos: all
+# To compile with an alternate compiler:
+#
+#       make CC=gcc CXX=g++
+#
+# To compile/install for system-wide usage:
+#
+#       make
+#       sudo make install
+#
+# To compile/install for local usage (SuiteSparse/lib and SuiteSparse/include):
+#
+#       make local
+#       make install
+#
+# To clean up the files:
+#
+#       make clean
 
-# Compile all C code
-all:
-	( cd Lib    ; $(MAKE) )
-	( cd Demo   ; $(MAKE) )
+JOBS ?= 8
 
-# compile just the C-callable libraries (not Demos)
+default: library
+
+# default is to install only in /usr/local
 library:
-	( cd Lib    ; $(MAKE) )
+	( cd build && cmake $(CMAKE_OPTIONS) .. && cmake --build . --config Release -j${JOBS} )
 
-# compile the static libraries only
-static:
-	( cd Lib    ; $(MAKE) static )
+# install only in SuiteSparse/lib and SuiteSparse/include
+local:
+	( cd build && cmake $(CMAKE_OPTIONS) -USUITESPARSE_PKGFILEDIR -DSUITESPARSE_LOCAL_INSTALL=1 .. && cmake --build . --config Release -j${JOBS} )
 
-# remove object files, but keep the compiled programs and library archives
-clean:
-	( cd Lib    ; $(MAKE) clean )
-	( cd Demo   ; $(MAKE) clean )
-	( cd MATLAB ; $(RM) $(CLEAN) )
+# install only in /usr/local (default)
+global:
+	( cd build && cmake $(CMAKE_OPTIONS) -USUITESPARSE_PKGFILEDIR -DSUITESPARSE_LOCAL_INSTALL=0 .. && cmake --build . --config Release -j${JOBS} )
 
-# clean, and then remove compiled programs and library archives
-purge:
-	( cd Lib    ; $(MAKE) purge )
-	( cd Demo   ; $(MAKE) purge )
-	( cd MATLAB ; $(RM) $(CLEAN) ; $(RM) *.mex* )
+debug:
+	( cd build && cmake $(CMAKE_OPTIONS) -DCMAKE_BUILD_TYPE=Debug .. && cmake --build . --config Debug -j${JOBS} )
 
-distclean: purge
+all: library
 
-# get ready for distribution
-dist: purge
-	( cd Demo   ; $(MAKE) dist )
+demos: library
+	( cd build && cmake $(CMAKE_OPTIONS) -DSUITESPARSE_DEMOS=1 .. && cmake --build . --config Release -j${JOBS} )
+	- ./build/colamd_example > ./build/colamd_example.out && ( command -v d2u && d2u ./build/colamd_example.out || true )
+	- diff ./Demo/colamd_example.out ./build/colamd_example.out
+	- ./build/colamd_l_example > ./build/colamd_l_example.out && ( command -v d2u && d2u ./build/colamd_l_example.out || true )
+	- diff ./Demo/colamd_l_example.out ./build/colamd_l_example.out
 
-ccode: library
+# just compile after running cmake; do not run cmake again
+remake:
+	( cd build && cmake --build . -j${JOBS} )
 
-lib: library
+# just run cmake to set things up
+setup:
+	( cd build ; cmake $(CMAKE_OPTIONS) .. )
 
-# install COLAMD
 install:
-	( cd Lib    ; $(MAKE) install )
+	( cd build && cmake --install . )
 
-# uninstall COLAMD
+# remove any installed libraries and #include files
 uninstall:
-	( cd Lib    ; $(MAKE) uninstall )
+	- xargs rm < build/install_manifest.txt
+
+# remove all files not in the distribution
+clean:
+	- $(RM) -rf build/* Config/*.tmp MATLAB/*.o MATLAB/*.mex* timelog.m
+
+purge: clean
+
+distclean: clean
+

@@ -1,3 +1,16 @@
+//------------------------------------------------------------------------------
+// Mongoose/Tests/Mongoose_Test_Memory_exe.cpp
+//------------------------------------------------------------------------------
+
+// Mongoose Graph Partitioning Library, Copyright (C) 2017-2018,
+// Scott P. Kolodziej, Nuri S. Yeralan, Timothy A. Davis, William W. Hager
+// Mongoose is licensed under Version 3 of the GNU General Public License.
+// Mongoose is also available under other licenses; contact authors for details.
+// SPDX-License-Identifier: GPL-3.0-only
+
+//------------------------------------------------------------------------------
+
+#include "Mongoose.hpp"
 #include "Mongoose_Test.hpp"
 
 using namespace Mongoose;
@@ -13,6 +26,14 @@ using namespace Mongoose;
 
 int main(int argn, const char **argv)
 {
+
+    if ((major_version ( ) != Mongoose_VERSION_MAJOR) ||
+        (minor_version ( ) != Mongoose_VERSION_MINOR) ||
+        (patch_version ( ) != Mongoose_VERSION_PATCH))
+    {
+        return EXIT_FAILURE;
+    }
+
     SuiteSparse_start();
 
     if (argn != 2)

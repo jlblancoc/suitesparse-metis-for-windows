@@ -1,3 +1,15 @@
+//------------------------------------------------------------------------------
+// Mongoose/Tests/Mongoose_Test_Reference.cpp
+//------------------------------------------------------------------------------
+
+// Mongoose Graph Partitioning Library, Copyright (C) 2017-2018,
+// Scott P. Kolodziej, Nuri S. Yeralan, Timothy A. Davis, William W. Hager
+// Mongoose is licensed under Version 3 of the GNU General Public License.
+// Mongoose is also available under other licenses; contact authors for details.
+// SPDX-License-Identifier: GPL-3.0-only
+
+//------------------------------------------------------------------------------
+
 #include <string>
 #include "Mongoose_IO.hpp"
 #include "Mongoose_EdgeCut.hpp"
@@ -11,7 +23,7 @@ int runReferenceTest(const std::string &inputFile)
     // Given a symmetric matrix
     EdgeCut_Options *options;
     Graph *graph;
-    clock_t t;
+    double t;
     
     options = EdgeCut_Options::create();
 
@@ -31,9 +43,9 @@ int runReferenceTest(const std::string &inputFile)
     }
 
     // An edge separator should be computed with default options
-    t = clock();
+    t = SUITESPARSE_TIME;
     EdgeCut *result = edge_cut(graph, options);
-    t = clock() - t;
+    t = SUITESPARSE_TIME - t;
 
     if (!result)
     {
@@ -43,7 +55,7 @@ int runReferenceTest(const std::string &inputFile)
     {
         std::ofstream ofs ((inputFile + "_result.txt").c_str(), std::ofstream::out);
         ofs << "InputFile: " << inputFile << std::endl;
-        ofs << "TotalTime: " << ((double) t)/CLOCKS_PER_SEC << std::endl;
+        ofs << "TotalTime: " << (t) << std::endl;
         ofs << "CutSize: " << result->cut_cost << std::endl;
         ofs << "Imbalance: " << result->imbalance << std::endl;
 
@@ -74,7 +86,7 @@ int runReferenceTest(const std::string &inputFile)
         ifs.ignore(200, ' ');
         ifs >> input;
         double ref_time = strtod(input.c_str(), NULL);
-        double test_time = ((double) t)/CLOCKS_PER_SEC;
+        double test_time = t ;
         std::cout << "Test Time:      " << test_time << std::endl;
         std::cout << "Reference Time: " <<  ref_time << std::endl;
         

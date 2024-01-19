@@ -2,8 +2,8 @@
 // GB_code_size: given a type code, return sizeof (type)
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
@@ -31,7 +31,8 @@ size_t GB_code_size             // return the size of a type, given its code
         case GB_UINT64_code : return (sizeof (uint64_t)) ;
         case GB_FP32_code   : return (sizeof (float))    ;
         case GB_FP64_code   : return (sizeof (double))   ;
-        case GB_UCT_code    :
+        case GB_FC32_code   : return (sizeof (GxB_FC32_t)) ;
+        case GB_FC64_code   : return (sizeof (GxB_FC64_t)) ;
         case GB_UDT_code    : return (usize) ;
         default             : return (0) ;
     }

@@ -1,31 +1,67 @@
 //------------------------------------------------------------------------------
-// GB_calloc_memory: wrapper for calloc
+// GB_calloc_memory: wrapper for calloc (actually uses malloc and memset)
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 // A wrapper for calloc.  Space is set to zero.
 
-// Parameters are the same as the POSIX calloc, except that asking to allocate
-// a block of zero size causes a block of size 1 to be allocated instead.  This
-// allows the return pointer p to be checked for the out-of-memory condition,
-// even when allocating an object of size zero.
-
-// By default, GB_CALLOC is defined in GB.h as calloc.  For a MATLAB
-// mexFunction, it is mxCalloc.  It can also be defined at compile time with
-// -DGB_CALLOC=mycallocfunc.
-
 #include "GB.h"
+
+//------------------------------------------------------------------------------
+// GB_calloc_helper:  malloc/memset to allocate an initialized block
+//------------------------------------------------------------------------------
+
+static inline void *GB_calloc_helper
+(
+    // input/output:
+    size_t *size            // on input: # of bytes requested
+                            // on output: # of bytes actually allocated
+)
+{
+    void *p = NULL ;
+
+    // make sure the block is at least 8 bytes in size
+    (*size) = GB_IMAX (*size, 8) ;
+
+    p = GB_Global_malloc_function (*size) ;
+
+    #ifdef GB_MEMDUMP
+    printf ("hard calloc %p %ld\n", p, *size) ; // MEMDUMP
+    GB_Global_memtable_dump ( ) ;
+    #endif
+
+    if (p != NULL)
+    { 
+        // clear the block of memory with a parallel memset
+        int nthreads_max = GB_Context_nthreads_max ( ) ;
+        GB_memset (p, 0, (*size), nthreads_max) ;
+    }
+
+    return (p) ;
+}
+
+//------------------------------------------------------------------------------
+// GB_calloc_memory
+//------------------------------------------------------------------------------
 
 void *GB_calloc_memory      // pointer to allocated block of memory
 (
     size_t nitems,          // number of items to allocate
-    size_t size_of_item     // sizeof each item
+    size_t size_of_item,    // sizeof each item
+    // output
+    size_t *size_allocated  // # of bytes actually allocated
 )
 {
+
+    //--------------------------------------------------------------------------
+    // check inputs
+    //--------------------------------------------------------------------------
+
+    ASSERT (size_allocated != NULL) ;
 
     void *p ;
     size_t size ;
@@ -37,55 +73,59 @@ void *GB_calloc_memory      // pointer to allocated block of memory
     size_of_item = GB_IMAX (1, size_of_item) ;
 
     bool ok = GB_size_t_multiply (&size, nitems, size_of_item) ;
-    if (!ok || nitems > GB_INDEX_MAX || size_of_item > GB_INDEX_MAX)
+    if (!ok || (((uint64_t) nitems) > GB_NMAX)
+            || (((uint64_t) size_of_item) > GB_NMAX))
     { 
         // overflow
-        p = NULL ;
+        (*size_allocated) = 0 ;
+        return (NULL) ;
+    }
+
+    //--------------------------------------------------------------------------
+    // allocate the memory block
+    //--------------------------------------------------------------------------
+
+    if (GB_Global_malloc_tracking_get ( ))
+    {
+
+        //----------------------------------------------------------------------
+        // for memory usage testing only
+        //----------------------------------------------------------------------
+
+        // brutal memory debug; pretend to fail if (count-- <= 0).
+        bool pretend_to_fail = false ;
+        if (GB_Global_malloc_debug_get ( ))
+        {
+            pretend_to_fail = GB_Global_malloc_debug_count_decrement ( ) ;
+        }
+
+        // allocate the memory
+        if (pretend_to_fail)
+        { 
+            p = NULL ;
+        }
+        else
+        { 
+            p = GB_calloc_helper (&size) ;
+        }
+
     }
     else
     { 
 
-        #ifdef GB_MALLOC_TRACKING
-        {
-            // for malloc testing only
-            bool pretend_to_fail = false ;
-            if (GB_Global.malloc_debug)
-            {
-                // brutal malloc debug; pretend to fail if the count <= 0
-                pretend_to_fail = (GB_Global.malloc_debug_count-- <= 0) ;
-            }
-            if (pretend_to_fail)
-            {
-                #ifdef GB_PRINT_MALLOC
-                printf ("pretend to fail\n") ;
-                #endif
-                p = NULL ;
-            }
-            else
-            {
-                p = (void *) GB_CALLOC (nitems, size_of_item) ;
-            }
-            if (p != NULL)
-            {
-                int nmalloc = ++GB_Global.nmalloc ;
-                GB_Global.inuse += nitems * size_of_item ;
-                GB_Global.maxused =
-                    GB_IMAX (GB_Global.maxused, GB_Global.inuse) ;
-                #ifdef GB_PRINT_MALLOC
-                printf ("calloc:  %14p %3d %1d n "GBd" size "GBd"\n",
-                    p, nmalloc, GB_Global.malloc_debug,
-                    (int64_t) nitems, (int64_t) size_of_item) ;
-                #endif
-            }
-        }
-        #else
-        {
-            // normal use, in production
-            p = (void *) GB_CALLOC (nitems, size_of_item) ;
-        }
-        #endif
+        //----------------------------------------------------------------------
+        // normal use, in production
+        //----------------------------------------------------------------------
 
+        p = GB_calloc_helper (&size) ;
     }
+
+    //--------------------------------------------------------------------------
+    // return result
+    //--------------------------------------------------------------------------
+
+    (*size_allocated) = (p == NULL) ? 0 : size ;
+    ASSERT (GB_IMPLIES (p != NULL, size == GB_Global_memtable_size (p))) ;
     return (p) ;
 }
 

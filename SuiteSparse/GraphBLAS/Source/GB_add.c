@@ -1,64 +1,72 @@
 //------------------------------------------------------------------------------
-// GB_add: 'add' two matrices using an operator
+// GB_add: C = A+B, C<M>=A+B, and C<!M>=A+B
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-// GB_add (C, A, B, op), 'adds' C = op (A,B), using the given operator
+// GB_add computes C=A+B, C<M>=A+B, or C<!M>=A+B using the given operator
 // element-wise on the matrices A and B.  The result is typecasted as needed.
-// The pattern of C is the union of the pattern of A and B.
-//
+// The pattern of C is the union of the pattern of A and B, intersection with
+// the mask M, if present.  On input, the contents of C are undefined; it is
+// an output-only matrix in a static header.
+
 // Let the op be z=f(x,y) where x, y, and z have type xtype, ytype, and ztype.
 // If both A(i,j) and B(i,j) are present, then:
-//
+
 //      C(i,j) = (ctype) op ((xtype) A(i,j), (ytype) B(i,j))
-//
+
 // If just A(i,j) is present but not B(i,j), then:
-//
+
 //      C(i,j) = (ctype) A (i,j)
-//
+
 // If just B(i,j) is present but not A(i,j), then:
-//
+
 //      C(i,j) = (ctype) B (i,j)
-//
+
 // ctype is the type of matrix C.  The pattern of C is the union of A and B.
-//
-// This function should not be called by the end user.  It is a helper function
-// for user-callable routines.  No error checking is performed except for
-// out-of-memory conditions.
 
-// This function does not transpose or reformat its inputs or outputs.  C, A,
-// and B must have the same number of vectors and vector lengths.  However,
-// suppose A is CSR, and B and C are CSC, but the caller wants to compute C =
-// A'+B.  Then no transpose of A is needed; just interpret the CSR of A' as a
-// CSC format.  The work is the same with C=A'+B if B and C are CSR and A is
-// CSC.  Then the output C is CSR, and the CSC of A' is already effectively in
-// CSR format.
+// If A_and_B_are_disjoint is true, the intersection of A and B must be empty.
+// This is used by GB_wait only, for merging the pending tuple matrix T into A.
+// In this case, the result C is always sparse or hypersparse, not bitmap or
+// full.  Any duplicate pending tuples have already been summed in T, so the
+// intersection of T and A is always empty.
 
-// As a result, the input formats of A and B are not relevant, and neither is
-// the output format of C.  This function can be completely agnostic as to the
-// CSR / CSC formats of A, B, and C.  The format of C is determined by the
-// caller and assigned to C->is_csc, but is otherwise unused here.
+// Some methods should not exploit the mask, but leave it for later.
+// See GB_ewise and GB_accum_mask: the only places where this function is
+// called with a non-null mask M.  Both of those callers can handle the
+// mask being applied later.  GB_add_sparsity determines whether or not the
+// mask should be applied now, or later.
 
-// The output C is hypersparse if both A and B are hypersparse; otherwise
-// C is not hypersparse.
+// If A and B are iso, the op is not positional, and op(A,B) == A == B, then C
+// is iso.  If A and B are known to be disjoint, then op(A,B) is ignored when
+// determining if C is iso.
 
-// FUTURE: this could be faster with built-in operators and types.
+// C on input is empty, see GB_add_phase2.c.
 
-#include "GB.h"
+#include "GB_add.h"
 
-GrB_Info GB_add             // C = A+B
+#define GB_FREE_ALL ;
+
+GrB_Info GB_add             // C=A+B, C<M>=A+B, or C<!M>=A+B
 (
-    GrB_Matrix *Chandle,    // output matrix (unallocated on input)
+    GrB_Matrix C,           // output matrix, static header
     const GrB_Type ctype,   // type of output matrix C
     const bool C_is_csc,    // format of output matrix C
+    const GrB_Matrix M,     // optional mask for C, unused if NULL
+    const bool Mask_struct, // if true, use the only structure of M
+    const bool Mask_comp,   // if true, use !M
+    bool *mask_applied,     // if true, the mask was applied
     const GrB_Matrix A,     // input A matrix
     const GrB_Matrix B,     // input B matrix
+    const bool is_eWiseUnion,   // if true, eWiseUnion, else eWiseAdd
+    const GrB_Scalar alpha, // alpha and beta ignored for eWiseAdd,
+    const GrB_Scalar beta,  // nonempty scalars for GxB_eWiseUnion
     const GrB_BinaryOp op,  // op to perform C = op (A,B)
-    GB_Context Context
+    const bool A_and_B_are_disjoint,   // if true, A and B are disjoint
+    GB_Werk Werk
 )
 {
 
@@ -66,170 +74,124 @@ GrB_Info GB_add             // C = A+B
     // check inputs
     //--------------------------------------------------------------------------
 
-    ASSERT (Chandle != NULL) ;
-    ASSERT_OK (GB_check (A, "A for C=A+B", GB0)) ;
-    ASSERT_OK (GB_check (B, "B for C=A+B", GB0)) ;
-    ASSERT_OK (GB_check (op, "op for C=A+B", GB0)) ;
-    ASSERT (!GB_PENDING (A)) ; ASSERT (!GB_ZOMBIES (A)) ;
-    ASSERT (!GB_PENDING (B)) ; ASSERT (!GB_ZOMBIES (B)) ;
-    ASSERT (A->vdim == A->vdim && B->vlen == A->vlen) ;
-
-    ASSERT (GB_Type_compatible (ctype,   op->ztype)) ;
-    ASSERT (GB_Type_compatible (ctype,   A->type)) ;
-    ASSERT (GB_Type_compatible (ctype,   B->type)) ;
-    ASSERT (GB_Type_compatible (A->type, op->xtype)) ;
-    ASSERT (GB_Type_compatible (B->type, op->ytype)) ;
-
-    (*Chandle) = NULL ;
-
-    //--------------------------------------------------------------------------
-    // allocate the output matrix C
-    //--------------------------------------------------------------------------
-
-    // C is hypersparse if both A and B are (contrast with GrB_Matrix_emult).
-    // C acquires the same hyperatio as A.
-
-    bool C_is_hyper = (A->is_hyper && B->is_hyper) && (A->vdim > 1) ;
-
-    // [ allocate the result C; C->p is malloc'd
-    // worst case nnz (C) is nnz (A) + nnz (B)
     GrB_Info info ;
-    GrB_Matrix C = NULL ;           // allocate a new header for C
-    GB_CREATE (&C, ctype, A->vlen, A->vdim, GB_Ap_malloc, C_is_csc,
-        GB_SAME_HYPER_AS (C_is_hyper), A->hyper_ratio,
-        A->nvec_nonempty + B->nvec_nonempty, GB_NNZ (A) + GB_NNZ (B), true) ;
+
+    ASSERT (C != NULL && (C->static_header || GBNSTATIC)) ;
+
+    ASSERT (mask_applied != NULL) ;
+    (*mask_applied) = false ;
+
+    ASSERT_MATRIX_OK (A, "A for add", GB0) ;
+    ASSERT_MATRIX_OK (B, "B for add", GB0) ;
+    ASSERT_BINARYOP_OK (op, "op for add", GB0) ;
+    ASSERT_MATRIX_OK_OR_NULL (M, "M for add", GB0) ;
+    ASSERT (A->vdim == B->vdim && A->vlen == B->vlen) ;
+    ASSERT (GB_IMPLIES (M != NULL, A->vdim == M->vdim && A->vlen == M->vlen)) ;
+
+    //--------------------------------------------------------------------------
+    // delete any lingering zombies and assemble any pending tuples
+    //--------------------------------------------------------------------------
+
+    // TODO: some cases can allow M, A, and/or B to be jumbled
+    GB_MATRIX_WAIT (M) ;        // cannot be jumbled
+    GB_MATRIX_WAIT (A) ;        // cannot be jumbled
+    GB_MATRIX_WAIT (B) ;        // cannot be jumbled
+
+    //--------------------------------------------------------------------------
+    // determine the sparsity of C
+    //--------------------------------------------------------------------------
+
+    bool apply_mask ;
+    int C_sparsity = GB_add_sparsity (&apply_mask, M, Mask_struct, Mask_comp,
+        A, B) ;
+
+    //--------------------------------------------------------------------------
+    // initializations
+    //--------------------------------------------------------------------------
+
+    int64_t Cnvec = 0 , Cnvec_nonempty = 0  ;
+    int64_t *Cp     = NULL ; size_t Cp_size = 0 ;
+    int64_t *Ch     = NULL ; size_t Ch_size = 0 ; 
+    int64_t *C_to_M = NULL ; size_t C_to_M_size = 0 ;
+    int64_t *C_to_A = NULL ; size_t C_to_A_size = 0 ;
+    int64_t *C_to_B = NULL ; size_t C_to_B_size = 0 ;
+    bool Ch_is_Mh ;
+    int C_ntasks = 0, C_nthreads ;
+    GB_task_struct *TaskList = NULL ; size_t TaskList_size = 0 ;
+
+    //--------------------------------------------------------------------------
+    // phase0: finalize the sparsity C and find the vectors in C
+    //--------------------------------------------------------------------------
+
+    info = GB_add_phase0 (
+        // computed by by phase0:
+        &Cnvec, &Ch, &Ch_size, &C_to_M, &C_to_M_size, &C_to_A, &C_to_A_size,
+        &C_to_B, &C_to_B_size, &Ch_is_Mh,
+        // input/output to phase0:
+        &C_sparsity,
+        // original input:
+        (apply_mask) ? M : NULL, A, B, Werk) ;
     if (info != GrB_SUCCESS)
     { 
+        // out of memory
         return (info) ;
     }
 
+    GBURBLE ("add:(%s<%s%s>=%s+%s) ",
+        GB_sparsity_char (C_sparsity),
+        GB_sparsity_char_matrix (M),
+        ((M != NULL) && !apply_mask) ? " (mask later)" : "",
+        GB_sparsity_char_matrix (A),
+        GB_sparsity_char_matrix (B)) ;
+
     //--------------------------------------------------------------------------
-    // two generic workers for C = A '+' B
+    // phase1: split C into tasks, and count entries in each vector of C
     //--------------------------------------------------------------------------
 
-    // If types are user-defined, the cast* function is just GB_copy_user_user,
-    // which requires the size of the type.  No typecast is done.
-
-    GxB_binary_function fadd = op->function ;
-
-    int64_t *restrict Ci = C->i ;
-    GB_void *restrict Cx = C->x ;
-
-    int64_t jlast, cnz, cnz_last ;
-    GB_jstartup (C, &jlast, &cnz, &cnz_last) ;
-
-    const int64_t *restrict Ai = A->i ;
-    const int64_t *restrict Bi = B->i ;
-
-    const GB_void *restrict Ax = A->x ;
-    const GB_void *restrict Bx = B->x ;
-
-    // check if no typecasting is needed for the operator
-    bool nocasting =
-        (A->type->code == op->xtype->code) &&
-        (B->type->code == op->ytype->code) &&
-        (ctype->code   == op->ztype->code) ;
-
-    if (nocasting && A->type == ctype && B->type == ctype)
-    { 
+    if (C_sparsity == GxB_SPARSE || C_sparsity == GxB_HYPERSPARSE)
+    {
 
         //----------------------------------------------------------------------
-        // C = A + B, no typecasting at all, all types the same
+        // C is sparse or hypersparse: slice and analyze the C matrix
         //----------------------------------------------------------------------
 
-        size_t s = ctype->size ;
+        // phase1a: split C into tasks
+        info = GB_ewise_slice (
+            // computed by phase1a
+            &TaskList, &TaskList_size, &C_ntasks, &C_nthreads,
+            // computed by phase0:
+            Cnvec, Ch, C_to_M, C_to_A, C_to_B, Ch_is_Mh,
+            // original input:
+            (apply_mask) ? M : NULL, A, B, Werk) ;
+        if (info != GrB_SUCCESS)
+        { 
+            // out of memory; free everything allocated by GB_add_phase0
+            GB_FREE (&Ch, Ch_size) ;
+            GB_FREE_WORK (&C_to_M, C_to_M_size) ;
+            GB_FREE_WORK (&C_to_A, C_to_A_size) ;
+            GB_FREE_WORK (&C_to_B, C_to_B_size) ;
+            return (info) ;
+        }
 
-        // for each vector of A and B
-        GB_for_each_vector2 (A, B)
-        {
-
-            //------------------------------------------------------------------
-            // get the next column, A (:,j) and B (:j)
-            //------------------------------------------------------------------
-
-            int64_t GBI2_initj (Iter, j, pa, pa_end, pb, pb_end) ;
-
-            //------------------------------------------------------------------
-            // merge A (:,j) and B (:,j) while both have entries
-            //------------------------------------------------------------------
-
-            while (pa < pa_end && pb < pb_end)
-            {
-                // both A(ia,j) and B (ib,j) are at head of lists to merge
-                int64_t ia = Ai [pa] ;
-                int64_t ib = Bi [pb] ;
-                if (ia < ib)
-                { 
-                    // C (ia:ib-1,j) = A (ia:ib-1,j)
-                    int64_t pa2 = pa ;
-                    do
-                    { 
-                        pa2++ ;
-                    }
-                    while (pa2 < pa_end && Ai [pa2] < ib) ;
-                    int64_t alen = pa2 - pa ;
-                    memcpy (&Ci [cnz  ], &Ai [pa  ], alen * sizeof (int64_t)) ;
-                    memcpy (Cx +(cnz*s), Ax +(pa*s), alen * s) ;
-                    pa  += alen ;
-                    cnz += alen ;
-                }
-                else if (ib < ia)
-                { 
-                    // C (ib:ia-1,j) = B (ib:ia-1,j)
-                    int64_t pb2 = pb ;
-                    do
-                    { 
-                        pb2++ ;
-                    }
-                    while (pb2 < pb_end && Bi [pb2] < ia) ;
-                    int64_t blen = pb2 - pb ;
-                    memcpy (&Ci [cnz  ], &Bi [pb  ], blen * sizeof (int64_t)) ;
-                    memcpy (Cx +(cnz*s), Bx +(pb*s), blen * s) ;
-                    pb  += blen ;
-                    cnz += blen ;
-                }
-                else // ia == ib == i
-                { 
-                    // C (i,j) = fadd (A (i,j), B (i,j))
-                    Ci [cnz] = ib ;
-                    fadd (Cx +(cnz*s), Ax +(pa*s), Bx +(pb*s)) ;
-                    pa++ ;
-                    pb++ ;
-                    cnz++ ;
-                }
-            }
-
-            //------------------------------------------------------------------
-            // A (:,j) or B (:,j) have entries left; not both
-            //------------------------------------------------------------------
-
-            if (pa < pa_end)
-            { 
-                int64_t alen = pa_end - pa ;
-                memcpy (&Ci [cnz  ], &Ai [pa  ], alen * sizeof (int64_t)) ;
-                memcpy (Cx +(cnz*s), Ax +(pa*s), alen * s) ;
-                cnz += alen ;
-            }
-            else if (pb < pb_end)
-            { 
-                int64_t blen = pb_end - pb ;
-                memcpy (&Ci [cnz  ], &Bi [pb  ], blen * sizeof (int64_t)) ;
-                memcpy (Cx +(cnz*s), Bx +(pb*s), blen * s) ;
-                cnz += blen ;
-            }
-
-            //------------------------------------------------------------------
-            // finalize C(:,j)
-            //------------------------------------------------------------------
-
-            // this cannot fail since C->plen is the upper bound: the sum of
-            // the non-empty vectors of A and B.
-            info = GB_jappend (C, j, &jlast, cnz, &cnz_last, Context) ;
-            ASSERT (info == GrB_SUCCESS) ;
-            #if 0
-            // if it could fail:
-            if (info != GrB_SUCCESS) { GB_MATRIX_FREE (&C) ; return (info) ; }
-            #endif
+        // count the number of entries in each vector of C
+        info = GB_add_phase1 (
+            // computed or used by phase1:
+            &Cp, &Cp_size, &Cnvec_nonempty, A_and_B_are_disjoint,
+            // from phase1a:
+            TaskList, C_ntasks, C_nthreads,
+            // from phase0:
+            Cnvec, Ch, C_to_M, C_to_A, C_to_B, Ch_is_Mh,
+            // original input:
+            (apply_mask) ? M : NULL, Mask_struct, Mask_comp, A, B, Werk) ;
+        if (info != GrB_SUCCESS)
+        { 
+            // out of memory; free everything allocated by GB_add_phase0
+            GB_FREE_WORK (&TaskList, TaskList_size) ;
+            GB_FREE (&Ch, Ch_size) ;
+            GB_FREE_WORK (&C_to_M, C_to_M_size) ;
+            GB_FREE_WORK (&C_to_A, C_to_A_size) ;
+            GB_FREE_WORK (&C_to_B, C_to_B_size) ;
+            return (info) ;
         }
 
     }
@@ -237,129 +199,55 @@ GrB_Info GB_add             // C = A+B
     { 
 
         //----------------------------------------------------------------------
-        // C = A + B, with any typecasting
+        // C is bitmap or full: only determine how many threads to use
         //----------------------------------------------------------------------
 
-        size_t csize = ctype->size ;
-        size_t asize = A->type->size ;
-        size_t bsize = B->type->size ;
-
-        // scalar workspace
-        char xwork [nocasting ? 1 : op->xtype->size] ;
-        char ywork [nocasting ? 1 : op->ytype->size] ;
-        char zwork [nocasting ? 1 : op->ztype->size] ;
-
-        GB_cast_function
-            cast_A_to_X, cast_B_to_Y, cast_A_to_C, cast_B_to_C, cast_Z_to_C ;
-        cast_A_to_X = GB_cast_factory (op->xtype->code, A->type->code) ;
-        cast_B_to_Y = GB_cast_factory (op->ytype->code, B->type->code) ;
-        cast_A_to_C = GB_cast_factory (ctype->code,     A->type->code) ;
-        cast_B_to_C = GB_cast_factory (ctype->code,     B->type->code) ;
-        cast_Z_to_C = GB_cast_factory (ctype->code,     op->ztype->code) ;
-
-        // for each vector of A and B
-        GB_for_each_vector2 (A, B)
-        {
-
-            //------------------------------------------------------------------
-            // get the next column, A (:,j) and B (:j)
-            //------------------------------------------------------------------
-
-            int64_t GBI2_initj (Iter, j, pa, pa_end, pb, pb_end) ;
-
-            //------------------------------------------------------------------
-            // merge A (:,j) and B (:,j) while both have entries
-            //------------------------------------------------------------------
-
-            for ( ; pa < pa_end && pb < pb_end ; cnz++)
-            {
-                // both A(ia,j) and B (ib,j) are at head of lists to merge
-                int64_t ia = Ai [pa] ;
-                int64_t ib = Bi [pb] ;
-                if (ia < ib)
-                { 
-                    // C (ia,j) = A (ia,j)
-                    Ci [cnz] = ia ;
-                    // Cx [cnz] = Ax [pa]
-                    cast_A_to_C (Cx +(cnz*csize), Ax +(pa*asize), csize) ;
-                    pa++ ;
-                }
-                else if (ia > ib)
-                { 
-                    // C (ib,j) = B (ib,j)
-                    Ci [cnz] = ib ;
-                    // Cx [cnz] = Bx [pb]
-                    cast_B_to_C (Cx +(cnz*csize), Bx +(pb*bsize), csize) ;
-                    pb++ ;
-                }
-                else
-                { 
-                    // C (i,j) = fadd (A (i,j), B (i,j))
-                    Ci [cnz] = ib ;
-                    if (nocasting)
-                    { 
-                        // operator requires no typecasting
-                        fadd (Cx +(cnz*csize), Ax +(pa*asize), Bx +(pb*bsize)) ;
-                    }
-                    else
-                    { 
-                        // xwork = (xtype) Ax [pa]
-                        cast_A_to_X (xwork, Ax +(pa*asize), asize) ;
-                        // ywork = (ytype) Bx [pa]
-                        cast_B_to_Y (ywork, Bx +(pb*bsize), bsize) ;
-                        // zwork = fadd (xwork, ywork), result is ztype
-                        fadd (zwork, xwork, ywork) ;
-                        // Cx [cnz] = (ctype) zwork
-                        cast_Z_to_C (Cx +(cnz*csize), zwork, csize) ;
-                    }
-                    pa++ ;
-                    pb++ ;
-                }
-            }
-
-            //------------------------------------------------------------------
-            // A (:,j) or B (:,j) have entries left; not both
-            //------------------------------------------------------------------
-
-            for ( ; pa < pa_end ; pa++, cnz++)
-            { 
-                // C (i,j) = A (i,j)
-                Ci [cnz] = Ai [pa] ;
-                // Cx [cnz] = (ctype) Ax [pa]
-                cast_A_to_C (Cx +(cnz*csize), Ax +(pa*asize), csize) ;
-            }
-            for ( ; pb < pb_end ; pb++, cnz++)
-            { 
-                // C (i,j) = B (i,j)
-                Ci [cnz] = Bi [pb] ;
-                // Cx [cnz] = (ctype) Bx [pb]
-                cast_B_to_C (Cx +(cnz*csize), Bx +(pb*bsize), csize) ;
-            }
-
-            //------------------------------------------------------------------
-            // finalize C(:,j)
-            //------------------------------------------------------------------
-
-            // this cannot fail since C->plen is the upper bound: the sum of
-            // the non-empty vectors of A and B.
-            info = GB_jappend (C, j, &jlast, cnz, &cnz_last, Context) ;
-
-            #if 0
-            // if it could fail:
-            if (info != GrB_SUCCESS) { GB_MATRIX_FREE (&C) ; return (info) ; }
-            #endif
-        }
+        int nthreads_max = GB_Context_nthreads_max ( ) ;
+        double chunk = GB_Context_chunk ( ) ;
+        C_nthreads = GB_nthreads (A->vlen * A->vdim, chunk, nthreads_max) ;
     }
 
     //--------------------------------------------------------------------------
-    // finalize C and trim its size: this cannot fail
+    // phase2: compute the entries (indices and values) in each vector of C
     //--------------------------------------------------------------------------
 
-    GB_jwrapup (C, jlast, cnz) ;
-    info = GB_ix_realloc (C, GB_NNZ (C), true, Context) ;
-    ASSERT (info == GrB_SUCCESS) ;
-    ASSERT_OK (GB_check (C, "C output for C=A+B", GB0)) ;
-    (*Chandle) = C ;
+    // Cp and Ch are either freed by phase2, or transplanted into C.
+    // Either way, they are not freed here.
+
+    info = GB_add_phase2 (
+        // computed or used by phase2:
+        C, ctype, C_is_csc, op, A_and_B_are_disjoint,
+        // from phase1
+        &Cp, Cp_size, Cnvec_nonempty,
+        // from phase1a:
+        TaskList, C_ntasks, C_nthreads,
+        // from phase0:
+        Cnvec, &Ch, Ch_size, C_to_M, C_to_A, C_to_B, Ch_is_Mh, C_sparsity,
+        // original input:
+        (apply_mask) ? M : NULL, Mask_struct, Mask_comp, A, B,
+        is_eWiseUnion, alpha, beta, Werk) ;
+
+    // Ch and Cp must not be freed; they are now C->h and C->p.
+    // If the method failed, Cp and Ch have already been freed.
+
+    // free workspace
+    GB_FREE_WORK (&TaskList, TaskList_size) ;
+    GB_FREE_WORK (&C_to_M, C_to_M_size) ;
+    GB_FREE_WORK (&C_to_A, C_to_A_size) ;
+    GB_FREE_WORK (&C_to_B, C_to_B_size) ;
+
+    if (info != GrB_SUCCESS)
+    { 
+        // out of memory
+        return (info) ;
+    }
+
+    //--------------------------------------------------------------------------
+    // return result
+    //--------------------------------------------------------------------------
+
+    ASSERT_MATRIX_OK (C, "C output for add", GB0) ;
+    (*mask_applied) = apply_mask ;
     return (GrB_SUCCESS) ;
 }
 

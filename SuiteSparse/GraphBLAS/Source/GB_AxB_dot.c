@@ -1,46 +1,64 @@
 //------------------------------------------------------------------------------
-// GB_AxB_dot: compute C<M> = A'*B without forming A' via dot products
+// GB_AxB_dot: C<M>=A'*B using dot products
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-// GB_AxB_dot computes the matrix multiplication C<M>=A'*B without forming
-// A' explicitly.  It is useful when A is very tall and thin (n-by-1 in
-// particular).  In that case A' is costly to transpose, but A'*B is very
-// easy if B is also tall and thin (say also n-by-1).
+// Parallel matrix-matrix multiply, A'*B, with optional mask M.  This
+// method is used by GrB_mxm, GrB_vxm, and GrB_mxv.  For both of the latter two
+// methods, B on input will be an nrows-by-1 column vxector.
 
-// If M is NULL, the method computes C=A'*B by considering each entry C(i,j),
-// taking O(m*n) time if C is m-by-n.  This is suitable only when C is small
-// (such as a scalar, a small matrix, or a vector).  If M is present, the upper
-// bound on the number of entries in C is the same as nnz(M), so that space is
-// allocated for C, and C(i,j) is computed only where M(i,j)=1.  This function
-// assumes the mask M is not complemented.
+// This function, and the matrices C, M, A, and B are all CSR/CSC agnostic.
+// For this discussion, suppose they are CSC, with vlen = # of rows, and vdim =
+// # of columns.
 
-// Compare this function with GB_AxB_Gustavson, which computes C=A*B and
-// C<M>=A*B.  The computation of C=A*B requires C->p and C->i to be constructed
-// first, in a symbolic phase.  Otherwise they are very similar.  The dot
-// product in this algorithm is very much like the merge-add in GB_add,
-// except that the merge in GB_add produces a column (a(:,j)+b(:,j)),
-// whereas the merge in this function produces a scalar (a(:,j)'*b(:,j)).
+// C=A'*B, C<M>=A'*B or C<!M>=A'*B is being computed.  A has not been
+// transposed yet (and will not be).  A and B must have the same vector length,
+// vlen (as if both A and B are CSC matrices with the same number of rows, for
+// example).  GB_AxB_dot2 and GB_AxB_dot3 operate on A' without forming it.
+// GB_AxB_dot2 computes C=A'*B and C<!M>=A'*B, and it takes Omega(m*n) time,
+// if C is m-by-n.  It is thus only suitable for cases when A and B are large,
+// and C is small.  GB_AxB_dot3 computes C<M>=A'*B, and it only needs to
+// examine entries in M, taking Omega(nnz(M)) time.  It can thus be used for
+// very large matrices C.  GB_AxB_dot4 computes C+=A'*B when C is full.
 
-#include "GB.h"
-#ifndef GBCOMPACT
-#include "GB_heap.h"
-#include "GB_AxB__semirings.h"
-#endif
+// The output matrix C has not been allocated.  It is an uninitialzed static
+// header on input.  The mask M is optional.
 
-GrB_Info GB_AxB_dot                 // C = A'*B using dot product method
+// If the result is computed in-place, then the C parameter is ignored, and the
+// result is computed in C_in instead.  This case requires the accum operator
+// to match the monoid of the semiring.
+
+// The semiring defines C=A*B.  flipxy modifies how the semiring multiply
+// operator is applied.  If false, then fmult(aik,bkj) is computed.  If true,
+// then the operands are swapped, and fmult(bkj,aij) is done instead.
+
+// Werk: the GB_Werk containing a string of the user-callable function that is
+// calling this function (GrB_mxm, GrB_mxv, or GxB_vxm) and detailed error
+// reports.
+
+#include "GB_mxm.h"
+#include "GB_stringify.h"
+#define GB_FREE_ALL ;
+
+GrB_Info GB_AxB_dot                 // dot product (multiple methods)
 (
-    GrB_Matrix *Chandle,            // output matrix
-    const GrB_Matrix M,             // mask matrix for C<M>=A'*B
-    const GrB_Matrix A,             // input matrix
-    const GrB_Matrix B,             // input matrix
+    GrB_Matrix C,                   // output matrix, static header
+    GrB_Matrix C_in,                // input/output matrix, if done in-place
+    GrB_Matrix M,                   // optional mask matrix
+    const bool Mask_comp,           // if true, use !M
+    const bool Mask_struct,         // if true, use the only structure of M
+    const GrB_BinaryOp accum,
+    const GrB_Matrix A,             // input matrix A
+    const GrB_Matrix B,             // input matrix B
     const GrB_Semiring semiring,    // semiring that defines C=A*B
     const bool flipxy,              // if true, do z=fmult(b,a) vs fmult(a,b)
-    GB_Context Context
+    bool *mask_applied,             // if true, mask was applied
+    bool *done_in_place,            // if true, C_in was computed in-place
+    GB_Werk Werk
 )
 {
 
@@ -48,260 +66,151 @@ GrB_Info GB_AxB_dot                 // C = A'*B using dot product method
     // check inputs
     //--------------------------------------------------------------------------
 
-    ASSERT_OK_OR_NULL (GB_check (M, "M for dot A'*B", GB0)) ;
-    ASSERT_OK (GB_check (A, "A for dot A'*B", GB0)) ;
-    ASSERT_OK (GB_check (B, "B for dot A'*B", GB0)) ;
-    ASSERT (!GB_PENDING (M)) ; ASSERT (!GB_ZOMBIES (M)) ;
-    ASSERT (!GB_PENDING (A)) ; ASSERT (!GB_ZOMBIES (A)) ;
-    ASSERT (!GB_PENDING (B)) ; ASSERT (!GB_ZOMBIES (B)) ;
-    ASSERT_OK (GB_check (semiring, "semiring for numeric A'*B", GB0)) ;
-    ASSERT (A->vlen == B->vlen) ;
-
-    if (flipxy)
-    { 
-        // z=fmult(b,a) will be computed
-        ASSERT (GB_Type_compatible (A->type, semiring->multiply->ytype)) ;
-        ASSERT (GB_Type_compatible (B->type, semiring->multiply->xtype)) ;
-    }
-    else
-    { 
-        // z=fmult(a,b) will be computed
-        ASSERT (GB_Type_compatible (A->type, semiring->multiply->xtype)) ;
-        ASSERT (GB_Type_compatible (B->type, semiring->multiply->ytype)) ;
-    }
-    ASSERT (semiring->multiply->ztype == semiring->add->op->ztype) ;
-
-    (*Chandle) = NULL ;
-
-    //--------------------------------------------------------------------------
-    // estimate nnz(C) and allocate C
-    //--------------------------------------------------------------------------
-
     GrB_Info info ;
-    GrB_Type ctype = semiring->add->op->ztype ;
-    int64_t cvlen = A->vdim ;
-    int64_t cvdim = B->vdim ;
+    ASSERT (C != NULL && (C->static_header || GBNSTATIC)) ;
 
-    info = GB_AxB_alloc (Chandle, ctype, cvlen, cvdim, M, A, B, true,
-        15 + GB_NNZ (A) + GB_NNZ (B), Context) ;
+    ASSERT_MATRIX_OK_OR_NULL (M, "M for dot A'*B", GB0) ;
+    ASSERT (!GB_PENDING (M)) ;
+    ASSERT (GB_JUMBLED_OK (M)) ;
+    ASSERT (!GB_ZOMBIES (M)) ;
 
-    if (info != GrB_SUCCESS)
-    { 
-        // out of memory
-        return (info) ;
-    }
+    ASSERT_MATRIX_OK (A, "A for dot A'*B", GB0) ;
+    GB_MATRIX_WAIT (A) ;
+    ASSERT (!GB_PENDING (A)) ;
+    ASSERT (!GB_JUMBLED (A)) ;
+    ASSERT (!GB_ZOMBIES (A)) ;
 
-    GrB_Matrix C = (*Chandle) ;
+    ASSERT_MATRIX_OK (B, "B for dot A'*B", GB0) ;
+    GB_MATRIX_WAIT (B) ;
+    ASSERT (!GB_PENDING (B)) ;
+    ASSERT (!GB_JUMBLED (B)) ;
+    ASSERT (!GB_ZOMBIES (B)) ;
 
-    //--------------------------------------------------------------------------
-    // C = A'*B, computing each entry with a dot product, via builtin semiring
-    //--------------------------------------------------------------------------
-
-    bool done = false ;
-
-#ifndef GBCOMPACT
-
-    //--------------------------------------------------------------------------
-    // define the worker for the switch factory
-    //--------------------------------------------------------------------------
-
-    #define GB_AdotB(add,mult,xyname) GB_AdotB_ ## add ## mult ## xyname
-
-    #define GB_AxB_WORKER(add,mult,xyname)                                     \
-    {                                                                          \
-        info = GB_AdotB (add,mult,xyname) (Chandle, M, A, B, flipxy, Context) ;\
-        done = true ;                                                          \
-    }                                                                          \
-    break ;
+    ASSERT_SEMIRING_OK (semiring, "semiring for dot A'*B", GB0) ;
+    ASSERT_MATRIX_OK_OR_NULL (C_in, "C_in for dot A'*B", GB0) ;
 
     //--------------------------------------------------------------------------
-    // launch the switch factory
+    // determine if C is iso
     //--------------------------------------------------------------------------
 
-    GB_Opcode mult_opcode, add_opcode ;
-    GB_Type_code xycode, zcode ;
+    GrB_Type ztype = semiring->add->op->ztype ;
+    size_t zsize = ztype->size ;
+    GB_void cscalar [GB_VLA(zsize)] ;
+    bool C_iso = GB_AxB_iso (cscalar, A, B, A->vlen, semiring, flipxy, false) ;
 
-    if (GB_semiring_builtin (A, B, semiring, flipxy,
-        &mult_opcode, &add_opcode, &xycode, &zcode))
-    { 
-        #include "GB_AxB_factory.c"
-    }
-
-    if (info != GrB_SUCCESS)
-    { 
-        // out of memory
-        return (info) ;
-    }
-
-#endif
-
-    //--------------------------------------------------------------------------
-    // user semirings created at compile time
-    //--------------------------------------------------------------------------
-
-    if (semiring->object_kind == GB_USER_COMPILED)
+    if (C_iso)
     {
-
-        // determine the required type of A and B for the user semiring
-        GrB_Type atype_required, btype_required ;
-
-        if (flipxy)
-        { 
-            // A is passed as y, and B as x, in z = mult(x,y)
-            atype_required = semiring->multiply->ytype ;
-            btype_required = semiring->multiply->xtype ;
-        }
-        else
-        { 
-            // A is passed as x, and B as y, in z = mult(x,y)
-            atype_required = semiring->multiply->xtype ;
-            btype_required = semiring->multiply->ytype ;
-        }
-
-        if (A->type == atype_required && B->type == btype_required)
+        // revise the method if A and B are both iso and full
+        if (A->iso && GB_as_if_full (A) && B->iso && GB_as_if_full (B))
         {
-            info = GB_AxB_user (GxB_AxB_DOT, semiring, Chandle, M, A, B,
-                flipxy, NULL, NULL, NULL, 0, NULL, Context) ;
-            done = true ;
-            if (info != GrB_SUCCESS)
+
+            //------------------------------------------------------------------
+            // C is iso and full; do not apply the mask
+            //------------------------------------------------------------------
+
+            GBURBLE ("(iso full dot) ") ;
+            (*done_in_place) = false ;
+            (*mask_applied) = false ;
+            // set C->iso = true    OK
+            info = GB_new_bix (&C, // existing header
+                ztype, A->vdim, B->vdim, GB_Ap_null, true, GxB_FULL, false,
+                GB_HYPER_SWITCH_DEFAULT, -1, 1, true, true) ;
+            if (info == GrB_SUCCESS)
             { 
-                // out of memory or invalid semiring
-                return (info) ;
+                C->magic = GB_MAGIC ;
+                memcpy (C->x, cscalar, zsize) ;
             }
+            return (info) ;
+        }
+    }
+
+    const char *iso_kind = (C_iso) ? "iso " : "" ;
+
+    //--------------------------------------------------------------------------
+    // in-place C+=A'*B.  mask is not present (and not applied)
+    //--------------------------------------------------------------------------
+
+    if (GB_AxB_dot4_control (C_iso, C_in, M, Mask_comp, accum, semiring))
+    { 
+        // C_in must be full on input.  M must be NULL and not
+        // complemented.  the C iso case is not handled (where C is iso on
+        // output), but C_in might be iso on input.
+
+        (*mask_applied) = false ;    // no mask to apply
+        info = GB_AxB_dot4 (C_in, A, B, semiring, flipxy, done_in_place, Werk) ;
+        if (info != GrB_NO_VALUE)
+        { 
+            // return if dot4 has handled this case, otherwise fall through
+            // to dot2 or dot3 below.
+            return (info) ;
         }
     }
 
     //--------------------------------------------------------------------------
-    // C = A'*B, computing each entry with a dot product, with typecasting
+    // check the empty case
     //--------------------------------------------------------------------------
 
-    if (!done)
-    {
+    if (A->vlen == 0)
+    { 
+        // no work to do; C is an empty matrix, normally hypersparse
+        GBURBLE ("(empty dot) ") ;
+        if (C_in != NULL) return (GrB_SUCCESS) ;
+        return (GB_new (&C, // auto sparsity, existing header
+            ztype, A->vdim, B->vdim, GB_Ap_calloc, true, GxB_AUTO_SPARSITY,
+            GB_Global_hyper_switch_get ( ), 1)) ;
+    }
 
-        //----------------------------------------------------------------------
-        // get operators, functions, workspace, contents of A, B, C, and M
-        //----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
+    // C<M>=A'*B: general case
+    //--------------------------------------------------------------------------
 
-        // get the semiring operators
-        GrB_BinaryOp multiply = semiring->multiply ;
-        GrB_Monoid add = semiring->add ;
+    if (GB_AxB_dot3_control (M, Mask_comp))
+    { 
 
-        GxB_binary_function fmult = multiply->function ;
-        GxB_binary_function fadd  = add->op->function ;
+        // use dot3 if M is present and not complemented, and either sparse or
+        // hypersparse
+        GBURBLE ("(%sdot3) ", iso_kind) ;
+        (*mask_applied) = true ;    // mask is always applied
+        (*done_in_place) = false ;
+        GrB_Info info ;
 
-        size_t csize = C->type->size ;
-        size_t asize = A->type->size ;
-        size_t bsize = B->type->size ;
+        // construct the hyper hashes for A and B
+        GB_OK (GB_hyper_hash_build (A, Werk)) ;
+        GB_OK (GB_hyper_hash_build (B, Werk)) ;
 
-        size_t xsize = multiply->xtype->size ;
-        size_t ysize = multiply->ytype->size ;
+        GBURBLE ("(%s%s%s%s = %s'*%s) ",
+            GB_sparsity_char_matrix (M),    // C has the same sparsity as M
+            Mask_struct ? "{" : "<",
+            GB_sparsity_char_matrix (M),
+            Mask_struct ? "}" : ">",
+            GB_sparsity_char_matrix (A),
+            GB_sparsity_char_matrix (B)) ;
 
-        // scalar workspace: because of typecasting, the x/y types need not
-        // be the same as the size of the A and B types.
-        // flipxy false: aki = (xtype) A(k,i) and bkj = (ytype) B(k,j)
-        // flipxy true:  aki = (ytype) A(k,i) and bkj = (xtype) B(k,j)
-        size_t aki_size = flipxy ? ysize : xsize ;
-        size_t bkj_size = flipxy ? xsize : ysize ;
-
-        char aki [aki_size] ;
-        char bkj [bkj_size] ;
-
-        char zwork [csize] ;
-
-        const GB_void *restrict Ax = A->x ;
-        const GB_void *restrict Bx = B->x ;
-        GB_void *restrict Cx = C->x ;
-        GB_void *restrict cij = Cx ;        // advances through each entry of C
-
-        GB_void *restrict identity = add->identity ;
-
-        GB_cast_function cast_A, cast_B ;
-        if (flipxy)
-        { 
-            // A is typecasted to y, and B is typecasted to x
-            cast_A = GB_cast_factory (multiply->ytype->code, A->type->code) ;
-            cast_B = GB_cast_factory (multiply->xtype->code, B->type->code) ;
+        #if defined ( GRAPHBLAS_HAS_CUDA )
+        if (!C_iso &&   // fixme for CUDA, remove and create C iso on output
+            GB_cuda_AxB_dot3_branch (M, Mask_struct, A, B, semiring, flipxy))
+        {
+            info = (GB_cuda_AxB_dot3_jit (C, M, Mask_struct, A, B, semiring,
+                flipxy)) ;
         }
         else
+        #endif
         { 
-            // A is typecasted to x, and B is typecasted to y
-            cast_A = GB_cast_factory (multiply->xtype->code, A->type->code) ;
-            cast_B = GB_cast_factory (multiply->ytype->code, B->type->code) ;
+            // use the CPU
+            info = (GB_AxB_dot3 (C, C_iso, cscalar, M, Mask_struct, A, B,
+                semiring, flipxy, Werk)) ;
         }
-
-        //----------------------------------------------------------------------
-        // C = A'*B via dot products, function pointers, and typecasting
-        //----------------------------------------------------------------------
-
-        // get A(k,i)
-        #define GB_DOT_GETA(pA)                                         \
-        {                                                               \
-            /* aki = A(k,i), located in Ax [pA] */                      \
-            cast_A (aki, Ax +((pA)*asize), asize) ;                     \
-        }
-
-        // get B(k,j)
-        #define GB_DOT_GETB(pB)                                         \
-        {                                                               \
-            /* bkj = B(k,j), located in Bx [pB] */                      \
-            cast_B (bkj, Bx +((pB)*bsize), bsize) ;                     \
-        }
-
-        #define GB_MULTOP(z,x,y) fmult (z, x, y) ;
-
-        // multiply aki*bkj
-        #define GB_DOT_MULT(bkj)                                        \
-        {                                                               \
-            GB_MULTIPLY (zwork, aki, bkj) ;                             \
-        }
-
-        // cij += zwork
-        #define GB_DOT_ADD                                              \
-        {                                                               \
-            /* cij = cij + zwork */                                     \
-            fadd (cij, cij, zwork) ;  /* (z x alias) */                 \
-        }
-
-        // cij = zwork
-        #define GB_DOT_COPY    memcpy (cij, zwork, csize) ;
-
-        // C->x has moved so the pointer to cij needs to be recomputed
-        #define GB_DOT_REACQUIRE                                        \
-        {                                                               \
-            cij = Cx + cnz * csize ;                                    \
-        }
-
-        // cij = identity
-        #define GB_DOT_CLEAR   memcpy (cij, identity, csize) ;
-
-        // save the value of C(i,j) by advancing cij pointer to next value
-        #define GB_DOT_SAVE    cij += csize ;
-
-        #define GB_DOT_WORK_TYPE GB_void
-
-        #define GB_DOT_WORK(k) (Work +((k)*bkj_size))
-
-        // Work [k] = (btype) B (k,j)
-        #define GB_DOT_SCATTER                                          \
-        {                                                               \
-            /* Work [k] = B(k,j), located in Bx [p] */                  \
-            cast_B (GB_DOT_WORK (k), Bx +((pB)*bsize), bsize) ;         \
-        }
-
-        #define GB_HANDLE_FLIPXY true
-        #define GB_XTYPE GB_void
-        #define GB_YTYPE GB_void
-        #include "GB_AxB_dot_flipxy.c"
+        return (info) ;
     }
 
     //--------------------------------------------------------------------------
-    // trim the size of C: this cannot fail
+    // general case: C<M>=A'*B, C<!M>=A'*B, or C=A'*B, not in-place
     //--------------------------------------------------------------------------
 
-    info = GB_ix_realloc (C, GB_NNZ (C), true, Context) ;
-    ASSERT (info == GrB_SUCCESS) ;
-    ASSERT_OK (GB_check (C, "dot: C = A'*B output", GB0)) ;
-    ASSERT (*Chandle == C) ;
-    return (GrB_SUCCESS) ;
+    GBURBLE ("(%sdot2) ", iso_kind) ;
+    (*mask_applied) = (M != NULL) ; // mask applied if present
+    (*done_in_place) = false ;      // TODO: allow dot2 to work in-place
+    return (GB_AxB_dot2 (C, C_iso, cscalar, M, Mask_comp, Mask_struct,
+        false, A, B, semiring, flipxy, Werk)) ;
 }
 

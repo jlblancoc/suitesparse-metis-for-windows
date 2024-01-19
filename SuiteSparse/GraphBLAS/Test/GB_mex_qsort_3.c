@@ -2,14 +2,14 @@
 // GB_mex_qsort_3: sort using GB_qsort_3
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 #include "GB_mex.h"
 
-#define USAGE "[I,J,K] = qsort (I,J,K)"
+#define USAGE "[I,J,K] = GB_mex_qsort_3 (I,J,K)"
 
 void mexFunction
 (
@@ -21,7 +21,6 @@ void mexFunction
 {
 
     // check inputs
-    GB_WHERE (USAGE) ;
     if (nargin != 3 || nargout != 3)
     {
         mexErrMsgTxt ("Usage: " USAGE) ;
@@ -54,23 +53,18 @@ void mexFunction
         mexErrMsgTxt ("I and K must be the same length") ;
     }
 
-    pargout [0] = mxCreateNumericMatrix (n, 1, mxINT64_CLASS, mxREAL) ;
+    pargout [0] = GB_mx_create_full (n, 1, GrB_INT64) ;
     int64_t *Iout = mxGetData (pargout [0]) ;
     memcpy (Iout, I, n * sizeof (int64_t)) ;
 
-    pargout [1] = mxCreateNumericMatrix (n, 1, mxINT64_CLASS, mxREAL) ;
+    pargout [1] = GB_mx_create_full (n, 1, GrB_INT64) ;
     int64_t *Jout = mxGetData (pargout [1]) ;
     memcpy (Jout, J, n * sizeof (int64_t)) ;
 
-    pargout [2] = mxCreateNumericMatrix (n, 1, mxINT64_CLASS, mxREAL) ;
+    pargout [2] = GB_mx_create_full (n, 1, GrB_INT64) ;
     int64_t *Kout = mxGetData (pargout [2]) ;
     memcpy (Kout, K, n * sizeof (int64_t)) ;
 
-    TIC ;
-
     GB_qsort_3 (Iout, Jout, Kout, n) ;
-
-    TOC ;
-    GB_mx_put_time (0) ;
 }
 

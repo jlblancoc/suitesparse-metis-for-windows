@@ -1,3 +1,77 @@
+Jan 10, 2024: version 6.3.1
+
+    * MATLAB interface:  add -DNO_SSIZE_T for Windows
+    * minor updates to build system
+
+Dec 30, 2023: version 6.3.0
+
+    * major change to build system: by Markus Mützel
+    * AMD: amd_internal.h removed from UMFPACK/Source.
+    * umfpack_version: added to return version of UMFPACK
+
+Oct 23, 2023: version 6.2.2
+
+    * for SuiteSparse 7.3.0: update for CHOLMOD 5.0.0
+
+Sept 18, 2023: version 6.2.1
+
+    * cmake update: add "None" build type, from Antonio Rojas, for Arch Linux
+    * AMD: amd_internal.h include file copied into UMFPACK/Source, so
+        that UMFPACK can be built with just the installed AMD files.
+
+Sept 8, 2023: version 6.2.0
+
+    * cmake updates: SuiteSparse:: namespace by Markus Muetzel
+
+June 16, 2023: version 6.1.1
+
+    * cmake build system updates: update by Markus Muetzel
+
+Jan 17, 2023: version 6.1.0
+
+    * NFORTRAN: option added to disable Fortran entirely
+    * SuiteSparse_config: now v7.0.0
+    * Fortran demos: extended to work on Windows, and complex with
+        64-bit integers
+    * copy/serialize/deserialize methods: added new methods to copy, serialize,
+        and deserialize the Numeric and Symbolic objects.  By Will Kimmerer,
+        revised by T. Davis.
+
+Dec 9, 2022: version 6.0.2
+
+    * minor change to build system
+    * Fortran compiler: no longer required to build UMFPACK.  Fortran is only
+        used in UMFPACK to determine how C calls the BLAS, and for a few
+        Fortran demo programs in Demo/*.f.
+
+Nov 12, 2022: version 6.0.1
+
+    * BLAS definitions: no longer exposed to the user application
+
+Nov 12, 2022: version 6.0.0
+
+    * using CMake build system
+    * integers: int (32-bit) and SuiteSparse_long (nominally 64-bit) replaced
+        with int32_t and int64_t.
+    * added new ordering option: UMFPACK_ORDERING_METIS_GUARD.  For the
+        symmetric strategy, this is the same as METIS on A+A'.  For the
+        unsymmetric strategy, if A has one or more fairly dense rows,
+        COLAMD is used.  Otherwise, METIS is used on A'A.
+    * added two control parameters: to control auto selection strategy
+    * added support methods for ParU: umfpack_paru_symbolic and
+        umfpack_paru_free_sw.
+    * umfpack_get_symbolic: revised output row permutation to exclude
+        the Diagonal Map, and now it is returned as its own array (if present).
+        The initial row permutation is returned as-is.
+    * umfpack.h: a single include file, no longer #include's umfpack_*.h files.
+    * BLAS/LAPACK: relying on SuiteSparse_config and CMake to find and link
+        with the BLAS and LAPACK libraries
+
+Oct 20, 2019: version 5.7.9
+
+    * update to Makefile, Tcov, and MATLAB: BLAS and LAPACK libraries
+    * Tcov/ut.c: avoiding compiler warnings
+
 Nov 9, 2018: version 5.7.8
 
     * minor change to umf_analyze.h

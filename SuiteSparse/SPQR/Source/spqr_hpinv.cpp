@@ -2,24 +2,29 @@
 // === spqr_hpinv ==============================================================
 // =============================================================================
 
+// SPQR, Copyright (c) 2008-2022, Timothy A Davis. All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
+
 // Finalizes the row permutation that is implicit in the pattern of H.  This
 // must be done sequentially, after all threads have finished factorizing the
 // matrix and finding all the dead columns.  Also determines QRnum->maxfm.
 
 #include "spqr.hpp"
 
-template <typename Entry> void spqr_hpinv
+template <typename Entry, typename Int> void spqr_hpinv
 (
     // input
-    spqr_symbolic *QRsym,
+    spqr_symbolic <Int> *QRsym,
     // input/output
-    spqr_numeric <Entry> *QRnum,
+    spqr_numeric <Entry, Int> *QRnum,
     // workspace
-    Long *W              // size QRnum->m
+    Int *W              // size QRnum->m
 )
 {
-    Long *Hi, *Hii, *Hip, *HPinv, *Hr, *Super, *Rp, *Hm, *Sleft, *PLinv ;
-    Long nf, m, n, f, rm, i, row1, row2, fm, fn, fp, cm, cn, maxfm ;
+    Int *Hi, *Hii, *Hip, *HPinv, *Hr, *Super, *Rp, *Hm, *Sleft, *PLinv ;
+    Int nf, m, n, f, rm, i, row1, row2, fm, fn, fp, cm, cn, maxfm ;
 
     // -------------------------------------------------------------------------
     // get the contents of the QRsym and QRnum objects
@@ -45,7 +50,7 @@ template <typename Entry> void spqr_hpinv
 #ifndef NDEBUG
     for (f = 0 ; f < nf ; f++)
     {
-        Long j ;
+        Int j ;
         rm = 0 ;
         for (j = Super [f] ; j < Super [f+1] ; j++)
         {
@@ -163,27 +168,39 @@ template <typename Entry> void spqr_hpinv
     }
 }
 
-
-// =============================================================================
-
-template void spqr_hpinv <double>
+template void spqr_hpinv <double, int32_t>
 (
     // input
-    spqr_symbolic *QRsym,
+    spqr_symbolic <int32_t> *QRsym,
     // input/output
-    spqr_numeric <double> *QRnum,
+    spqr_numeric <double, int32_t> *QRnum,
     // workspace
-    Long *W              // size QRnum->m
+    int32_t *W              // size QRnum->m
 ) ;
-
-// =============================================================================
-
-template void spqr_hpinv <Complex>
+template void spqr_hpinv <Complex, int32_t>
 (
     // input
-    spqr_symbolic *QRsym,
+    spqr_symbolic <int32_t> *QRsym,
     // input/output
-    spqr_numeric <Complex> *QRnum,
+    spqr_numeric <Complex, int32_t> *QRnum,
     // workspace
-    Long *W              // size QRnum->m
+    int32_t *W              // size QRnum->m
+) ;
+template void spqr_hpinv <double, int64_t>
+(
+    // input
+    spqr_symbolic <int64_t> *QRsym,
+    // input/output
+    spqr_numeric <double, int64_t> *QRnum,
+    // workspace
+    int64_t *W              // size QRnum->m
+) ;
+template void spqr_hpinv <Complex, int64_t>
+(
+    // input
+    spqr_symbolic <int64_t> *QRsym,
+    // input/output
+    spqr_numeric <Complex, int64_t> *QRnum,
+    // workspace
+    int64_t *W              // size QRnum->m
 ) ;

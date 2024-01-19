@@ -1,13 +1,13 @@
 function w = GB_spec_mxv (w, mask, accum, semiring, A, u, descriptor)
-%GB_SPEC_MXV a MATLAB mimic of GrB_mxv
+%GB_SPEC_MXV a mimic of GrB_mxv
 %
 % Usage:
 % w = GB_spec_mxv (w, mask, accum, semiring, A, u, descriptor)
 %
 % w, mask, and u are vectors.  u is not transposed (descriptor inp1 ignored)
 
-% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-% http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+% SPDX-License-Identifier: Apache-2.0
 
 if (nargout > 1 || nargin ~= 7)
     error ('usage: w = GB_spec_mxv (w, mask, accum, semiring, A, u, descriptor)') ;

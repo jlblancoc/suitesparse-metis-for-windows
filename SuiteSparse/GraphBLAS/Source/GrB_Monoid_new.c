@@ -2,8 +2,8 @@
 // GrB_Monoid_new:  create a new monoid
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
@@ -12,40 +12,44 @@
 // same type.  No typecasting is done for the identity value.
 
 #include "GB.h"
+#include "GB_Monoid_new.h"
 
-#define GB_MONOID_NEW(type,T)                                               \
-GrB_Info GrB_Monoid_new_ ## T       /* create a new boolean monoid   */     \
+#define GB_MONOID_NEW(prefix,type,T)                                        \
+GrB_Info GB_EVAL3 (prefix, _Monoid_new_, T) /* create a new monoid */       \
 (                                                                           \
     GrB_Monoid *monoid,             /* handle of monoid to create    */     \
-    const GrB_BinaryOp op,          /* binary operator of the monoid */     \
-    const type identity             /* identity value of the monoid  */     \
+    GrB_BinaryOp op,                /* binary operator of the monoid */     \
+    type identity                   /* identity value of the monoid  */     \
 )                                                                           \
 {                                                                           \
-    GB_WHERE ("GrB_Monoid_new_" GB_STR(T) " (&monoid, op, identity)") ;     \
+    GB_WHERE1 ("GrB_Monoid_new_" GB_STR(T) " (&monoid, op, identity)") ;    \
     type id = identity ;                                                    \
-    return (GB_Monoid_new (monoid, op, &id, GB_ ## T ## _code, Context)) ;  \
+    return (GB_Monoid_new (monoid, op, &id, NULL, GB_ ## T ## _code,        \
+        Werk)) ;                                                         \
 }
 
-GB_MONOID_NEW (bool     , BOOL   )
-GB_MONOID_NEW (int8_t   , INT8   )
-GB_MONOID_NEW (uint8_t  , UINT8  )
-GB_MONOID_NEW (int16_t  , INT16  )
-GB_MONOID_NEW (uint16_t , UINT16 )
-GB_MONOID_NEW (int32_t  , INT32  )
-GB_MONOID_NEW (uint32_t , UINT32 )
-GB_MONOID_NEW (int64_t  , INT64  )
-GB_MONOID_NEW (uint64_t , UINT64 )
-GB_MONOID_NEW (float    , FP32   )
-GB_MONOID_NEW (double   , FP64   )
+GB_MONOID_NEW (GrB, bool      , BOOL   )
+GB_MONOID_NEW (GrB, int8_t    , INT8   )
+GB_MONOID_NEW (GrB, uint8_t   , UINT8  )
+GB_MONOID_NEW (GrB, int16_t   , INT16  )
+GB_MONOID_NEW (GrB, uint16_t  , UINT16 )
+GB_MONOID_NEW (GrB, int32_t   , INT32  )
+GB_MONOID_NEW (GrB, uint32_t  , UINT32 )
+GB_MONOID_NEW (GrB, int64_t   , INT64  )
+GB_MONOID_NEW (GrB, uint64_t  , UINT64 )
+GB_MONOID_NEW (GrB, float     , FP32   )
+GB_MONOID_NEW (GrB, double    , FP64   )
+GB_MONOID_NEW (GxB, GxB_FC32_t, FC32   )
+GB_MONOID_NEW (GxB, GxB_FC64_t, FC64   )
 
 GrB_Info GrB_Monoid_new_UDT         // create a monoid with a user-defined type
 (
     GrB_Monoid *monoid,             // handle of monoid to create
-    const GrB_BinaryOp op,          // binary operator of the monoid
-    const void *identity            // identity value of the monoid
+    GrB_BinaryOp op,                // binary operator of the monoid
+    void *identity                  // identity value of monoid
 )
 { 
-    GB_WHERE ("GrB_Monoid_new_UDT (&monoid, op, identity)") ;
-    return (GB_Monoid_new (monoid, op, identity, GB_UDT_code, Context)) ;
+    GB_WHERE1 ("GrB_Monoid_new_UDT (&monoid, op, identity)") ;
+    return (GB_Monoid_new (monoid, op, identity, NULL, GB_UDT_code, Werk)) ;
 }
 

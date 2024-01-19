@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_lsolve =========================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_lsolve: solve Lx=b
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /*  solves Lx = b, where L is the lower triangular factor of a matrix */
 /*  B is overwritten with the solution X. */
@@ -14,7 +14,7 @@
 #include "umf_internal.h"
 #include "umf_lsolve.h"
 
-GLOBAL double UMF_lsolve
+double UMF_lsolve
 (
     NumericType *Numeric,
     Entry X [ ],		/* b on input, solution x on output */

@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_create_element =================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_create_element: create element after factorizing a front
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /*
     Factorization of a frontal matrix is complete.  Create a new element for
@@ -27,7 +27,7 @@
 PRIVATE void copy_column (Int len, Entry *X, Entry *Y)
 {
     Int i ;
-#pragma ivdep
+UMFPACK_IVDEP
     for (i = 0 ; i < len ; i++)
     {
 	Y [i] = X [i] ;
@@ -38,7 +38,7 @@ PRIVATE void copy_column (Int len, Entry *X, Entry *Y)
 /* === UMF_create_element =================================================== */
 /* ========================================================================== */
 
-GLOBAL Int UMF_create_element
+Int UMF_create_element
 (
     NumericType *Numeric,
     WorkType *Work,
@@ -96,7 +96,7 @@ GLOBAL Int UMF_create_element
     if (!Symbolic->fixQ)
     {
 	/* but only if the column ordering is not fixed */
-#pragma ivdep
+UMFPACK_IVDEP
 	for (j = 0 ; j < fncols ; j++)
 	{
 	    /* add the current frontal matrix to the degree */
@@ -109,7 +109,7 @@ GLOBAL Int UMF_create_element
     /* add the current frontal matrix to the degrees of each row */
     /* ---------------------------------------------------------------------- */
 
-#pragma ivdep
+UMFPACK_IVDEP
     for (i = 0 ; i < fnrows ; i++)
     {
 	/* add the current frontal matrix to the degree */
@@ -133,7 +133,7 @@ GLOBAL Int UMF_create_element
 	    /* guard against integer overflow.  This is very rare */
 	    DEBUG1 (("Integer overflow, cdeg\n")) ;
 	    Work->cdeg0 = 1 ;
-#pragma ivdep
+UMFPACK_IVDEP
 	    for (e = 1 ; e <= Work->nel ; e++)
 	    {
 		if (E [e])
@@ -154,7 +154,7 @@ GLOBAL Int UMF_create_element
 	    /* guard against integer overflow.  This is very rare */
 	    DEBUG1 (("Integer overflow, rdeg\n")) ;
 	    Work->rdeg0 = 1 ;
-#pragma ivdep
+UMFPACK_IVDEP
 	    for (e = 1 ; e <= Work->nel ; e++)
 	    {
 		if (E [e])
@@ -172,7 +172,7 @@ GLOBAL Int UMF_create_element
 
     if (!Work->pivrow_in_front)
     {
-#pragma ivdep
+UMFPACK_IVDEP
 	for (j = 0 ; j < fncols ; j++)
 	{
 	    Fcpos [Fcols [j]] = EMPTY ;
@@ -181,7 +181,7 @@ GLOBAL Int UMF_create_element
 
     if (!Work->pivcol_in_front)
     {
-#pragma ivdep
+UMFPACK_IVDEP
 	for (i = 0 ; i < fnrows ; i++)
 	{
 	    Frpos [Frows [i]] = EMPTY ;
@@ -283,12 +283,12 @@ GLOBAL Int UMF_create_element
     /* copy frontal matrix into the new element */
     /* ---------------------------------------------------------------------- */
 
-#pragma ivdep
+UMFPACK_IVDEP
     for (i = 0 ; i < fnrows ; i++)
     {
 	Rows [i] = Frows [i] ;
     }
-#pragma ivdep
+UMFPACK_IVDEP
     for (i = 0 ; i < fncols ; i++)
     {
 	Cols [i] = Fcols [i] ;

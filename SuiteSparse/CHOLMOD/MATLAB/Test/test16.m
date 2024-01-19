@@ -4,7 +4,8 @@ function test16
 %   test16
 % See also cholmod_test
 
-% Copyright 2007, Timothy A. Davis, http://www.suitesparse.com
+% Copyright 2006-2023, Timothy A. Davis, All Rights Reserved.
+% SPDX-License-Identifier: GPL-2.0+
 
 fprintf ('=================================================================\n');
 fprintf ('test16: test cholmod2 on a large matrix\n') ;
@@ -12,7 +13,7 @@ fprintf ('test16: test cholmod2 on a large matrix\n') ;
 rand ('state',1) ;
 randn ('state',1) ;
 
-Prob = UFget (936)							    %#ok
+Prob = ssget (936)                                                          %#ok
 A = Prob.A ;
 % tic
 % [L,s,p] = lchol (A) ;

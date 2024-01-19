@@ -1,3 +1,15 @@
+//------------------------------------------------------------------------------
+// Mongoose/Tests/Mongoose_Test_Memory.cpp
+//------------------------------------------------------------------------------
+
+// Mongoose Graph Partitioning Library, Copyright (C) 2017-2018,
+// Scott P. Kolodziej, Nuri S. Yeralan, Timothy A. Davis, William W. Hager
+// Mongoose is licensed under Version 3 of the GNU General Public License.
+// Mongoose is also available under other licenses; contact authors for details.
+// SPDX-License-Identifier: GPL-3.0-only
+
+//------------------------------------------------------------------------------
+
 
 #include "Mongoose_EdgeCut.hpp"
 #include "Mongoose_IO.hpp"
@@ -50,10 +62,10 @@ int runMemoryTest(const std::string &inputFile)
     }
 
     /* Override SuiteSparse memory management with custom testers. */
-    SuiteSparse_config.malloc_func = myMalloc;
-    SuiteSparse_config.calloc_func = myCalloc;
-    SuiteSparse_config.realloc_func = myRealloc;
-    SuiteSparse_config.free_func = myFree;
+    SuiteSparse_config_malloc_func_set (myMalloc) ;
+    SuiteSparse_config_calloc_func_set (myCalloc) ;
+    SuiteSparse_config_realloc_func_set (myRealloc) ;
+    SuiteSparse_config_free_func_set (myFree) ;
 
     int status = RunAllTests(inputFile, options);
 

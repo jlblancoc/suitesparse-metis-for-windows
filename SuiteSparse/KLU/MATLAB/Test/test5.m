@@ -7,7 +7,9 @@ function test5
 %
 % See also klu
 
-% Copyright 2004-2012, University of Florida
+% KLU, Copyright (c) 2004-2022, University of Florida.  All Rights Reserved.
+% Authors: Timothy A. Davis and Ekanathan Palamadai.
+% SPDX-License-Identifier: LGPL-2.1+
 
 do_diary = 0 ;
 
@@ -96,7 +98,7 @@ circ = [
 
 fprintf ('Running KLU on %d circuits.\n', length (circ)) ;
 
-index = UFget ;
+index = ssget ;
 
 opts_noscale.scale = -1 ;
 opts_sum.scale = 1 ;
@@ -110,7 +112,7 @@ try
     for kk = 1:nmat
 
         k = circ (kk) ;
-        Prob = UFget (k, index) ;
+        Prob = ssget (k, index) ;
 
         waitbar (kk/nmat, h) ;
 

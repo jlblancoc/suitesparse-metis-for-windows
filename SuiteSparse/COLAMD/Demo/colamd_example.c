@@ -1,6 +1,12 @@
-/* ========================================================================== */
-/* === colamd and symamd example ============================================ */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// COLAMD/Demo/colamd_example.c: simple example for COLAMD
+//------------------------------------------------------------------------------
+
+// COLAMD, Copyright (c) 1998-2022, Timothy A. Davis and Stefan Larimore,
+// All Rights Reserved.
+// SPDX-License-Identifier: BSD-3-clause
+
+//------------------------------------------------------------------------------
 
 /* COLAMD / SYMAMD example
 
@@ -28,7 +34,6 @@
 
 /* ========================================================================== */
 
-#include <stdio.h>
 #include "colamd.h"
 
 #define A_NNZ 11
@@ -92,6 +97,21 @@ int main (void)
     int stats [COLAMD_STATS] ;	/* for colamd and symamd output statistics */
 
     int row, col, pp, length, ok ;
+
+    //--------------------------------------------------------------------------
+    // colamd version
+    //--------------------------------------------------------------------------
+
+    int version [3] ;
+    colamd_version (version) ;
+    printf ("COLAMD v%d.%d.%d\n", version [0], version [1], version [2]) ;
+    if ((version [0] != COLAMD_MAIN_VERSION) ||
+        (version [1] != COLAMD_SUB_VERSION) ||
+        (version [2] != COLAMD_SUBSUB_VERSION))
+    {
+        fprintf (stderr, "version in header does not match library\n") ;
+        abort ( ) ;
+    }
 
     /* ====================================================================== */
     /* dump the input matrix A */

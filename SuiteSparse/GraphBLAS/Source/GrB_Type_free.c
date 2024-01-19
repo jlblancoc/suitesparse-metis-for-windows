@@ -2,8 +2,8 @@
 // GrB_Type_free:  free a user-defined type
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
@@ -17,16 +17,23 @@ GrB_Info GrB_Type_free          // free a user-defined type
 
     if (type != NULL)
     {
-        // only free a user-defined type, not a built-in one
+        // only free a dynamically-allocated type, which have header_size > 0
         GrB_Type t = *type ;
-        if (t != NULL && t->code == GB_UDT_code)
+        if (t != NULL)
         {
-            if (t->magic == GB_MAGIC)
+            GB_FREE (&(t->user_name), t->user_name_size) ;
+            size_t defn_size = t->defn_size ;
+            if (defn_size > 0)
             { 
-                t->magic = GB_FREED ;   // to help detect dangling pointers
-                GB_FREE_MEMORY (*type, 1, sizeof (struct GB_Type_opaque)) ;
+                GB_FREE (&(t->defn), defn_size) ;
             }
-            (*type) = NULL ;
+            size_t header_size = t->header_size ;
+            if (header_size > 0)
+            {
+                t->magic = GB_FREED ;  // to help detect dangling pointers
+                t->header_size = 0 ;
+                GB_FREE (type, header_size) ;
+            }
         }
     }
 

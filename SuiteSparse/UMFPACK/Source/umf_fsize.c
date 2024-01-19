@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_fsize ============================================================ */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_fsize: determine largest front in each subtree
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt.txt for License.              */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /* Determine the largest frontal matrix size for each subtree.   Called by
  * UMF_colamd and UMF_analyze.  Only required to sort the children of each
@@ -14,7 +14,7 @@
 #include "umf_internal.h"
 #include "umf_fsize.h"
 
-GLOBAL void UMF_fsize
+void UMF_fsize
 (
     Int nn,
     Int Fsize [ ],

@@ -1,3 +1,6 @@
+// CXSparse/Source/cs_updown: sparse Cholesky update/downdate
+// CXSparse, Copyright (c) 2006-2022, Timothy A. Davis. All Rights Reserved.
+// SPDX-License-Identifier: LGPL-2.1+
 #include "cs.h"
 /* sparse Cholesky update/downdate, L*L' + sigma*w*w' (sigma = +1 or -1) */
 CS_INT cs_updown (cs *L, CS_INT sigma, const cs *C, const CS_INT *parent)
@@ -22,7 +25,11 @@ CS_INT cs_updown (cs *L, CS_INT sigma, const cs *C, const CS_INT *parent)
     {
         p = Lp [j] ;
         alpha = w [j] / Lx [p] ;                    /* alpha = w(j) / L(j,j) */
-        beta2 = beta*beta + sigma*alpha*CS_CONJ(alpha) ;
+        #ifdef CS_COMPLEX
+        beta2 = beta*beta + sigma*creal(alpha*CS_CONJ(alpha)) ;
+        #else
+        beta2 = beta*beta + sigma*(alpha*alpha) ;
+        #endif
         if (beta2 <= 0) break ;                     /* not positive definite */
         beta2 = sqrt (beta2) ;
         delta = (sigma > 0) ? (beta / beta2) : (beta2 / beta) ;

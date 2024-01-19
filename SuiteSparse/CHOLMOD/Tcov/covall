@@ -1,5 +1,13 @@
-#!/bin/csh
-./gcovs z*.c l_*c
-./covs > covs.out
-echo -n "statments not yet tested: "
+#!/bin/bash
+
+# ------------------------------------------------------------------------------
+# CHOLMOD/Tcov Module.  Copyright (C) 2005-2023, Timothy A. Davis.
+# All Rights Reserved.
+# SPDX-License-Identifier: GPL-2.0+
+# ------------------------------------------------------------------------------
+
+./gcovs z_*.c zz_*.c l_*.c ui_*.c ul_*.c zl_*.c
+./covs *.gcov > covs.out
+echo -n "statements not yet tested: "
 grep -c "#####" covs.out
+exit 0

@@ -1,6 +1,9 @@
 function test83
 %TEST83 test GrB_assign with J=lo:0:hi, an empty list, and C_replace true
 
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+% SPDX-License-Identifier: Apache-2.0
+
 % exercises the C_replace_phase of GB_assign.c
 
 rng ('default') ;

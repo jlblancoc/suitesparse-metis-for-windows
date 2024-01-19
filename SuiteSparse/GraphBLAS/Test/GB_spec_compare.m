@@ -1,23 +1,29 @@
 function ok = GB_spec_compare (C_spec, C_mex, identity, tol)
-%GB_SPEC_COMPARE compare MATLAB mimic result with GraphBLAS result
-% ok = GB_spec_compare (C_spec, C_mex, identity)
+%GB_SPEC_COMPARE compare mimic result with GraphBLAS result
+% ok = GB_spec_compare (C_spec, C_mex, identity, tol)
 %
 % compares two structs C_spec and C_mex.  The C_spec struct contains a dense
-% matrix and is the output of a MATLAB mimic, C_spec = GB_spec_* (...) for
-% some GraphBLAS method.  C_mex = GrG_mex_* (...) is the output of the
-% corresponding MATLAB interface to the true GraphBLAS method, in C.
+% matrix and is the output of a mimic, C_spec = GB_spec_* (...) for
+% some GraphBLAS method.  C_mex = GB_mex_* (...) is the output of the
+% corresponding interface to the true GraphBLAS method, in C.
 
-% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-% http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+% SPDX-License-Identifier: Apache-2.0
 
 % get the semiring identity
 if (nargin < 3)
     identity = 0 ;
 end
+if (isempty (identity))
+    % results from the ANY monoid or operator cannot be checked with
+    % this function, since many results are possible.
+    ok = true ;
+    return
+end
 
-if (nargin < 4)
+if (nargin < 4 || isempty (tol))
     if (isfloat (identity))
-        tol = 64*eps (class (identity)) ;
+        tol = 64*eps (class (identity)) ;   % not GB_spec_type.
     else
         tol = 0 ;
     end
@@ -67,26 +73,21 @@ if (~ok_matrix)
     % C1.matrix
     % C2.matrix
 end
-
 if (~ok_pattern)
     fprintf ('pattern is wrong:\n') ;
-    % C1.pattern
-    % C2.pattern
+    C1.pattern
+    C2.pattern
 end
 %}
 
 if (~ok_class || ~ok_pattern || ~ok_matrix)
-    % C_spec
-    % % C_mex
-    % C1
-    % C2
     fprintf ('matrix: %d pattern: %d class %d\n', ...
         ok_matrix, ok_pattern, ok_class) ;
+    norm (double (C1.matrix) - double (C2.matrix), 1)
 end
 
 % with no output, just assert that ok is true
 if (nargout == 0)
     assert (ok_matrix && ok_pattern && ok_class) ;
 end
-
 

@@ -1,6 +1,12 @@
-/* ========================================================================== */
-/* === colamd and symamd example ============================================ */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// COLAMD/Demo/colamd_l_example.c: simple example for COLAMD (int64_t)
+//------------------------------------------------------------------------------
+
+// COLAMD, Copyright (c) 1998-2022, Timothy A. Davis and Stefan Larimore,
+// All Rights Reserved.
+// SPDX-License-Identifier: BSD-3-clause
+
+//------------------------------------------------------------------------------
 
 /* COLAMD / SYMAMD example
 
@@ -28,9 +34,7 @@
 
 /* ========================================================================== */
 
-#include <stdio.h>
 #include "colamd.h"
-#define Long SuiteSparse_long
 
 #define A_NNZ 11
 #define A_NROW 5
@@ -47,14 +51,14 @@ int main (void)
     /* input matrix A definition */
     /* ====================================================================== */
 
-    Long A [ALEN] = {
+    int64_t A [ALEN] = {
 
     	0, 1, 4,		/* row indices of nonzeros in column 0 */
 	2, 4,			/* row indices of nonzeros in column 1 */
 	0, 1, 2, 3,		/* row indices of nonzeros in column 2 */
 	1, 3} ;			/* row indices of nonzeros in column 3 */
 
-    Long p [ ] = {
+    int64_t p [ ] = {
 
     	0,			/* column 0 is in A [0..2] */
 	3,			/* column 1 is in A [3..4] */ 
@@ -66,7 +70,7 @@ int main (void)
     /* input matrix B definition */
     /* ====================================================================== */
 
-    Long B [ ] = {              /* Note: only strictly lower triangular part */
+    int64_t B [ ] = {           /* Note: only strictly lower triangular part */
     				/* is included, since symamd ignores the */
 				/* diagonal and upper triangular part of B. */
 
@@ -76,7 +80,7 @@ int main (void)
     	4			/* row indices of nonzeros in column 3 */
     	} ;			/* row indices of nonzeros in column 4 (none) */
 
-    Long q [ ] = {
+    int64_t q [ ] = {
 
     	0,			/* column 0 is in B [0] */
 	1,			/* column 1 is in B [1..2] */ 
@@ -89,10 +93,26 @@ int main (void)
     /* other variable definitions */
     /* ====================================================================== */
 
-    Long perm [B_N+1] ;	        /* note the size is N+1 */
-    Long stats [COLAMD_STATS] ; /* for colamd and symamd output statistics */
+    int64_t perm [B_N+1] ;	        /* note the size is N+1 */
+    int64_t stats [COLAMD_STATS] ; /* for colamd and symamd output statistics */
 
-    Long row, col, pp, length, ok ;
+    int64_t row, col, pp, length ;
+    int ok ;
+
+    //--------------------------------------------------------------------------
+    // colamd version
+    //--------------------------------------------------------------------------
+
+    int version [3] ;
+    colamd_version (version) ;
+    printf ("COLAMD v%d.%d.%d\n", version [0], version [1], version [2]) ;
+    if ((version [0] != COLAMD_MAIN_VERSION) ||
+        (version [1] != COLAMD_SUB_VERSION) ||
+        (version [2] != COLAMD_SUBSUB_VERSION))
+    {
+        fprintf (stderr, "version in header does not match library\n") ;
+        abort ( ) ;
+    }
 
     /* ====================================================================== */
     /* dump the input matrix A */
@@ -102,11 +122,11 @@ int main (void)
     for (col = 0 ; col < A_NCOL ; col++)
     {
 	length = p [col+1] - p [col] ;
-    	printf ("Column %ld, with %ld entries:\n", col, length) ;
+    	printf ("Column %"PRId64", with %"PRId64" entries:\n", col, length) ;
 	for (pp = p [col] ; pp < p [col+1] ; pp++)
 	{
 	    row = A [pp] ;
-	    printf ("    row %ld\n", row) ;
+	    printf ("    row %"PRId64"\n", row) ;
 	}
     }
 
@@ -128,10 +148,10 @@ int main (void)
     /* ====================================================================== */
 
     printf ("colamd_l column ordering:\n") ;
-    printf ("1st column: %ld\n", p [0]) ;
-    printf ("2nd column: %ld\n", p [1]) ;
-    printf ("3rd column: %ld\n", p [2]) ;
-    printf ("4th column: %ld\n", p [3]) ;
+    printf ("1st column: %"PRId64"\n", p [0]) ;
+    printf ("2nd column: %"PRId64"\n", p [1]) ;
+    printf ("3rd column: %"PRId64"\n", p [2]) ;
+    printf ("4th column: %"PRId64"\n", p [3]) ;
 
     /* ====================================================================== */
     /* dump the strictly lower triangular part of symmetric input matrix B */
@@ -142,11 +162,11 @@ int main (void)
     for (col = 0 ; col < B_N ; col++)
     {
 	length = q [col+1] - q [col] ;
-    	printf ("Column %ld, with %ld entries:\n", col, length) ;
+    	printf ("Column %"PRId64", with %"PRId64" entries:\n", col, length) ;
 	for (pp = q [col] ; pp < q [col+1] ; pp++)
 	{
 	    row = B [pp] ;
-	    printf ("    row %ld\n", row) ;
+	    printf ("    row %"PRId64"\n", row) ;
 	}
     }
 
@@ -168,11 +188,11 @@ int main (void)
     /* ====================================================================== */
 
     printf ("symamd_l column ordering:\n") ;
-    printf ("1st row/column: %ld\n", perm [0]) ;
-    printf ("2nd row/column: %ld\n", perm [1]) ;
-    printf ("3rd row/column: %ld\n", perm [2]) ;
-    printf ("4th row/column: %ld\n", perm [3]) ;
-    printf ("5th row/column: %ld\n", perm [4]) ;
+    printf ("1st row/column: %"PRId64"\n", perm [0]) ;
+    printf ("2nd row/column: %"PRId64"\n", perm [1]) ;
+    printf ("3rd row/column: %"PRId64"\n", perm [2]) ;
+    printf ("4th row/column: %"PRId64"\n", perm [3]) ;
+    printf ("5th row/column: %"PRId64"\n", perm [4]) ;
 
     exit (0) ;
 }

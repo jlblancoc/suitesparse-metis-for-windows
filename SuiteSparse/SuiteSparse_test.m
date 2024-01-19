@@ -10,7 +10,8 @@ function SuiteSparse_test
 %
 % See also SuiteSparse_install, SuiteSparse_demo.
 
-% Copyright 1990-2015, Timothy A. Davis, http://www.suitesparse.com.
+% Copyright (c) 1990-2022, Timothy A. Davis, http://suitesparse.com.
+% See each package for its license.
 
 help SuiteSparse_test
 
@@ -110,7 +111,6 @@ try
     package = package + 1 ;
     waitbar (package/(npackages+1), h, 'SuiteSparse test: LDL') ;
     cd ([SuiteSparse '/LDL/MATLAB']) ;
-    ldlmain2 ;
     ldltest ;
 
     %---------------------------------------------------------------------------
@@ -156,7 +156,7 @@ try
     shellgui ;
     cd ([SuiteSparse '/MATLAB_Tools/waitmex']) ;
     waitmex ;
-    url = 'http://www.suitesparse.com' ;
+    url = 'http://suitesparse.com' ;
     fprintf ('<a href="%s">Click here for more details</a>\n', url) ;
     hprintf ('or see <a href="%s">\n', url) ;
     cd ([SuiteSparse '/MATLAB_Tools/find_components']) ;
@@ -201,13 +201,13 @@ try
     mongoose_test ;
 
     %---------------------------------------------------------------------------
-    % PIRO_BAND
+    % GraphBLAS
     %---------------------------------------------------------------------------
 
-%   package = package + 1 ;
-%   waitbar (package/(npackages+1), h, 'SuiteSparse test: PIRO_BAND') ;
-%   cd ([SuiteSparse '/PIRO_BAND/MATLAB/Test']) ;
-%   demo_spqr_rank ;
+    package = package + 1 ;
+    waitbar (package/(npackages+1), h, 'SuiteSparse test: GraphBLAS') ;
+    cd ([SuiteSparse '/GraphBLAS/GraphBLAS/test']) ;
+    gbtest ;
 
     %---------------------------------------------------------------------------
     % AMD, CAMD, SuiteSparseCollection, ssget

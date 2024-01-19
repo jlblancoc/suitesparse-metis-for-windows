@@ -3,10 +3,11 @@
 /* ========================================================================== */
 
 /* -----------------------------------------------------------------------------
- * Mongoose Graph Partitioning Library  Copyright (C) 2017-2018,
+ * Mongoose Graph Partitioning Library, Copyright (C) 2017-2018,
  * Scott P. Kolodziej, Nuri S. Yeralan, Timothy A. Davis, William W. Hager
  * Mongoose is licensed under Version 3 of the GNU General Public License.
  * Mongoose is also available under other licenses; contact authors for details.
+ * SPDX-License-Identifier: GPL-3.0-only
  * -------------------------------------------------------------------------- */
 
 // #pragma once
@@ -16,11 +17,38 @@
 #include "SuiteSparse_config.h"
 #include <string>
 
+// Configuration information from CMake
+#define Mongoose_VERSION_MAJOR 3
+#define Mongoose_VERSION_MINOR 3
+#define Mongoose_VERSION_PATCH 1
+#define Mongoose_DATE "Jan 10, 2024"
+
+#define Mongoose__VERSION SUITESPARSE__VERCODE(3,3,1)
+#if !defined (SUITESPARSE__VERSION) || \
+    (SUITESPARSE__VERSION < SUITESPARSE__VERCODE(7,5,0))
+#error "Mongoose 3.3.1 requires SuiteSparse_config 7.5.0 or later"
+#endif
+
+#if defined (_MSC_VER) && ! defined (__INTEL_COMPILER)
+    #if defined (MONGOOSE_STATIC)
+        #define MONGOOSE_API
+    #else
+        #if defined (MONGOOSE_BUILDING)
+            #define MONGOOSE_API __declspec ( dllexport )
+        #else
+            #define MONGOOSE_API __declspec ( dllimport )
+        #endif
+    #endif
+#else
+    // for other compilers
+    #define MONGOOSE_API
+#endif
+
 namespace Mongoose
 {
 
 /* Type definitions */
-typedef SuiteSparse_long Int;
+typedef int64_t Int;
 
 typedef struct cs_sparse /* matrix in compressed-column or triplet form */
 {

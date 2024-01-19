@@ -1,9 +1,13 @@
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_kernel_wrapup.h
+//------------------------------------------------------------------------------
 
-GLOBAL void UMF_kernel_wrapup
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
+
+void UMF_kernel_wrapup
 (
     NumericType *Numeric,
     SymbolicType *Symbolic,

@@ -2,6 +2,9 @@
 // === spqr mexFunction ========================================================
 // =============================================================================
 
+// SPQR, Copyright (c) 2008-2022, Timothy A Davis. All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
 #include "spqr_mx.hpp"
 
 // This function mimics the existing MATLAB QR syntax, with extensions.
@@ -37,15 +40,15 @@ void mexFunction
     const mxArray *pargin [ ]
 )
 {
-    Long *Ap, *Ai, *E, *Bp, *Bi, *HPinv ;
+    int64_t *Ap, *Ai, *E, *Bp, *Bi, *HPinv ;
     double *Ax, *Bx, dummy, tol ;
-    Long m, n, anz, bnz, is_complex, econ, A_complex, B_complex ;
+    int64_t m, n, anz, bnz, is_complex, econ, A_complex, B_complex ;
     spqr_mx_options opts ;
     cholmod_sparse *A, Amatrix, *R, *Q, *Csparse, Bsmatrix, *Bsparse, *H ;
     cholmod_dense *Cdense, Bdmatrix, *Bdense, *HTau ;
     cholmod_common Common, *cc ;
 
-    double t0 = (nargout > 3) ? SuiteSparse_time ( ) : 0 ;
+    double t0 = (nargout > 3) ? SUITESPARSE_TIME : 0 ;
 
     // -------------------------------------------------------------------------
     // start CHOLMOD and set parameters
@@ -85,8 +88,8 @@ void mexFunction
     }
 
     A = spqr_mx_get_sparse (pargin [0], &Amatrix, &dummy) ;
-    Ap = (Long *) A->p ;
-    Ai = (Long *) A->i ;
+    Ap = (int64_t *) A->p ;
+    Ai = (int64_t *) A->i ;
     m = A->nrow ;
     n = A->ncol ;
     A_complex = mxIsComplex (pargin [0]) ;
@@ -308,14 +311,14 @@ void mexFunction
             if (B_is_sparse)
             {
                 // B and C are both sparse and complex
-                SuiteSparseQR <Complex> (order, tol, econ, A, Bsparse,
+                SuiteSparseQR <Complex,int64_t> (order, tol, econ, A, Bsparse,
                     &Csparse, &R, &E, cc) ;
                 pargout [0] = spqr_mx_put_sparse (&Csparse, cc) ;
             }
             else
             {
                 // B and C are both dense and complex
-                SuiteSparseQR <Complex> (order, tol, econ, A, Bdense,
+                SuiteSparseQR <Complex,int64_t> (order, tol, econ, A, Bdense,
                     &Cdense, &R, &E, cc) ;
                 pargout [0] = spqr_mx_put_dense (&Cdense, cc) ;
             }
@@ -331,14 +334,14 @@ void mexFunction
             if (B_is_sparse)
             {
                 // B and C are both sparse and real
-                SuiteSparseQR <double> (order, tol, econ, A, Bsparse,
+                SuiteSparseQR <double,int64_t> (order, tol, econ, A, Bsparse,
                     &Csparse, &R, &E, cc) ;
                 pargout [0] = spqr_mx_put_sparse (&Csparse, cc) ;
             }
             else
             {
                 // B and C are both dense and real
-                SuiteSparseQR <double> (order, tol, econ, A, Bdense,
+                SuiteSparseQR <double,int64_t> (order, tol, econ, A, Bdense,
                     &Cdense, &R, &E, cc) ;
                 pargout [0] = spqr_mx_put_dense (&Cdense, cc) ;
             }
@@ -356,11 +359,11 @@ void mexFunction
 
         if (is_complex)
         {
-            SuiteSparseQR <Complex> (0, tol, econ, A, &R, NULL, cc) ;
+            SuiteSparseQR <Complex,int64_t> (0, tol, econ, A, &R, NULL, cc) ;
         }
         else
         {
-            SuiteSparseQR <double> (0, tol, econ, A, &R, NULL, cc) ;
+            SuiteSparseQR <double,int64_t> (0, tol, econ, A, &R, NULL, cc) ;
         }
         pargout [0] = spqr_mx_put_sparse (&R, cc) ;
 
@@ -381,11 +384,13 @@ void mexFunction
 
             if (is_complex)
             {
-                SuiteSparseQR <Complex> (order, tol, econ, A, &R, &E, cc);
+                SuiteSparseQR <Complex,int64_t> (order, tol, econ, A, &R, &E,
+                    cc);
             }
             else
             {
-                SuiteSparseQR <double> (order, tol, econ, A, &R, &E, cc) ;
+                SuiteSparseQR <double,int64_t> (order, tol, econ, A, &R, &E,
+                    cc) ;
             }
             pargout [0] = mxCreateDoubleMatrix (0, 0, mxREAL) ;
 
@@ -399,11 +404,11 @@ void mexFunction
 
             if (is_complex)
             {
-                SuiteSparseQR <Complex> (order, tol, econ, A, &Q, &R, &E, cc) ;
+                SuiteSparseQR <Complex,int64_t> (order, tol, econ, A, &Q, &R, &E, cc) ;
             }
             else
             {
-                SuiteSparseQR <double> (order, tol, econ, A, &Q, &R, &E, cc) ;
+                SuiteSparseQR <double,int64_t> (order, tol, econ, A, &Q, &R, &E, cc) ;
             }
             pargout [0] = spqr_mx_put_sparse (&Q, cc) ;
 
@@ -418,12 +423,12 @@ void mexFunction
             mxArray *Tau, *P, *Hmatlab ;
             if (is_complex)
             {
-                SuiteSparseQR <Complex> (order, tol, econ, A,
+                SuiteSparseQR <Complex,int64_t> (order, tol, econ, A,
                     &R, &E, &H, &HPinv, &HTau, cc) ;
             }
             else
             {
-                SuiteSparseQR <double> (order, tol, econ, A,
+                SuiteSparseQR <double,int64_t> (order, tol, econ, A,
                     &R, &E, &H, &HPinv, &HTau, cc) ;
             }
 
@@ -433,7 +438,7 @@ void mexFunction
             // Q.P contains the inverse row permutation
             P = mxCreateDoubleMatrix (1, m, mxREAL) ;
             double *Tx = mxGetPr (P) ;
-            for (Long i = 0 ; i < m ; i++)
+            for (int64_t i = 0 ; i < m ; i++)
             {
                 Tx [i] = HPinv [i] + 1 ;
             }
@@ -479,7 +484,7 @@ void mexFunction
     if (nargout > 3)
     {
         double flops = cc->SPQR_flopcount ;
-        double t = SuiteSparse_time ( ) - t0 ;
+        double t = SUITESPARSE_TIME - t0 ;
         pargout [3] = spqr_mx_info (cc, t, flops) ;
     }
 

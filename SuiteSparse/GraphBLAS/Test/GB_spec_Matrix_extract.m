@@ -1,13 +1,13 @@
 function C = GB_spec_Matrix_extract (C, Mask, accum, A, I, J, descriptor)
-%GB_SPEC_MATRIX_EXTRACT a MATLAB mimic of GrB_Matrix_extract
+%GB_SPEC_MATRIX_EXTRACT a mimic of GrB_Matrix_extract
 %
 % Usage:
 % C = GB_spec_Matrix_extract (C, Mask, accum, A, I, J, descriptor)
 %
-% MATLAB mimic of C<Mask> = accum (A (I,J))
+% mimic of C<Mask> = accum (A (I,J))
 
-% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-% http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+% SPDX-License-Identifier: Apache-2.0
 
 %-------------------------------------------------------------------------------
 % get inputs
@@ -19,16 +19,17 @@ end
 
 C = GB_spec_matrix (C) ;
 A = GB_spec_matrix (A) ;
-Mask = GB_spec_getmask (Mask) ;
-[C_replace, Mask_comp, Atrans, ~] = GB_spec_descriptor (descriptor) ;
+[C_replace Mask_comp Atrans Btrans Mask_struct] = ...
+    GB_spec_descriptor (descriptor) ;
+Mask = GB_spec_getmask (Mask, Mask_struct) ;
 
 %-------------------------------------------------------------------------------
-% do the work via a clean MATLAB interpretation of the entire GraphBLAS spec
+% do the work via a clean *.m interpretation of the entire GraphBLAS spec
 %-------------------------------------------------------------------------------
 
 % apply the descriptor to A
 if (Atrans)
-    A.matrix = A.matrix' ;
+    A.matrix = A.matrix.' ;
     A.pattern = A.pattern' ;
 end
 
