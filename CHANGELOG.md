@@ -6,9 +6,8 @@
   - always compile `SuiteSparse_config` with `-DNTIMER` disabling tic-toc support
   - compile `CXSparse` without complex support
   - remove SourceWrappers for `CHOLMOD` and `CXSparse` modules
-
-# unreleased
 - More generic `OpenBLAS` linkage [#122](https://github.com/jlblancoc/suitesparse-metis-for-windows/pull/122)
+- Update Hunter to `v0.25.3` to fix CMake 3.25 deprecation warnings [#126](https://github.com/jlblancoc/suitesparse-metis-for-windows/pull/126)
 
 # Release 1.8.0: October 25th, 2023
 - Increase minimum required CMake version to v3.5 to prevent deprecation warnings [#117](https://github.com/jlblancoc/suitesparse-metis-for-windows/issues/117).
