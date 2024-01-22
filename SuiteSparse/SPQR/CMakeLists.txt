@@ -53,7 +53,7 @@ set(LIBSRCS
 
 declare_suitesparse_library(spqr "${LIBSRCS}" "${LIBHDRS}"
 	TARGET_PRIVATE_LINK	${SuiteSparse_LINKER_LAPACK_BLAS_LIBS}
-	TARGET_PUBLIC_LINK 	camd ccolamd cholmod ${SuiteSparse_LINKER_METIS_LIBS}
+	TARGET_PUBLIC_LINK 	camd ccolamd cholmod
 )
 
 if(WITH_CUDA)

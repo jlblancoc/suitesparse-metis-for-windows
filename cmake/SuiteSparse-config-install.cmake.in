@@ -44,7 +44,6 @@ set(SuiteSparse_LIBRARIES
 	SuiteSparse::ldl
 	SuiteSparse::umfpack
 	SuiteSparse::spqr
-	@SuiteSparse_EXPORTED_METIS_LIBS@
 )
 if(TARGET SuiteSparse::metis)
   set(SuiteSparse_METIS_VERSION "@SuiteSparse_METIS_VERSION@")
