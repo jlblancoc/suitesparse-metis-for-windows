@@ -16,12 +16,6 @@ if(NOT BUILD_METIS)
     add_definitions(-DNPARTITION)
 endif()
 
-# Disable COMPLEX numbers: disable it by default, since it causes problems in some platforms.
-set(HAVE_COMPLEX OFF CACHE BOOL "Enables building SuiteSparse with complex numbers (disabled by default to avoid problems in some platforms)")
-if (NOT HAVE_COMPLEX)
-	add_definitions(-DNCOMPLEX)
-endif (NOT HAVE_COMPLEX)
-
 # Used even for MSVC, so blas function names have the final "_"
 if (MSVC)
 	add_definitions(-D__MINGW32__)
