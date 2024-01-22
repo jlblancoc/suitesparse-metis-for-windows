@@ -11,15 +11,44 @@
 # simple Makefile for Mongoose, relies on cmake to do the actual build.  Use
 # the CMAKE_OPTIONS argument to this Makefile to pass options to cmake.
 
-JOBS ?= 1
+# To compile with an alternate compiler:
+#
+#       make CC=gcc CXX=g++
+#
+# To compile/install for system-wide usage:
+#
+#       make
+#       sudo make install
+#
+# To compile/install for local usage (SuiteSparse/lib and SuiteSparse/include):
+#
+#       make local
+#       make install
+#
+# To clean up the files:
+#
+#       make clean
+
+JOBS ?= 8
+
+default: library
+
+# default is to install only in /usr/local
+library:
+	( cd build && cmake $(CMAKE_OPTIONS) .. && cmake --build . --config Release -j${JOBS} )
+
+# install only in SuiteSparse/lib and SuiteSparse/include
+local:
+	( cd build && cmake $(CMAKE_OPTIONS) -USUITESPARSE_PKGFILEDIR -DSUITESPARSE_LOCAL_INSTALL=1 .. && cmake --build . --config Release -j${JOBS} )
+
+# install only in /usr/local (default)
+global:
+	( cd build && cmake $(CMAKE_OPTIONS) -USUITESPARSE_PKGFILEDIR -DSUITESPARSE_LOCAL_INSTALL=0 .. && cmake --build . --config Release -j${JOBS} )
 
 # build the Mongoose library (static and dynamic) and run a quick test
-default:
-	( cd build ; CC=$(CC) CXX=$(CXX) cmake $(CMAKE_OPTIONS) .. ; $(MAKE) --jobs=$(JOBS) ; ./bin/demo )
-
-# just build the static and dynamic libraries; do not run the demo
-library:
-	( cd build ; CC=$(CC) CXX=$(CXX) cmake $(CMAKE_OPTIONS) .. ; $(MAKE) --jobs=$(JOBS) )
+demos: library
+	( cd build ; ./demo )
+	( cd build && ctest . || ctest . --rerun-failed --output-on-failure )
 
 # the same as "make library"
 static: library
@@ -27,11 +56,11 @@ static: library
 # installs Mongoose to the install location defined by cmake, usually
 # /usr/local/lib and /usr/local/include
 install:
-	( cd build ; CC=$(CC) CXX=$(CXX) cmake $(CMAKE_OPTIONS) .. ; $(MAKE) --jobs=$(JOBS) ; $(MAKE) install )
+	( cd build && cmake --install . )
 
 # create the Doc/Mongoose_UserGuide.pdf
 docs:
-	( cd build ; cmake $(CMAKE_OPTIONS) .. ; $(MAKE) userguide )
+	( cd build ; cmake $(CMAKE_OPTIONS) .. ; cmake --build . --target userguide )
 
 # remove any installed libraries and #include files
 uninstall:
@@ -39,7 +68,7 @@ uninstall:
 
 # run the extensive tests
 test:
-	( cd build ; CC=$(CC) CXX=$(CXX) cmake $(CMAKE_OPTIONS) .. ; $(MAKE) test )
+	( cd build ; cmake $(CMAKE_OPTIONS) .. ; ctest . )
 
 clean: distclean
 
@@ -47,6 +76,6 @@ purge: distclean
 
 # remove all files not in the distribution
 distclean:
-	rm -rf build/* Lib/* MATLAB/*.mex*
-	rm -rf SuiteSparse_config/*.o SuiteSparse_config/*.a
+	- $(RM) -rf build/* Version/*.tmp MATLAB/*.o MATLAB/*.mex*
+	- $(RM) -r Doc/*.out Doc/*.aux Doc/*.log Doc/*.bbl Doc/*.blg Doc/*.toc Doc/*.idx
 

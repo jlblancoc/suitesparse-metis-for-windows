@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_realloc ========================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_realloc: reallocate a block of memory
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /*
     Realloc a block previously allocated by UMF_malloc.
@@ -20,7 +20,7 @@
 #include "umf_malloc.h"
 #endif
 
-GLOBAL void *UMF_realloc
+void *UMF_realloc
 (
     void *p,
     Int n_objects,
@@ -53,10 +53,10 @@ GLOBAL void *UMF_realloc
     }
     size *= size_of_object ;
 
-    DEBUG0 (("UMF_realloc: "ID" n_objects "ID"  size_of_object "ID"\n",
-	(Int) p, n_objects, (Int) size_of_object)) ;
+    DEBUG0 (("UMF_realloc: %p n_objects "ID"  size_of_object %zu\n",
+	 p, n_objects, size_of_object)) ;
 
-    p2 = SuiteSparse_config.realloc_func (p, size) ;
+    p2 = SuiteSparse_config_realloc (p, size) ;
 
 #if defined (UMF_MALLOC_COUNT) || !defined (NDEBUG)
     /* If p didn't exist on input, and p2 exists, then a new object has been
@@ -67,8 +67,8 @@ GLOBAL void *UMF_realloc
     }
 #endif
 
-    DEBUG0 (("UMF_realloc: "ID" new malloc count "ID"\n",
-	(Int) p2, UMF_malloc_count)) ;
+    DEBUG0 (("UMF_realloc: %p new malloc count "ID"\n",
+	p2, UMF_malloc_count)) ;
 
     return (p2) ;
 }

@@ -1,3 +1,0 @@
-	$(C) -c ../Source/ccolamd_global.c
-	$(C) -c ../Source/ccolamd.c
-	$(C) -DDLONG -c ../Source/ccolamd.c -o ccolamd_l.o

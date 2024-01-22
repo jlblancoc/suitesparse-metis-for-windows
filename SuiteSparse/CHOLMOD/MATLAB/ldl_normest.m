@@ -3,17 +3,19 @@ function rho = ldl_normest (A, L, D)
 %
 % Example:
 %
-%       rho = ldl_normest (A, L, D)
+%   rho = ldl_normest (A, L, D)
 %
 % which estimates the computation of the 1-norm:
 %
-%       rho = norm (A-L*D*L', 1)
+%   rho = norm (A-L*D*L', 1)
 %
-% See also condest, normest
+% See also condest, normest.
 
-% Copyright 2006-2007, William W. Hager and Timothy A. Davis
+ % Copyright 2006-2023, William W. Hager and Timothy A. Davis,
+ % All Rights Reserved.
+ % SPDX-License-Identifier: GPL-2.0+
 
-[m n] = size (A) ;
+[m,n] = size (A) ;
 
 if (m ~= n)
     error ('A must be square') ;
@@ -55,7 +57,7 @@ for trial = 1:3 % {
         z = (A*y) - L*(D*(L'*x)) ;
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        [zj, j] = max (abs (z .* notvisited)) ;
+        [~, j] = max (abs (z .* notvisited)) ;
         j = j (1) ;
         if (abs (z (j)) > z'*x) % {
             x = zeros (m, 1) ;

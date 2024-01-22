@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_transpose ======================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_transpose: transpose/permute a sparse matrix
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /*  Not user-callable.  Computes a permuted transpose, R = (A (P,Q(1:nq)))' in
 	MATLAB notation, where R is in column-form.  A is n_row-by-n_col, the
@@ -21,7 +21,7 @@
 #include "umf_transpose.h"
 #include "umf_is_permutation.h"
 
-GLOBAL Int UMF_transpose
+Int UMF_transpose
 (
     Int n_row,			/* A is n_row-by-n_col */
     Int n_col,

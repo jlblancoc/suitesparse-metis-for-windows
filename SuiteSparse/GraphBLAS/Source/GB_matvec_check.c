@@ -2,240 +2,404 @@
 // GB_matvec_check: print a GraphBLAS matrix and check if it is valid
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-// uncomment this line to add extra diagnostics (for the developer only)
-// #define GB_DEVELOPER
+// for code development only:
+#ifdef GRAPHBLAS_HAS_CUDA
+// when CUDA kernels enabled:
+#define GB_DEVELOPER 0
+#else
+// in production: turn off developer flag
+#define GB_DEVELOPER 0
+#endif
 
+#include "GB_Pending.h"
 #include "GB.h"
 
 GrB_Info GB_matvec_check    // check a GraphBLAS matrix or vector
 (
     const GrB_Matrix A,     // GraphBLAS matrix to print and check
     const char *name,       // name of the matrix, optional
-    int pr,                 // 0: print nothing, 1: print header and errors,
-                            // 2: print brief, 3: print all
-                            // if negative, ignore queue conditions
-                            // and use GB_FLIP(pr) for diagnostic printing.
-    FILE *f,                // file for output
-    const char *kind,       // "matrix" or "vector"
-    GB_Context Context
+    int pr,                 // print level; if negative, ignore nzombie
+                            // conditions and use GB_FLIP(pr) for diagnostics
+    FILE *f,                // file for output (or stdout if f is NULL)
+    const char *kind        // "matrix" or "vector" (only for printing diag.)
 )
 {
 
     //--------------------------------------------------------------------------
-    // check inputs
+    // decide what to print
     //--------------------------------------------------------------------------
 
-    bool ignore_queue = false ;
+    GrB_Info info ;
+    bool is_hyper = GB_IS_HYPERSPARSE (A) ;
+    bool is_full = GB_IS_FULL (A) ;
+    bool is_bitmap = GB_IS_BITMAP (A) ;
+    bool is_sparse = GB_IS_SPARSE (A) ;
+
+    bool ignore_zombies = false ;
     if (pr < 0)
     { 
-        // -2: print nothing (pr = 0)
-        // -3: print header  (pr = 1)
-        // -4: print brief   (pr = 2)
-        // -5: print all     (pr = 3)
         pr = GB_FLIP (pr) ;
-        ignore_queue = true ;
+        ignore_zombies = true ;
+    }
+    pr = GB_IMIN (pr, GxB_COMPLETE_VERBOSE) ;
+    bool phantom = (is_full && (A->x == NULL || A->iso)) ;
+    if (phantom)
+    { 
+        // the matrix is a phantom: iso full, or full with no A->x;
+        // convert GxB_COMPLETE* to GxB_SHORT* for a phantom matrix
+        if (pr == GxB_COMPLETE_VERBOSE) pr = GxB_SHORT_VERBOSE ;
+        if (pr == GxB_COMPLETE        ) pr = GxB_SHORT ;
+    }
+//  bool pr_silent   = (pr == GxB_SILENT) ;
+    bool pr_complete = (pr == GxB_COMPLETE || pr == GxB_COMPLETE_VERBOSE) ;
+    bool pr_short    = (pr == GxB_SHORT    || pr == GxB_SHORT_VERBOSE   ) ;
+    bool one_based = GB_Global_print_one_based_get ( ) ;
+    bool pr_mem_shallow = GB_Global_print_mem_shallow_get ( ) ;
+    int64_t offset = (one_based) ? 1 : 0 ;
+    #if GB_DEVELOPER
+    int pr_developer = pr ;
+    #else
+    int pr_developer = 0 ;
+    #endif
+
+    GBPR0 ("\n  " GBd "x" GBd " GraphBLAS ",
+        (A != NULL) ? GB_NROWS (A) : 0,
+        (A != NULL) ? GB_NCOLS (A) : 0) ;
+
+    if (A != NULL && A->type != NULL)
+    {
+        if (A->type == GxB_FC32)
+        { 
+            GBPR0 ("float complex") ;
+        }
+        else if (A->type == GxB_FC64)
+        { 
+            GBPR0 ("double complex") ;
+        }
+        else
+        { 
+            GBPR0 ("%s", A->type->name) ;
+        }
     }
 
-    if (pr > 0) GBPR ("\nGraphBLAS %s: %s ", kind, GB_NAME) ;
+    GBPR0 (" %s", kind) ;
+
+    #if GB_DEVELOPER
+    if (phantom) GBPR0 (" (phantom)") ;
+    #endif
+
+    //--------------------------------------------------------------------------
+    // check if null, freed, or uninitialized
+    //--------------------------------------------------------------------------
 
     if (A == NULL)
     { 
-        // GrB_error status not modified since this may be an optional argument
-        if (pr > 0) GBPR ("NULL\n") ;
+        GBPR0 (" NULL\n") ;
         return (GrB_NULL_POINTER) ;
     }
 
+    GB_CHECK_MAGIC (A) ;
+
     //--------------------------------------------------------------------------
-    // check the object
+    // print the header
     //--------------------------------------------------------------------------
 
-    GB_CHECK_MAGIC (A, kind) ;
-    ASSERT (A->magic == GB_MAGIC) ;    // A is now a valid initialized object
-
-    if (pr > 0)
+    if (is_full)
     { 
-        GBPR ("\nnrows: "GBd" ncols: "GBd" max # entries: "GBd"\n",
-            GB_NROWS (A), GB_NCOLS (A), A->nzmax) ;
-        GBPR ("format: %s %s",
-            A->is_hyper ? "hypersparse" : "standard",
-            A->is_csc ?   "CSC" : "CSR") ;
-        GBPR (" vlen: "GBd" nvec_nonempty: "GBd" nvec: "GBd" plen: "
-            GBd " vdim: "GBd"\n",
-            A->vlen, A->nvec_nonempty, A->nvec, A->plen, A->vdim) ;
-        GBPR ("hyper_ratio %g\n", A->hyper_ratio) ;
+        // A->p, A->h, A->i, and A->b all null
+        GBPR0 (", full") ;
     }
-
-    if (A->vlen < 0 || A->vlen > GB_INDEX_MAX ||
-        A->vdim < 0 || A->vdim > GB_INDEX_MAX ||
-        A->nzmax < 0 || A->nzmax > GB_INDEX_MAX)
+    else if (is_bitmap)
     { 
-        if (pr > 0) GBPR ("invalid %s dimensions\n", kind) ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "%s invalid : nrows, ncols, or nzmax out of range: [%s]",
-            kind, GB_NAME))) ;
+        // A->b not null
+        GBPR0 (", bitmap") ;
     }
-
-    if (A->is_hyper)
-    {
-        if (! (A->nvec >= 0 && A->nvec <= A->plen && A->plen <= A->vdim &&
-               A->nvec == A->nvec_nonempty))
-        { 
-            if (pr > 0) GBPR ("invalid %s hypersparse structure\n", kind) ;
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "%s invalid hypersparse structure [%s]", kind, GB_NAME))) ;
-        }
+    else if (is_sparse)
+    { 
+        // A->h null, A->p not null
+        GBPR0 (", sparse") ;
+    }
+    else if (is_hyper)
+    { 
+        // A->h not null
+        GBPR0 (", hypersparse") ;
     }
     else
+    { 
+        // A is not hyper, sparse, bitmap, or full
+        GBPR0 (" invalid structure\n") ;
+        return (GrB_INVALID_OBJECT) ;
+    }
+    if (A->jumbled)
+    { 
+        GBPR0 (" (jumbled)") ;
+    }
+    GBPR0 (" %s\n", A->is_csc ? "by col" : "by row") ;
+
+    #if GB_DEVELOPER
+    GBPR0 ("  max # entries: " GBd "\n", GB_nnz_max (A)) ;
+    GBPR0 ("  vlen: " GBd , A->vlen) ;
+    if (A->nvec_nonempty != -1)
     {
+        GBPR0 (" nvec_nonempty: " GBd , A->nvec_nonempty) ;
+    }
+    GBPR0 (" nvec: " GBd " plen: " GBd " vdim: " GBd "\n  hyper_switch %g "
+        "bitmap_switch %g\n",
+        A->nvec, A->plen, A->vdim, A->hyper_switch, A->bitmap_switch) ;
+    #endif
+
+    switch (A->sparsity_control)
+    {
+
+        // 1
+        case GxB_HYPERSPARSE : 
+            GBPR0 ("  sparsity control: hypersparse only\n") ;
+            break ;
+
+        // 2
+        case GxB_SPARSE : 
+            GBPR0 ("  sparsity control: sparse only\n") ;
+            break ;
+
+        // 3
+        case GxB_HYPERSPARSE + GxB_SPARSE : 
+            GBPR0 ("  sparsity control: sparse/hypersparse\n") ;
+            break ;
+
+        // 4
+        case GxB_BITMAP : 
+            GBPR0 ("  sparsity control: bitmap only\n") ;
+            break ;
+
+        // 5
+        case GxB_HYPERSPARSE + GxB_BITMAP : 
+            GBPR0 ("  sparsity control: hypersparse/bitmap\n") ;
+            break ;
+
+        // 6
+        case GxB_SPARSE + GxB_BITMAP : 
+            GBPR0 ("  sparsity control: sparse/bitmap\n") ;
+            break ;
+
+        // 7
+        case GxB_HYPERSPARSE + GxB_SPARSE + GxB_BITMAP : 
+            GBPR0 ("  sparsity control: hypersparse/sparse/bitmap\n") ;
+            break ;
+
+        // 8
+        case GxB_FULL : 
+            GBPR0 ("  sparsity control: full\n") ;
+            break ;
+
+        // 9
+        case GxB_HYPERSPARSE + GxB_FULL : 
+            GBPR0 ("  sparsity control: hypersparse/full\n") ;
+            break ;
+
+        // 10
+        case GxB_SPARSE + GxB_FULL : 
+            GBPR0 ("  sparsity control: sparse/full\n") ;
+            break ;
+
+        // 11
+        case GxB_HYPERSPARSE + GxB_SPARSE + GxB_FULL : 
+            GBPR0 ("  sparsity control: hypersparse/sparse/full\n") ;
+            break ;
+
+        // 12
+        case GxB_FULL + GxB_BITMAP : 
+            GBPR0 ("  sparsity control: bitmap/full\n") ;
+            break ;
+
+        // 13
+        case GxB_HYPERSPARSE + GxB_BITMAP + GxB_FULL : 
+            GBPR0 ("  sparsity control: hypersparse/bitmap/full\n") ;
+            break ;
+
+        // 14
+        case GxB_SPARSE + GxB_BITMAP + GxB_FULL : 
+            GBPR0 ("  sparsity control: sparse/bitmap/full\n") ;
+            break ;
+
+        // 15
+        case GxB_HYPERSPARSE + GxB_SPARSE + GxB_BITMAP + GxB_FULL : 
+            #if GB_DEVELOPER
+            GBPR0 ("  sparsity control: hyper/sparse/bitmap/full\n") ;
+            #endif
+            break ;
+
+        default : 
+            // invalid sparsity control
+            GBPR0 ("  sparsity control: %d invalid\n", A->sparsity_control) ;
+            return (GrB_INVALID_OBJECT) ;
+            break ;
+    }
+
+    //--------------------------------------------------------------------------
+    // check the dimensions
+    //--------------------------------------------------------------------------
+
+    if (A->vlen < 0 || A->vlen > GB_NMAX || A->vdim < 0 || A->vdim > GB_NMAX)
+    { 
+        GBPR0 ("  invalid %s dimensions\n", kind) ;
+        return (GrB_INVALID_OBJECT) ;
+    }
+
+    //--------------------------------------------------------------------------
+    // check vector structure
+    //--------------------------------------------------------------------------
+
+    if (is_full) 
+    {
+        // A is full
+        if (! (A->nvec == A->vdim && A->plen == -1))
+        { 
+            GBPR0 ("  invalid full %s structure\n", kind) ;
+            return (GrB_INVALID_OBJECT) ;
+        }
+    }
+    else if (is_bitmap) 
+    {
+        // A is bitmap
+        if (! (A->nvec == A->vdim && A->plen == -1 &&
+               A->h == NULL && A->p == NULL && A->i == NULL))
+        { 
+            GBPR0 ("  invalid bitmap %s structure\n", kind) ;
+            return (GrB_INVALID_OBJECT) ;
+        }
+    }
+    else if (is_sparse)
+    {
+        // A is sparse
         if (! (A->nvec == A->plen && A->plen == A->vdim))
         { 
-            if (pr > 0) GBPR ("invalid %s standard structure\n", kind) ;
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "%s invalid structure [%s]", kind, GB_NAME))) ;
-        }
-    }
-
-    // a matrix contains 1 to 8 different malloc'd blocks
-    int64_t nallocs = 1 +                       // header
-        (A->h != NULL && !A->h_shallow) +       // A->h, if not shallow
-        (A->p != NULL && !A->p_shallow) +       // A->p, if not shallow
-        (A->i != NULL && !A->i_shallow) +       // A->i, if not shallow
-        (A->x != NULL && !A->x_shallow) +       // A->x, if not shallow
-        (A->i_pending != NULL) +                // A->i_pending if tuples
-        (A->j_pending != NULL) +                // A->j_pending if tuples
-        (A->s_pending != NULL) ;                // A->s_pending if tuples
-
-    #ifdef GB_DEVELOPER
-    if (pr > 1) GBPR ("A %p magic "GBd"\n", A, A->magic) ;
-    if (pr > 1) GBPR ("number of memory blocks: "GBd"\n", nallocs) ;
-    #endif
-
-    GrB_Info info = GB_Type_check (A->type, "", pr, f, Context) ;
-    if (info != GrB_SUCCESS || (A->type->size != A->type_size))
-    { 
-        if (pr > 0) GBPR ("%s has an invalid type\n", kind) ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "%s has an invalid type: [%s]", kind, GB_NAME))) ;
-    }
-
-    if (A->Sauna != NULL)
-    {
-        if (pr > 1) GBPR ("Sauna: n: "GBd" entry size: %zu\n",
-            A->Sauna->Sauna_n, A->Sauna->Sauna_size) ;
-    }
-
-    if (pr > 1 && A->AxB_method_used != GxB_DEFAULT)
-    {
-        GBPR ("last method used for GrB_mxm, vxm, or mxv: ") ;
-        switch (A->AxB_method_used)
-        {
-            case GxB_AxB_GUSTAVSON : GBPR ("Gustavson") ; break ;
-            case GxB_AxB_HEAP      : GBPR ("heap")      ; break ;
-            case GxB_AxB_DOT       : GBPR ("dot")       ; break ;
-            default: ;
-        }
-        GBPR ("\n") ;
-    }
-
-    #ifdef GB_DEVELOPER
-    if (pr > 1) GBPR ("->h: %p shallow: %d\n", A->h, A->h_shallow) ;
-    if (pr > 1) GBPR ("->p: %p shallow: %d\n", A->p, A->p_shallow) ;
-    if (pr > 1) GBPR ("->i: %p shallow: %d\n", A->i, A->i_shallow) ;
-    if (pr > 1) GBPR ("->x: %p shallow: %d\n", A->x, A->x_shallow) ;
-    #endif
-
-    if (A->p == NULL)
-    { 
-        if (pr > 0) GBPR ("->p is NULL, invalid %s\n", kind) ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "%s contains a NULL A->p pointer: [%s]", kind, GB_NAME))) ;
-    }
-
-    if (A->is_hyper)
-    {
-        if (A->h == NULL)
-        { 
-            if (pr > 0) GBPR ("->h is NULL, invalid hypersparse %s\n",
-                kind) ;
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "hypersparse %s contains a NULL A->h pointer: [%s]",
-                kind, GB_NAME))) ;
+            GBPR0 ("  invalid sparse %s structure\n", kind) ;
+            return (GrB_INVALID_OBJECT) ;
         }
     }
     else
     {
-        if (A->h != NULL)
+        // A is hypersparse
+        if (! (A->nvec >= 0 && A->nvec <= A->plen && A->plen <= A->vdim))
         { 
-            if (pr > 0) GBPR ("->h is not NULL, invalid non-hypersparse %s\n",
-                kind) ;
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "non-hypersparse %s contains a non-NULL A->h pointer: [%s]",
-                kind, GB_NAME))) ;
+            GBPR0 ("  invalid hypersparse %s structure\n", kind) ;
+            return (GrB_INVALID_OBJECT) ;
         }
     }
 
-    bool A_empty = (A->nzmax == 0) ;
+    //--------------------------------------------------------------------------
+    // count the allocated blocks
+    //--------------------------------------------------------------------------
 
-    if (A_empty)
+    int64_t nallocs ;
+    size_t mem_deep, mem_shallow, memsize ;
+    GB_memoryUsage (&nallocs, &mem_deep, &mem_shallow, A, true) ;
+    memsize = mem_deep + (pr_mem_shallow ? mem_shallow : 0) ;
+
+    #if GB_DEVELOPER
+    if (pr_short || pr_complete)
     {
-        // A->x and A->i pointers must be NULL and shallow must be false
-        if (A->i != NULL || A->i_shallow || A->x_shallow)
-        { 
-            if (pr > 0) GBPR ("invalid empty %s\n", kind) ;
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "%s is an invalid empty object: [%s]", kind, GB_NAME))) ;
-        }
-
-        // check the vector pointers
-        for (int64_t j = 0 ; j <= A->nvec ; j++)
+        if (A->static_header)
         {
-            if (A->p [j] != 0)
+            GBPR ("  static header,") ;
+        }
+        else
+        {
+            GBPR ("  header %p", A) ;
+        }
+        GBPR (" number of memory blocks: " GBd "\n", nallocs) ;
+        GBPR ("  deep: " GBu " shallow: " GBu " total: " GBu "\n",
+            (uint64_t) mem_deep, (uint64_t) mem_shallow,
+            (uint64_t) (mem_deep + mem_shallow)) ;
+    }
+    #endif
+
+    //--------------------------------------------------------------------------
+    // check the type
+    //--------------------------------------------------------------------------
+
+    info = GB_Type_check (A->type, "", pr_developer, f) ;
+    if (info != GrB_SUCCESS)
+    { 
+        GBPR0 ("  %s has an invalid type\n", kind) ;
+        return (GrB_INVALID_OBJECT) ;
+    }
+
+    //--------------------------------------------------------------------------
+    // report shallow structure
+    //--------------------------------------------------------------------------
+
+    #if GB_DEVELOPER
+    if (pr_short || pr_complete)
+    {
+        GBPR ("  ->h: %p shallow: %d size: " GBu "\n",
+            A->h, A->h_shallow, (uint64_t) A->h_size) ;
+        GBPR ("  ->p: %p shallow: %d size: " GBu "\n",
+            A->p, A->p_shallow, (uint64_t) A->p_size) ;
+        GBPR ("  ->i: %p shallow: %d size: " GBu "\n",
+            A->i, A->i_shallow, (uint64_t) A->i_size) ;
+        GBPR ("  ->b: %p shallow: %d size: " GBu "\n",
+            A->b, A->b_shallow, (uint64_t) A->b_size) ;
+        GBPR ("  ->x: %p shallow: %d size: " GBu "\n",
+            A->x, A->x_shallow, (uint64_t) A->x_size) ;
+        GBPR ("  ->Y: %p shallow: %d\n", A->Y, A->Y_shallow) ;
+    }
+    #endif
+
+    if (A->p != NULL && (A->p_size < (A->plen + 1) * sizeof (int64_t)))
+    { 
+        GBPR0 ("  A->p is too small!\n") ;
+        return (GrB_INVALID_OBJECT) ;
+    }
+
+    if (A->h != NULL && (A->h_size < (A->plen) * sizeof (int64_t)))
+    { 
+        GBPR0 ("  A->h is too small!\n") ;
+        return (GrB_INVALID_OBJECT) ;
+    }
+
+    //--------------------------------------------------------------------------
+    // check p
+    //--------------------------------------------------------------------------
+
+    if (is_hyper || is_sparse)
+    {
+        if (A->p == NULL)
+        { 
+            GBPR0 ("  ->p is NULL, invalid %s\n", kind) ;
+            return (GrB_INVALID_OBJECT) ;
+        }
+        if (A->p [0] != 0)
+        { 
+            GBPR0 ("  ->p [0] = " GBd " invalid\n", A->p [0]) ;
+            return (GrB_INVALID_OBJECT) ;
+        }
+        int64_t nzmax = A->i_size / sizeof (int64_t) ;
+        for (int64_t j = 0 ; j < A->nvec ; j++)
+        {
+            if (A->p [j+1] < A->p [j] || A->p [j+1] > nzmax)
             { 
-                if (pr > 0) GBPR ("->p ["GBd"] = "GBd" invalid\n", j,A->p[j]);
-                return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                    "%s ->p ["GBd"] = "GBd" invalid: [%s]",
-                    kind, j, A->p[j], GB_NAME))) ;
+                GBPR0 ("  ->p [" GBd "] = " GBd " invalid\n", j+1, A->p [j+1]) ;
+                return (GrB_INVALID_OBJECT) ;
             }
         }
-        if (pr > 0) GBPR ("empty\n") ;
-    }
-
-    if (!A_empty && A->i == NULL)
-    { 
-        if (pr > 0) GBPR ("->i is NULL, invalid %s\n", kind) ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "%s contains a NULL A->i pointer: [%s]", kind, GB_NAME))) ;
-    }
-
-    //--------------------------------------------------------------------------
-    // check the vector pointers
-    //--------------------------------------------------------------------------
-
-    if (A->p [0] != 0)
-    { 
-        if (pr > 0) GBPR ("->p [0] = "GBd" invalid\n", A->p [0]) ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "%s A->p [0] = "GBd" invalid: [%s]", kind, A->p [0], GB_NAME))) ;
-    }
-
-    for (int64_t j = 0 ; j < A->nvec ; j++)
-    {
-        if (A->p [j+1] < A->p [j] || A->p [j+1] > A->nzmax)
+        if (nzmax > 0 && A->i == NULL)
         { 
-            if (pr > 0) GBPR ("->p ["GBd"] = "GBd" invalid\n",
-                j+1, A->p [j+1]) ;
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "%s A->p ["GBd"] = "GBd" invalid: [%s]",
-                kind, j+1, A->p [j+1], GB_NAME))) ;
+            GBPR0 ("  ->i is NULL, invalid %s\n", kind) ;
+            return (GrB_INVALID_OBJECT) ;
         }
     }
 
-    if (A->is_hyper)
+    //--------------------------------------------------------------------------
+    // check the content of h
+    //--------------------------------------------------------------------------
+
+    if (is_hyper)
     {
         int64_t jlast = -1 ;
         for (int64_t k = 0 ; k < A->nvec ; k++)
@@ -243,121 +407,254 @@ GrB_Info GB_matvec_check    // check a GraphBLAS matrix or vector
             int64_t j = A->h [k] ;
             if (jlast >= j || j < 0 || j >= A->vdim)
             { 
-                if (pr > 0) GBPR ("->h ["GBd"] = "GBd" invalid\n",
-                    k, A->h [k]) ;
-                return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                    "%s A->h ["GBd"] = "GBd" invalid: [%s]",
-                    kind, k, A->h [k], GB_NAME))) ;
+                GBPR0 ("  ->h [" GBd "] = " GBd " invalid\n", k, j) ;
+                return (GrB_INVALID_OBJECT) ;
             }
             jlast = j ;
         }
     }
 
-    int64_t anz = GB_NNZ (A) ;
-    if (pr > 0) GBPR ("number of entries: "GBd" ", anz) ;
-
-    if (pr > 0) GBPR ("\n") ;
-
     //--------------------------------------------------------------------------
-    // report the number of pending tuples and number of zombies
+    // report name and number of entries
     //--------------------------------------------------------------------------
 
-    if (A->n_pending != 0 || A->nzombies != 0)
+    GBPR0 ("  ") ;
+    if (name != NULL && strlen (name) > 0)
     { 
-        if (pr > 0) GBPR ("pending tuples: "GBd" max pending: "GBd
-            " zombies: "GBd"\n", A->n_pending, A->max_n_pending, A->nzombies) ;
+        GBPR0 ("%s, ", ((name != NULL) ? name : "")) ;
     }
 
-    if (A->nzombies < 0 || A->nzombies > anz)
+    // # of entries cannot be computed until all the tests above are OK
+    int64_t anz = GB_nnz (A) ;
+    if (anz == 0)
     { 
-        if (pr > 0) GBPR ("invalid number of zombies: "GBd" "
-            "must be >= 0 and <= # entries ("GBd")\n", A->nzombies, anz) ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "%s invalid number of zombies: "GBd"\n"
-            "must be >= 0 and <= # entries ("GBd") [%s]",
-            kind, A->nzombies, anz, GB_NAME))) ;
+        GBPR0 ("no entries") ;
+    }
+    else if (anz == 1)
+    { 
+        GBPR0 ("1 entry") ;
+    }
+    else if (anz == INT64_MAX)
+    { 
+        // GB_nnz (A) resulted in integer overflow, so use double instead
+        GBPR0 ("%g entries", ((double) A->vlen) * ((double) A->vdim)) ;
+    }
+    else
+    { 
+        GBPR0 (GBd " entries", anz) ;
+    }
+
+    //--------------------------------------------------------------------------
+    // print the memory size
+    //--------------------------------------------------------------------------
+
+    #define K (1024L)
+    if (memsize < K)
+    { 
+        GBPR0 (", memory: " GBd " bytes\n", (int64_t) memsize) ;
+    }
+    else if (memsize < K*K)
+    { 
+        double s = ((double) memsize) / ((double) K) ;
+        GBPR0 (", memory: %.1f KB\n", s) ;
+    }
+    else if (memsize < K*K*K)
+    {
+        double s = ((double) memsize) / ((double) K*K) ;
+        GBPR0 (", memory: %.1f MB\n", s) ;
+    }
+    else
+    {
+        double s = ((double) memsize) / ((double) K*K*K) ;
+        GBPR0 (", memory: %.1f GB\n", s) ;
+    }
+
+    //--------------------------------------------------------------------------
+    // print the iso value
+    //--------------------------------------------------------------------------
+
+    if (A->iso)
+    {
+        if (A->x == NULL || A->x_size < A->type->size)
+        { 
+            GBPR0 ("  invalid iso matrix\n") ;
+            return (GrB_INVALID_OBJECT) ;
+        }
+        GBPR0 ("  iso value: ") ;
+        if (pr > 0)
+        { 
+            info = GB_entry_check (A->type, A->x, pr, f) ;
+            if (info != GrB_SUCCESS) return (info) ;
+        }
+        GBPR0 ("\n") ;
+    }
+
+    //--------------------------------------------------------------------------
+    // report the number of pending tuples and zombies
+    //--------------------------------------------------------------------------
+
+    GB_Pending Pending = A->Pending ;
+
+    if (Pending != NULL || A->nzombies != 0)
+    { 
+        GBPR0 ("  pending tuples: " GBd " max pending: " GBd 
+            " zombies: " GBd "\n", GB_Pending_n (A),
+            (Pending == NULL) ? 0 : (Pending->nmax),
+            A->nzombies) ;
+    }
+
+    if (is_full || is_bitmap)
+    {
+        if (A->nzombies != 0)
+        { 
+            // full/bitmap cannot have zombies
+            GBPR0 ("  %s %s cannot have zombies\n",
+                is_full ? "full" : "bitmap", kind) ;
+            return (GrB_INVALID_OBJECT) ;
+        }
+        if (Pending != NULL)
+        { 
+            // full/bitmap cannot have pending tuples
+            GBPR0 ("  %s %s cannot have pending tuples\n",
+                is_full ? "full" : "bitmap", kind) ;
+            return (GrB_INVALID_OBJECT) ;
+        }
+        if (A->jumbled)
+        { 
+            // full/bitmap jumbled
+            GBPR0 ("  %s %s cannot be jumbled\n",
+                is_full ? "full" : "bitmap", kind) ;
+            return (GrB_INVALID_OBJECT) ;
+        }
+    }
+
+    if (!ignore_zombies && (A->nzombies > anz))
+    { 
+        GBPR0 ("  invalid number of zombies: " GBd " "
+            "must be >= 0 and <= # entries (" GBd ")\n", A->nzombies, anz) ;
+        return (GrB_INVALID_OBJECT) ;
     }
 
     //--------------------------------------------------------------------------
     // check and print the row indices and numerical values
     //--------------------------------------------------------------------------
 
+    if (anz > 0) GBPR0 ("\n") ;
+
     #define GB_NBRIEF 10
     #define GB_NZBRIEF 30
 
-    bool jumbled = false ;
     int64_t nzombies = 0 ;
-    int64_t jcount = 0 ;
+    int64_t icount = 0 ;
+    bool truncated = false ;
+    int64_t anz_actual = 0 ;
 
-    GB_for_each_vector (A)
+    // for each vector of A
+    for (int64_t k = 0 ; k < A->nvec ; k++)
     {
         int64_t ilast = -1 ;
-        GB_for_each_entry (j, p, pend)
+        int64_t j = GBH (A->h, k) ;
+        int64_t p = GBP (A->p, k, A->vlen) ;
+        int64_t pend = GBP (A->p, k+1, A->vlen) ;
+
+        // count the entries in A(:,j)
+        int64_t ajnz = pend - p ;
+        if (is_bitmap)
         {
-            bool prcol = ((pr > 1 && jcount < GB_NBRIEF) || pr > 2) ;
-            if (ilast == -1)
+            ajnz = 0 ;
+            for (int64_t p2 = p ; p2 < pend ; p2++)
             {
-                // print the header for vector j
-                if (prcol)
+                int8_t ab = A->b [p2] ;
+                if (ab < 0 || ab > 1)
                 { 
-                    GBPR ("%s: "GBd" : "GBd" entries ["GBd":"GBd"]\n",
-                        A->is_csc ? "column" : "row", j, pend - p, p, pend-1) ;
+                    // bitmap with value other than 0, 1
+                    GBPR0 ("    invalid bitmap %d\n", ab) ;
+                    return (GrB_INVALID_OBJECT) ;
                 }
-                else if (pr == 2 && jcount == GB_NBRIEF)
-                { 
-                    GBPR ("...\n") ;
-                }
-                jcount++ ;      // count # of vectors printed so far
+                ajnz += (ab != 0)  ;
             }
-            int64_t i = A->i [p] ;
+        }
+
+        bool prcol = ((pr_short && !truncated) || pr_complete) ;
+        // print the header for vector j
+        if (prcol)
+        { 
+            #if GB_DEVELOPER
+            GBPR ("  %s: " GBd " : " GBd " entries [" GBd ":" GBd "]\n",
+                A->is_csc ? "column" : "row", j, ajnz, p, pend-1) ;
+            if (pr_short && k == GB_NBRIEF) truncated = true ;
+            #endif
+        }
+
+        // for each entry in A(:,j), the kth vector of A
+        for ( ; p < pend ; p++)
+        {
+            if (!GBB (A->b, p)) continue ;
+            anz_actual++ ;
+            icount++ ;
+
+            int64_t i = GBI (A->i, p, A->vlen) ;
             bool is_zombie = GB_IS_ZOMBIE (i) ;
             i = GB_UNFLIP (i) ;
             if (is_zombie) nzombies++ ;
+            bool print_value = false ;
             if (prcol)
-            { 
-                if ((pr > 1 && p < GB_NZBRIEF) || pr > 2)
+            {
+                if ((pr_short && icount < GB_NZBRIEF) || pr_complete)
                 { 
-                    GBPR ("    %s "GBd": ", A->is_csc ? "row" : "column", i) ;
+                    print_value = true ;
+                    #if GB_DEVELOPER
+                    GBPR ("    %s " GBd ": ", A->is_csc ? "row":"column", i) ;
+                    #else
+                    if (A->is_csc)
+                    {
+                        GBPR ("    (" GBd "," GBd ") ", i+offset, j+offset) ;
+                    }
+                    else
+                    {
+                        GBPR ("    (" GBd "," GBd ") ", j+offset, i+offset) ;
+                    }
+                    #endif
                 }
-                else if (pr == 2 && (ilast == -1 || p == GB_NZBRIEF))
+                else if (pr_short && (ilast == -1 || icount == GB_NZBRIEF))
                 { 
-                    GBPR ("    ...\n") ;
+                    truncated = true ;
                 }
             }
             int64_t row = A->is_csc ? i : j ;
             int64_t col = A->is_csc ? j : i ;
             if (i < 0 || i >= A->vlen)
             { 
-                if (pr > 0) GBPR ("index ("GBd","GBd") out of range\n",
-                    row, col) ;
-                return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                    "%s index ("GBd","GBd") out of range: [%s]",
-                    kind, row, col, GB_NAME))) ;
+                GBPR0 ("  index (" GBd "," GBd ") out of range\n",
+                    row+offset, col+offset) ;
+                return (GrB_INVALID_OBJECT) ;
             }
 
             // print the value
-            bool print_value = prcol && ((pr > 1 && p < GB_NZBRIEF) || pr > 2) ;
             if (print_value)
-            { 
+            {
                 if (is_zombie)
                 { 
                     GBPR ("zombie") ;
                 }
                 else if (A->x != NULL)
                 { 
-                    GB_void *Ax = A->x ;
+                    GB_void *Ax = (GB_void *) A->x ;
                     info = GB_entry_check (A->type,
-                        Ax +(p * (A->type->size)), f, Context) ;
+                        Ax + (A->iso ? 0 : (p * (A->type->size))), pr, f) ;
                     if (info != GrB_SUCCESS) return (info) ;
                 }
             }
 
-            if (i <= ilast)
+            // If the matrix is known to be jumbled, then out-of-order
+            // indices are OK (but duplicates are not OK).  If the matrix is
+            // unjumbled, then all indices must appear in ascending order.
+            if (A->jumbled ? (i == ilast) : (i <= ilast))
             { 
                 // indices unsorted, or duplicates present
-                if (pr > 0) GBPR (" index ("GBd","GBd") jumbled", row, col) ;
-                jumbled = true ;
-                print_value = (pr > 0) ;
+                GBPR0 (" index (" GBd "," GBd ") invalid\n",
+                    row+offset, col+offset) ;
+                return (GrB_INDEX_OUT_OF_BOUNDS) ;
             }
 
             if (print_value)
@@ -365,114 +662,135 @@ GrB_Info GB_matvec_check    // check a GraphBLAS matrix or vector
                 GBPR ("\n") ;
             }
             ilast = i ;
+
+            if (phantom && anz_actual >= GB_NZBRIEF)
+            { 
+                truncated = true ;
+                break ;
+            }
         }
+
+        if (phantom && (truncated || k >= GB_NBRIEF))
+        { 
+            truncated = true ;
+            break ;
+        }
+    }
+
+    if (pr_short && truncated) GBPR ("    ...\n") ;
+
+    //--------------------------------------------------------------------------
+    // check the entry count in the bitmap
+    //--------------------------------------------------------------------------
+
+    if (is_bitmap && anz != anz_actual)
+    { 
+        // bitmap with invalid nvals
+        GBPR0 ("  invalid bitmap count: " GBd " exist but"
+            " A->nvals = " GBd "\n", anz_actual, anz) ;
+        return (GrB_INVALID_OBJECT) ;
+    }
+    else if ((is_sparse || is_hyper) && anz != anz_actual)
+    { 
+        // sparse/hypersparse with invalid nvals
+        GBPR0 ("  invalid sparse/hypersparse entry count: " GBd " exist but"
+            " A->nvals = " GBd "\n", anz_actual, anz) ;
+        return (GrB_INVALID_OBJECT) ;
     }
 
     //--------------------------------------------------------------------------
     // check the zombie count
     //--------------------------------------------------------------------------
 
-    if (nzombies != A->nzombies)
+    if (!ignore_zombies && nzombies != A->nzombies)
     { 
-        if (pr > 0) GBPR ("invalid zombie count: "GBd" exist but"
-            " A->nzombies = "GBd"\n", nzombies, A->nzombies) ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "%s invalid zombie count: "GBd" exist but A->nzombies = "GBd" "
-            "[%s]", kind, nzombies, A->nzombies, GB_NAME))) ;
+        GBPR0 ("  invalid zombie count: " GBd " exist but"
+            " A->nzombies = " GBd "\n", nzombies, A->nzombies) ;
+        return (GrB_INVALID_OBJECT) ;
     }
 
     //--------------------------------------------------------------------------
     // check and print the pending tuples
     //--------------------------------------------------------------------------
 
-    if (A->n_pending < 0 || A->n_pending > A->max_n_pending ||
-        A->max_n_pending < 0)
-    { 
-        if (pr > 0) GBPR ("invalid pending count\n") ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "%s invalid pending tuple count: pending "GBd" max "GBd": [%s]",
-            kind, A->n_pending, A->max_n_pending, GB_NAME))) ;
+    #if GB_DEVELOPER
+    if ((pr_short || pr_complete) && (is_sparse || is_hyper))
+    {
+        GBPR ("  Pending %p\n", Pending) ;
     }
-
-    #ifdef GB_DEVELOPER
-    if (pr > 1) GBPR ("->i_pending %p\n", A->i_pending) ;
-    if (pr > 1) GBPR ("->j_pending %p\n", A->j_pending) ;
-    if (pr > 1) GBPR ("->s_pending %p\n", A->s_pending) ;
     #endif
 
-    if (A->n_pending == 0)
-    {
-
-        //---------------------------------------------------------------------
-        // A has no pending tuples
-        //---------------------------------------------------------------------
-
-        // no tuples; arrays must be NULL
-        if (A->i_pending != NULL || A->s_pending != NULL ||
-            A->j_pending != NULL || A->max_n_pending != 0)
-        { 
-            if (pr > 0) GBPR ("invalid pending tuples\n") ;
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "%s invalid pending tuples: [%s]", kind, GB_NAME))) ;
-        }
-
-    }
-    else
+    if (Pending != NULL)
     {
 
         //---------------------------------------------------------------------
         // A has pending tuples
         //---------------------------------------------------------------------
 
-        // matrix has tuples, arrays and type must not be NULL
-        if (A->i_pending == NULL || A->s_pending == NULL ||
-            (A->vdim > 1 && A->j_pending == NULL))
+        #if GB_DEVELOPER
+        if (pr_short || pr_complete)
+        {
+            GBPR ("  Pending->i %p\n", Pending->i) ;
+            GBPR ("  Pending->j %p\n", Pending->j) ;
+            GBPR ("  Pending->x %p\n", Pending->x) ;
+        }
+        #endif
+
+        if (Pending->n < 0 || Pending->n > Pending->nmax ||
+            Pending->nmax < 0)
         { 
-            if (pr > 0) GBPR ("invalid pending tuples\n") ;
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "%s invalid pending tuples: [%s]", kind, GB_NAME))) ;
+            GBPR0 ("  invalid pending count\n") ;
+            return (GrB_INVALID_OBJECT) ;
         }
 
-        if (pr > 0) GBPR ("pending tuples:\n") ;
-
-        info = GB_Type_check (A->type_pending, "", pr, f, Context) ;
-        if (info != GrB_SUCCESS ||
-            (A->type_pending->size != A->type_pending_size))
+        // matrix has tuples, arrays and type must not be NULL
+        // Pending->x must be NULL if and only if A is iso
+        // Pending->x must be non-NULL if and only if A is non-iso
+        if (Pending->i == NULL || ((Pending->x == NULL) != (A->iso)) ||
+            (A->vdim > 1 && Pending->j == NULL))
         { 
-            if (pr > 0) GBPR ("%s has an invalid type_pending\n", kind) ;
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "%s has an invalid type_pending: [%s]", kind, GB_NAME))) ;
+            GBPR0 ("  invalid pending tuples\n") ;
+            return (GrB_INVALID_OBJECT) ;
+        }
+
+        GBPR0 ("  pending tuples:\n") ;
+
+        info = GB_Type_check (Pending->type, "", pr, f) ;
+        if (info != GrB_SUCCESS || (Pending->type->size != Pending->size))
+        { 
+            // invalid Pending->type
+            GBPR0 ("  %s has an invalid Pending->type\n", kind) ;
+            return (GrB_INVALID_OBJECT) ;
         }
 
         int64_t ilast = -1 ;
         int64_t jlast = -1 ;
         bool sorted = true ;
 
-        for (int64_t k = 0 ; k < A->n_pending ; k++)
+        for (int64_t k = 0 ; k < Pending->n ; k++)
         {
-            int64_t i = A->i_pending [k] ;
-            int64_t j = (A->vdim <= 1) ? 0 : (A->j_pending [k]) ;
-            int64_t row = A->is_csc ? i : j ;
-            int64_t col = A->is_csc ? j : i ;
+            int64_t i = Pending->i [k] ;
+            int64_t j = (A->vdim <= 1) ? 0 : (Pending->j [k]) ;
+            int64_t row = (A->is_csc ? i : j) + offset ;
+            int64_t col = (A->is_csc ? j : i) + offset ;
 
             // print the tuple
-            if ((pr > 1 && k < GB_NZBRIEF) || pr > 2)
-            { 
-                GBPR ("row: "GBd" col: "GBd" ", row, col) ;
-                GB_void *As = A->s_pending ;
-                info = GB_entry_check (A->type_pending,
-                    As +(k * A->type_pending->size), f, Context) ;
-                if (info != GrB_SUCCESS) return (info) ;
+            if ((pr_short && k < GB_NZBRIEF) || pr_complete)
+            {
+                GBPR ("    row: " GBd " col: " GBd " ", row, col) ;
+                if (!A->iso)
+                { 
+                    info = GB_entry_check (Pending->type,
+                        Pending->x +(k * Pending->type->size), pr, f) ;
+                    if (info != GrB_SUCCESS) return (info) ;
+                }
                 GBPR ("\n") ;
             }
 
             if (i < 0 || i >= A->vlen || j < 0 || j >= A->vdim)
             { 
-                if (pr > 0) GBPR ("tuple ("GBd","GBd") out of range\n",
-                    row, col) ;
-                return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                    "%s tuple index ("GBd","GBd") out of range: [%s]",
-                    kind, row, col, GB_NAME))) ;
+                GBPR0 ("    tuple (" GBd "," GBd ") out of range\n", row, col) ;
+                return (GrB_INVALID_OBJECT) ;
             }
 
             sorted = sorted && ((jlast < j) || (jlast == j && ilast <= i)) ;
@@ -480,119 +798,118 @@ GrB_Info GB_matvec_check    // check a GraphBLAS matrix or vector
             jlast = j ;
         }
 
-        if (sorted != A->sorted_pending)
+        if (sorted != Pending->sorted)
         { 
-            GBPR ("sorted %d sorted_pending %d\n", sorted, A->sorted_pending);
-            if (pr > 0) GBPR ("invalid pending tuples: invalid sort\n") ;
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "%s invalid pending tuples: [%s]", kind, GB_NAME))) ;
+            GBPR0 ("  invalid pending tuples: invalid sort\n") ;
+            return (GrB_INVALID_OBJECT) ;
         }
 
-        if (A->operator_pending == NULL)
+        if (Pending->op == NULL)
         { 
-            if (pr > 0) GBPR ("pending operator: implicit 2nd\n") ;
+            GBPR0 ("  pending operator: implicit 2nd\n") ;
         }
         else
         {
-            info = GB_BinaryOp_check (A->operator_pending, "pending operator:",
-                pr, f, Context) ;
+            info = GB_BinaryOp_check (Pending->op, "pending operator:", pr, f) ;
             if (info != GrB_SUCCESS)
             { 
-                if (pr > 0) GBPR ("invalid pending operator\n") ;
-                return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                    "%s invalid operator: [%s]", kind, GB_NAME))) ;
+                GBPR0 ("  invalid pending operator\n") ;
+                return (GrB_INVALID_OBJECT) ;
             }
         }
     }
 
+    if (pr_complete)
+    { 
+        GBPR ("\n") ;
+    }
+
     //--------------------------------------------------------------------------
-    // check the queue
+    // check nvec_nonempty
     //--------------------------------------------------------------------------
 
-    if (!ignore_queue)
+    // A->nvec_nonempty == -1 denotes that the value has not been computed.
+    // This is valid, and can occur for imported matrices and in other cases
+    // when its computation is postponed or not needed.  If not -1, however,
+    // the value must be correct.
+
+    int64_t actual_nvec_nonempty = GB_nvec_nonempty (A) ;
+
+    if (! ((A->nvec_nonempty == actual_nvec_nonempty) ||
+           (A->nvec_nonempty == -1)))
+    { 
+        // invalid nvec_nonempty
+        GBPR0 ("  invalid count of non-empty vectors\n") ;
+        return (GrB_INVALID_OBJECT) ;
+    }
+
+    //--------------------------------------------------------------------------
+    // check A->Y
+    //--------------------------------------------------------------------------
+
+    GrB_Matrix Y = A->Y ;
+    if (Y != NULL)
     {
-        GrB_Matrix head, prev, next ;
-        bool enqd ;
 
-        GB_CRITICAL (GB_queue_status (A, &head, &prev, &next, &enqd)) ;
-
-        #ifdef GB_DEVELOPER
-        if (pr > 1) GBPR ("queue head  %p\n", head) ;
-        if (pr > 1) GBPR ("queue prev  %p\n", prev) ;
-        if (pr > 1) GBPR ("queue next  %p\n", next) ;
-        if (pr > 1) GBPR ("is in queue %d\n", enqd) ;
-        #endif
-
-        #define GB_IS_NOT_IN_QUEUE(A) (prev == NULL && head != A)
-        #define GB_IS_IN_QUEUE(A) (! GB_IS_NOT_IN_QUEUE(A))
-        if (enqd != GB_IS_IN_QUEUE (A))
+        if (!is_hyper)
         { 
-            if (pr > 0) GBPR ("queued state inconsistent: [%d] != [%d]\n",
-                enqd, GB_IS_IN_QUEUE (A)) ;
-            return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "%s queued state inconsistent: [%s], [%d] != [%d]", kind,
-                GB_NAME, enqd, GB_IS_IN_QUEUE (A)))) ;
+            // A->Y is optional, but A must be hypersparse for A->Y to exist
+            GBPR0 ("  hyper_hash invalid\n") ;
+            return (GrB_INVALID_OBJECT) ;
         }
-
-        if (GB_PENDING (A) || GB_ZOMBIES (A))
-        {
-            if (!enqd)
-            { 
-                if (pr > 0) GBPR ("must be in queue but is not there\n") ;
-                return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                "%s must be in queue but is not there: [%s]", kind, GB_NAME))) ;
-            }
-
-            // prev is NULL if and only if A is at the head of the queue
-            if ((prev == NULL) != (head == A))
-            { 
-                if (pr > 0) GBPR ("invalid queue\n") ;
-                return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                    "%s invalid queue: [%s]", kind, GB_NAME))) ;
-            }
+        info = GB_matvec_check (Y, "Y hyper_hash", pr_developer, f, "matrix") ;
+        if (info != GrB_SUCCESS)
+        { 
+            // A->Y fails the tests in GB_matvec_check
+            GBPR0 ("  hyper_hash invalid") ;
+            return (info) ;
         }
-        else
+        if (Y->vlen != A->vdim || !GB_IS_POWER_OF_TWO (Y->vdim) ||
+            Y->nvals != A->nvec || !GB_IS_SPARSE (Y) || Y->type != GrB_UINT64 ||
+            !Y->is_csc || GB_ANY_PENDING_WORK (Y))
+        { 
+            // Y must be sparse, uint64, held by column, with A->nvec values,
+            // vector length the same as A->vdim, and with a Y->vdim that is a
+            // power of 2. It cannot have any pending work.
+            GBPR0 ("  hyper_hash invalid") ;
+            return (GrB_INVALID_OBJECT) ;
+        }
+        // ensure that Y is the inverse of A->h
+        int64_t hash_bits = Y->vdim - 1 ;
+        const int64_t *restrict Yx = (int64_t *) Y->x ;
+        for (int64_t k = 0 ; k < A->nvec ; k++)
         {
-            if (enqd)
+            // look for j in the hyper_hash; it must be at position k
+            int64_t j = A->h [k] ;
+            int64_t jhash = GB_HASHF2 (j, hash_bits) ;
+            bool found = false ;
+            for (int64_t p = Y->p [jhash] ; p < Y->p [jhash+1] ; p++)
+            {
+                if (j == Y->i [p])
+                {
+                    if (k != Yx [p])
+                    { 
+                        // j is found but not with the right value of k
+                        GBPR0 ("  hyper_hash invalid\n") ;
+                        return (GrB_INVALID_OBJECT) ;
+                    }
+                    found = true ;
+                    break ;
+                }
+            }
+            if (!found)
             { 
-                if (pr > 0) GBPR ("must not be in queue but is there\n") ;
-                return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-                    "%s must not be in queue but present there: [%s]",
-                    kind, GB_NAME))) ;
+                // j must appear in the hyper_hash
+                GBPR0 ("  hyper_hash invalid\n") ;
+                return (GrB_INVALID_OBJECT) ;
             }
         }
     }
-
-    if (pr == 3) GBPR ("\n") ;
 
     //--------------------------------------------------------------------------
     // return result
     //--------------------------------------------------------------------------
 
-    int64_t actual = GB_nvec_nonempty (A) ;
-    if (A->nvec_nonempty != actual)
-    { 
-        if (pr > 0) GBPR ("invalid count of non-empty vectors"
-            "A->nvec_nonempty = "GBd" actual "GBd"\n",
-            A->nvec_nonempty, actual) ;
-        return (GB_ERROR (GrB_INVALID_OBJECT, (GB_LOG,
-            "%s invalid count of nonempty-vectors [%s]", kind, GB_NAME))) ;
-    }
-
-    // Returns GrB_INVALID_OBJECT if a row or column index is out of bounds,
-    // since this indicates the object is corrupted.  No valid matrix is ever
-    // built with indices out of bounds since the indices are checked when the
-    // matrix is built.
-
-    // Returns GrB_INDEX_OUT_OF_BOUNDS if a column has unsorted indices, and
-    // perhaps duplicates as well.  For matrices passed back to the user, or
-    // obtained from the user, this is an error.  For some matrices internally,
-    // the row indices may be jumbled.  These are about to be sorted via qsort
-    // or transpose.  In this case, a jumbled matrix is OK.  Duplicates are
-    // still an error but this function does not distinguish between the two
-    // cases (it would require workspace to do so).  See the
-    // ASSERT_OK_OR_JUMBLED macro.
-
-    return (jumbled ? GrB_INDEX_OUT_OF_BOUNDS : GrB_SUCCESS) ;
+    return (GrB_SUCCESS) ;
 }
 

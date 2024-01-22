@@ -3,10 +3,11 @@
 /* ========================================================================== */
 
 /* -----------------------------------------------------------------------------
- * Mongoose Graph Partitioning Library  Copyright (C) 2017-2018,
+ * Mongoose Graph Partitioning Library, Copyright (C) 2017-2018,
  * Scott P. Kolodziej, Nuri S. Yeralan, Timothy A. Davis, William W. Hager
  * Mongoose is licensed under Version 3 of the GNU General Public License.
  * Mongoose is also available under other licenses; contact authors for details.
+ * SPDX-License-Identifier: GPL-3.0-only
  * -------------------------------------------------------------------------- */
 
 /**
@@ -28,7 +29,7 @@ namespace Mongoose
 
 int Logger::debugLevel = None;
 bool Logger::timingOn  = false;
-clock_t Logger::clocks[6];
+double Logger::clocks[6];
 float Logger::times[6];
 
 void Logger::setDebugLevel(int debugType)

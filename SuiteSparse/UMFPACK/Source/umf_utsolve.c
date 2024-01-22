@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_utsolve ========================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_utsolve: solve U'x=b
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /*  solves U'x = b or U.'x=b, where U is the upper triangular factor of a */
 /*  matrix.  B is overwritten with the solution X. */
@@ -14,7 +14,7 @@
 #include "umf_internal.h"
 #include "umf_utsolve.h"
 
-GLOBAL double
+double
 #ifdef CONJUGATE_SOLVE
 UMF_uhsolve			/* solve U'x=b  (complex conjugate transpose) */
 #else

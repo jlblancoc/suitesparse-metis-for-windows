@@ -2,24 +2,23 @@
 // GB_wait:  finish all pending computations on a single matrix
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
+// JIT: not needed.  Only one variant possible.
+
+// CALLS:     GB_builder
+
 // The matrix A has zombies and/or pending tuples placed there by
-// GrB_setElement and GrB_*assign.  Zombies must now be deleted, and pending
-// tuples must now be assembled together and added into the matrix.
+// GrB_setElement, GrB_*assign, or GB_mxm.  Zombies must now be deleted, and
+// pending tuples must now be assembled together and added into the matrix.
+// The indices in A might also be jumbled; if so, they are sorted now.
 
-// When the function returns, the matrix has been removed from the queue
-// and all pending tuples and zombies have been deleted.  This is true even
-// the function fails due to lack of memory (in that case, the matrix is
-// cleared as well).
-
-// GrB_wait removes the head of the queue from the queue via
-// GB_queue_remove_head, and then passes the matrix to this function.  Thus is
-// is possible (and safe) for this matrix to operate on a matrix not in
-// the queue.
+// When the function returns, and all pending tuples and zombies have been
+// deleted.  This is true even the function fails due to lack of memory (in
+// that case, the matrix is cleared as well).
 
 // If A is hypersparse, the time taken is at most O(nnz(A) + t log t), where t
 // is the number of pending tuples in A, and nnz(A) includes both zombies and
@@ -30,12 +29,41 @@
 // If A is non-hypersparse, then O(n) is added in the worst case, to prune
 // zombies and to update the vector pointers for A.
 
-#include "GB.h"
+// If A->nvec_nonempty is unknown (-1) it is computed.
+
+// The A->Y hyper_hash is freed if the A->h hyperlist has to be constructed.
+// Instead, it is not computed and left pending (as NULL).  It is not modified
+// if A->h doesn't change.
+
+// If the method is successful, it does an OpenMP flush just before returning.
+
+#define GB_FREE_WORKSPACE               \
+{                                       \
+    GB_Matrix_free (&Y) ;               \
+    GB_Matrix_free (&T) ;               \
+    GB_Matrix_free (&S) ;               \
+    GB_Matrix_free (&A1) ;              \
+}
+
+#define GB_FREE_ALL                     \
+{                                       \
+    GB_FREE_WORKSPACE ;                 \
+    GB_phybix_free (A) ;                \
+}
+
+#include "GB_select.h"
+#include "GB_add.h"
+#include "GB_binop.h"
+#include "GB_Pending.h"
+#include "GB_build.h"
+#include "GB_jappend.h"
+#include "GB_scalar_wrap.h"
 
 GrB_Info GB_wait                // finish all pending computations
 (
     GrB_Matrix A,               // matrix with pending computations
-    GB_Context Context
+    const char *name,           // name of the matrix
+    GB_Werk Werk
 )
 {
 
@@ -43,13 +71,177 @@ GrB_Info GB_wait                // finish all pending computations
     // check inputs
     //--------------------------------------------------------------------------
 
-    ASSERT (A != NULL) ;
+    GrB_Info info = GrB_SUCCESS ;
+    struct GB_Matrix_opaque T_header, A1_header, S_header ;
+    GrB_Matrix T = NULL, A1 = NULL, S = NULL, Y = NULL ;
 
-    // The matrix A might have pending operations but not be in the queue.
-    // GB_check expects the matrix to be in the queue.  As a result, GB_check
-    // can report an inconsistency, and thus this assert must be made
-    // with a negative pr.
-    ASSERT_OK (GB_check (A, "A to wait", GB_FLIP (GB0))) ;
+    ASSERT_MATRIX_OK (A, "A to wait", GB_FLIP (GB0)) ;
+
+    if (GB_IS_FULL (A) || GB_IS_BITMAP (A))
+    { 
+        // full and bitmap matrices never have any pending work
+        ASSERT (!GB_ZOMBIES (A)) ;
+        ASSERT (!GB_JUMBLED (A)) ;
+        ASSERT (!GB_PENDING (A)) ;
+        ASSERT (A->nvec_nonempty >= 0) ;
+        // ensure the matrix is written to memory
+        #pragma omp flush
+        return (GrB_SUCCESS) ;
+    }
+
+    // only sparse and hypersparse matrices can have pending work
+    ASSERT (GB_IS_SPARSE (A) || GB_IS_HYPERSPARSE (A)) ;
+    ASSERT (GB_ZOMBIES_OK (A)) ;
+    ASSERT (GB_JUMBLED_OK (A)) ;
+    ASSERT (GB_PENDING_OK (A)) ;
+
+    //--------------------------------------------------------------------------
+    // get the zombie and pending count, and burble if work needs to be done
+    //--------------------------------------------------------------------------
+
+    int64_t nzombies = A->nzombies ;
+    int64_t npending = GB_Pending_n (A) ;
+    const bool A_iso = A->iso ;
+    if (nzombies > 0 || npending > 0 || A->jumbled || A->nvec_nonempty < 0)
+    { 
+        GB_BURBLE_MATRIX (A, "(%swait:%s " GBd " %s, " GBd " pending%s%s) ",
+            A_iso ? "iso " : "", name, nzombies,
+            (nzombies == 1) ? "zombie" : "zombies", npending,
+            A->jumbled ? ", jumbled" : "",
+            A->nvec_nonempty < 0 ? ", nvec" : "") ;
+    }
+
+    //--------------------------------------------------------------------------
+    // determine the max # of threads to use
+    //--------------------------------------------------------------------------
+
+    int nthreads_max = GB_Context_nthreads_max ( ) ;
+    double chunk = GB_Context_chunk ( ) ;
+
+    //--------------------------------------------------------------------------
+    // check if only A->nvec_nonempty is needed
+    //--------------------------------------------------------------------------
+
+    if (npending == 0 && nzombies == 0 && !A->jumbled)
+    {
+        // A->Y is not modified.  If not NULL, it remains valid
+        if (A->nvec_nonempty < 0)
+        {
+            A->nvec_nonempty = GB_nvec_nonempty (A) ;
+        }
+        return (GrB_SUCCESS) ;
+    }
+
+    //--------------------------------------------------------------------------
+    // check if A only needs to be unjumbled
+    //--------------------------------------------------------------------------
+
+    if (npending == 0 && nzombies == 0)
+    { 
+        // A is not conformed, so the sparsity structure of A is not modified.
+        // That is, if A has no pending tuples and no zombies, but is just
+        // jumbled, then it stays sparse or hypersparse.  A->Y is not modified
+        // nor accessed, and remains NULL if it is NULL on input.  If it is
+        // present, it remains valid.
+        GB_OK (GB_unjumble (A, Werk)) ;
+        ASSERT (GB_IMPLIES (info == GrB_SUCCESS, A->nvec_nonempty >= 0)) ;
+        return (info) ;
+    }
+
+    //--------------------------------------------------------------------------
+    // assemble the pending tuples into T
+    //--------------------------------------------------------------------------
+
+    int64_t anz_orig = GB_nnz (A) ;
+    int64_t asize = A->type->size ;
+
+    int64_t tnz = 0 ;
+    if (npending > 0)
+    {
+
+        //----------------------------------------------------------------------
+        // construct a new hypersparse matrix T with just the pending tuples
+        //----------------------------------------------------------------------
+
+        // T has the same type as A->type, which can differ from the type of
+        // the pending tuples, A->Pending->type.  The Pending->op can be NULL
+        // (an implicit SECOND function), or it can be any accum operator.  The
+        // z=accum(x,y) operator can have any types, and it does not have to be
+        // associative.  T is constructed as iso if A is iso.
+
+        GB_void *S_input = (A_iso) ? ((GB_void *) A->x) : NULL ;
+        GrB_Type stype = (A_iso) ? A->type : A->Pending->type ;
+
+        GB_CLEAR_STATIC_HEADER (T, &T_header) ;
+        info = GB_builder (
+            T,                      // create T using a static header
+            A->type,                // T->type = A->type
+            A->vlen,                // T->vlen = A->vlen
+            A->vdim,                // T->vdim = A->vdim
+            A->is_csc,              // T->is_csc = A->is_csc
+            &(A->Pending->i),       // iwork_handle, becomes T->i on output
+            &(A->Pending->i_size),
+            &(A->Pending->j),       // jwork_handle, free on output
+            &(A->Pending->j_size),
+            &(A->Pending->x),       // Swork_handle, free on output
+            &(A->Pending->x_size),
+            A->Pending->sorted,     // tuples may or may not be sorted
+            false,                  // there might be duplicates; look for them
+            A->Pending->nmax,       // size of Pending->[ijx] arrays
+            true,                   // is_matrix: unused
+            NULL, NULL, S_input,    // original I,J,S_input tuples
+            A_iso,                  // pending tuples are iso if A is iso
+            npending,               // # of tuples
+            A->Pending->op,         // dup operator for assembling duplicates,
+                                    // NULL if A is iso
+            stype,                  // type of Pending->x
+            true,                   // burble is allowed
+            Werk
+        ) ;
+
+        //----------------------------------------------------------------------
+        // free pending tuples
+        //----------------------------------------------------------------------
+
+        // The tuples have been converted to T, which is more compact, and
+        // duplicates have been removed.  The following work needs to be done
+        // even if the builder fails.
+
+        // GB_builder frees A->Pending->j and A->Pending->x.  If successful,
+        // A->Pending->i is now T->i.  Otherwise A->Pending->i is freed.  In
+        // both cases, A->Pending->i is NULL.
+        ASSERT (A->Pending->i == NULL) ;
+        ASSERT (A->Pending->j == NULL) ;
+        ASSERT (A->Pending->x == NULL) ;
+
+        // free the list of pending tuples
+        GB_Pending_free (&(A->Pending)) ;
+        ASSERT (!GB_PENDING (A)) ;
+
+        ASSERT_MATRIX_OK (A, "A after moving pending tuples to T", GB0) ;
+
+        //----------------------------------------------------------------------
+        // check the status of the builder
+        //----------------------------------------------------------------------
+
+        // Finally check the status of the builder.  The pending tuples, must
+        // be freed (just above), whether or not the builder is successful.
+        if (info != GrB_SUCCESS)
+        { 
+            // out of memory in GB_builder
+            GB_FREE_ALL ;
+            return (info) ;
+        }
+
+        ASSERT_MATRIX_OK (T, "T = hypersparse matrix of pending tuples", GB0) ;
+        ASSERT (GB_IS_HYPERSPARSE (T)) ;
+        ASSERT (!GB_ZOMBIES (T)) ;
+        ASSERT (!GB_JUMBLED (T)) ;
+        ASSERT (!GB_PENDING (T)) ;
+
+        tnz = GB_nnz (T) ;
+        ASSERT (tnz > 0) ;
+    }
 
     //--------------------------------------------------------------------------
     // delete zombies
@@ -57,550 +249,397 @@ GrB_Info GB_wait                // finish all pending computations
 
     // A zombie is an entry A(i,j) in the matrix that as been marked for
     // deletion, but hasn't been deleted yet.  It is marked by "negating"
-    // replacing its index i with GB_FLIP(i).  Zombies are simple to delete via
-    // an in-place algorithm.  No memory is allocated so this step always
-    // succeeds.  Pending tuples are ignored, so A can have pending tuples.
+    // replacing its index i with GB_FLIP(i).
 
-    GrB_Info info = GrB_SUCCESS ;
-    int64_t anz = GB_NNZ (A) ;
-    int64_t anz_orig = anz ;
-    int64_t anzmax_orig = A->nzmax ;
-    ASSERT (anz_orig <= anzmax_orig) ;
-
-    int64_t nzombies = A->nzombies ;
+    // TODO: pass tnz to GB_selector, to pad the reallocated A matrix
+    ASSERT_MATRIX_OK (A, "A before zombies removed", GB0) ;
 
     if (nzombies > 0)
     { 
-
-        // There are zombies that will now be deleted.
-        ASSERT (GB_ZOMBIES_OK (A)) ;
-        ASSERT (GB_ZOMBIES (A)) ;
-
-        // This step tolerates pending tuples
-        // since pending tuples and zombies do not intersect
-        ASSERT (GB_PENDING_OK (A)) ;
-
-        //----------------------------------------------------------------------
-        // zombies exist in the matrix: delete them all
-        //----------------------------------------------------------------------
-
-        // compare with the pruning phase of GB_resize
-        #define GB_PRUNE if (GB_IS_ZOMBIE (i)) continue ;
-        #include "GB_prune_inplace.c"
-
-        //----------------------------------------------------------------------
-        // all zombies have been deleted
-        //----------------------------------------------------------------------
-
-        // exactly A->nzombies have been deleted from A
-        ASSERT (A->nzombies == (anz_orig - anz)) ;
-
-        // at least one zombie has been deleted
-        ASSERT (anz < anz_orig) ;
-
-        // no more zombies; pending tuples may still exist
+        // remove all zombies from A
+        // GB_selector frees A->Y if it changes A->h, or leaves it
+        // unmodified (and valid) otherwise.
+        struct GB_Scalar_opaque Thunk_header ;
+        int64_t k = 0 ;
+        GrB_Scalar Thunk = GB_Scalar_wrap (&Thunk_header, GrB_INT64, &k) ;
+        GB_OK (GB_selector (NULL, GxB_NONZOMBIE, false, A, Thunk, Werk)) ;
+        ASSERT (A->nzombies == (anz_orig - GB_nnz (A))) ;
         A->nzombies = 0 ;
-        ASSERT (GB_PENDING_OK (A)) ;
-
-        // A->nvec_nonempty has been updated
-        ASSERT (A->nvec_nonempty == GB_nvec_nonempty (A)) ;
     }
 
-    ASSERT (anz == GB_NNZ (A)) ;
+    ASSERT_MATRIX_OK (A, "A after zombies removed", GB0) ;
+
+    // all the zombies are gone, and pending tuples are now in T 
+    ASSERT (!GB_ZOMBIES (A)) ;
+    ASSERT (GB_JUMBLED_OK (A)) ;
+    ASSERT (!GB_PENDING (A)) ;
+
+    //--------------------------------------------------------------------------
+    // unjumble the matrix
+    //--------------------------------------------------------------------------
+
+    GB_OK (GB_unjumble (A, Werk)) ;
+
+    ASSERT (!GB_ZOMBIES (A)) ;
+    ASSERT (!GB_JUMBLED (A)) ;
+    ASSERT (!GB_PENDING (A)) ;
 
     //--------------------------------------------------------------------------
     // check for pending tuples
     //--------------------------------------------------------------------------
 
-    // all the zombies are gone
-    ASSERT (!GB_ZOMBIES (A)) ;
-
-    if (!GB_PENDING (A))
+    if (npending == 0)
     { 
-        // nothing more to do; remove the matrix from the queue
-        ASSERT (!GB_PENDING (A)) ;
-        GB_CRITICAL (GB_queue_remove (A)) ;
-        ASSERT (!(A->enqueued)) ;
-
-        // trim any significant extra space from the matrix, but allow for some
-        // future insertions.  do not increase the size of the matrix;
-        // zombies have been deleted but no pending tuples added.  This is
-        // guaranteed not to fail.
-        ASSERT (anz <= anz_orig) ;
-        info = GB_ix_resize (A, anz, Context) ;
-        ASSERT (info == GrB_SUCCESS) ;
-
-        // conform A to its desired hypersparsity
-        return (GB_to_hyper_conform (A, Context)) ;
-    }
-
-    // There are pending tuples that will now be assembled.
-    ASSERT (GB_PENDING (A)) ;
-
-    //--------------------------------------------------------------------------
-    // construct a new hypersparse matrix T with just the pending tuples
-    //--------------------------------------------------------------------------
-
-    // If anz > 0, T is always hypersparse.  Otherwise T can be returned as
-    // non-hypersparse, and it is then transplanted as-is into the final A.
-
-    // T has the same type as A->type, which can differ from the type of the
-    // pending tuples, A->type_pending.  This is OK since build process
-    // assembles the tuples in the order they were inserted into the matrix.
-    // The A->operator_pending can be NULL (an implicit SECOND function), or it
-    // can be any accum operator.  The z=accum(x,y) operator can have any
-    // types, and it does not have to be associative.
-
-    GrB_Matrix T ;
-    info = GB_builder (&T, A->type, A->vlen, A->vdim, A->is_csc,
-        &(A->i_pending), &(A->j_pending), A->sorted_pending, A->s_pending,
-        A->n_pending, A->max_n_pending, A->operator_pending,
-        A->type_pending->code, Context) ;
-
-    //--------------------------------------------------------------------------
-    // free pending tuples
-    //--------------------------------------------------------------------------
-
-    // The tuples have been converted to T, which is more compact, and
-    // duplicates have been removed.
-
-    // This work needs to be done even if the builder fails.
-
-    // GB_builder frees A->j_pending.  If successful, A->i_pending is now T->i.
-    // Otherwise A->i_pending is freed.  In both cases, it has been set to NULL.
-    ASSERT (A->i_pending == NULL && A->j_pending == NULL) ;
-
-    // pending tuples are now free; so A->s_pending can be freed as well
-    // FUTURE: GB_builder could modify A->s_pending in place to save memory,
-    // but it can't do that for the user's S array for GrB_*_build.
-    GB_pending_free (A) ;
-
-    //--------------------------------------------------------------------------
-    // remove the matrix from the queue
-    //--------------------------------------------------------------------------
-
-    ASSERT (!GB_PENDING (A)) ;
-    ASSERT (!GB_ZOMBIES (A)) ;
-    GB_CRITICAL (GB_queue_remove (A)) ;
-
-    // No pending operations on A, and A is not in the queue, so GB_check can
-    // now see the conditions it expects.
-    ASSERT (!(A->enqueued)) ;
-    ASSERT_OK (GB_check (A, "A after moving pending tuples to T", GB0)) ;
-
-    //--------------------------------------------------------------------------
-    // check the status of the builder
-    //--------------------------------------------------------------------------
-
-    // Finally check the status of the builder.  The pending tuples, just freed
-    // above, must be freed whether or not the builder is succesful.
-    if (info != GrB_SUCCESS)
-    { 
-        // out of memory
-        GB_CONTENT_FREE (A) ;
-        ASSERT (T == NULL) ;
+        // conform A to its desired sparsity structure and return result
+        info = GB_conform (A, Werk) ;
+        ASSERT (GB_IMPLIES (info == GrB_SUCCESS, A->nvec_nonempty >= 0)) ;
+        #pragma omp flush
         return (info) ;
     }
-
-    ASSERT_OK (GB_check (T, "T = matrix of pending tuples", GB0)) ;
-    ASSERT (!GB_PENDING (T)) ;
-    ASSERT (!GB_ZOMBIES (T)) ;
-    ASSERT (GB_NNZ (T) > 0) ;
-    ASSERT (T->is_hyper) ;
-    ASSERT (T->nvec == T->nvec_nonempty) ;
 
     //--------------------------------------------------------------------------
     // check for quick transplant
     //--------------------------------------------------------------------------
 
+    int64_t anz = GB_nnz (A) ;
     if (anz == 0)
     { 
         // A has no entries so just transplant T into A, then free T and
         // conform A to its desired hypersparsity.
-        return (GB_transplant_conform (A, A->type, &T, Context)) ;
-    }
-
-    //--------------------------------------------------------------------------
-    // reallocate A to hold the tuples
-    //--------------------------------------------------------------------------
-
-    // make A->nzmax larger to accomodate future tuples, but only
-    // allocate new space if the old A->nzmax is insufficient.
-
-    int64_t anz_new = anz + GB_NNZ (T) ;  // must have at least this space
-
-    info = GB_ix_resize (A, anz_new, Context) ;
-    if (info != GrB_SUCCESS)
-    { 
-        // out of memory
-        GB_MATRIX_FREE (&T) ;
+        info = GB_transplant_conform (A, A->type, &T, Werk) ;
+        ASSERT (GB_IMPLIES (info == GrB_SUCCESS, A->nvec_nonempty >= 0)) ;
+        #pragma omp flush
         return (info) ;
     }
 
     //--------------------------------------------------------------------------
-    // if A is hypersparse, ensure A->plen is sufficient for A=A+T
+    // create the SECOND_ATYPE binary operator
+    //--------------------------------------------------------------------------
+
+    struct GB_BinaryOp_opaque op_header ;
+    GrB_BinaryOp op_2nd = GB_binop_second (A->type, &op_header) ;
+
+    //--------------------------------------------------------------------------
+    // determine the method for A = A+T
     //--------------------------------------------------------------------------
 
     // If anz > 0, T is hypersparse, even if A is a GrB_Vector
-    ASSERT (T->is_hyper) ;
+    ASSERT (GB_IS_HYPERSPARSE (T)) ;
+    ASSERT (tnz > 0) ;
+    ASSERT (T->nvec > 0) ;
+    ASSERT (A->nvec > 0) ;
 
-    // No addition is done since the nonzero patterns of A and T are disjoint.
+    // tjfirst = first vector in T
+    int64_t tjfirst = T->h [0] ;
+    int64_t anz0 = 0 ;
+    int64_t kA = 0 ;
+    int64_t jlast ;
 
-    int64_t *restrict Ah = A->h ;
     int64_t *restrict Ap = A->p ;
+    int64_t *restrict Ah = A->h ;
     int64_t *restrict Ai = A->i ;
-    GB_void *restrict Ax = A->x ;
+    GB_void *restrict Ax = (GB_void *) A->x ;
+
     int64_t anvec = A->nvec ;
-    int64_t anvec_new = anvec ;
 
-    const int64_t *restrict Th = T->h ;
-    const int64_t *restrict Tp = T->p ;
-    const int64_t *restrict Ti = T->i ;
-    const GB_void *restrict Tx = T->x ;
-    int64_t tnvec = T->nvec ;
-
-    int64_t ak, tk ;
-
-    if (A->is_hyper)
-    {
-
-        // 2-way merge of A->h and T->h
-        for (ak = 0, tk = 0 ; ak < anvec && tk < tnvec ; )
-        {
-            int64_t ja = Ah [ak] ;
-            int64_t jt = Th [tk] ;
-            if (jt == ja)
-            { 
-                // vector jt appears in both A and T
-                ak++ ;
-                tk++ ;
-            }
-            else if (ja < jt)
-            { 
-                // vector ja appears in A but not T
-                ak++ ;
-            }
-            else // jt < ja
-            { 
-                // vector jt appears in T but not A
-                tk++ ;
-                anvec_new++ ;
-            }
-        }
-
-        // count the vectors not yet seen in T
-        if (tk < tnvec)
-        { 
-            anvec_new += (tnvec - tk) ;
-        }
-
-        // reallocate A->p and A->h, if needed
-        if (anvec_new > A->plen)
-        {
-            if (GB_to_nonhyper_test (A, anvec_new, A->vdim))
-            { 
-                // convert to non-hypersparse if anvec_new will become too large
-                info = GB_to_nonhyper (A, Context) ;
-            }
-            else
-            { 
-                // increase the size of A->p and A->h.  The size must be at
-                // least anvec_new, but add some slack for future growth.
-                int64_t aplen_new = 2 * (anvec_new + 1) ;
-                aplen_new = GB_IMIN (aplen_new, A->vdim) ;
-                info = GB_hyper_realloc (A, aplen_new, Context) ;
-            }
-            if (info != GrB_SUCCESS)
-            { 
-                // out of memory; all content of A has been freed
-                ASSERT (A->magic == GB_MAGIC2) ;
-                GB_MATRIX_FREE (&T) ;
-                return (info) ;
-            }
-            Ah = A->h ;
-            Ap = A->p ;
-        }
-    }
-
-    ASSERT_OK (GB_check (A, "A after increasing A->h", GB0)) ;
-    ASSERT_OK (GB_check (T, "T to fold in", GB0)) ;
-
-    //--------------------------------------------------------------------------
-    // A = A + T ; in place by folding in the tuples in reverse order
-    //--------------------------------------------------------------------------
-
-    // Merge in the tuples into each vector, in reverse order.  Note that Ap
-    // [k+1] or Ap [j+1] is changed during the iteration.  The bottom of the
-    // new A is treated like a stack, where entries are placed on top of the Ai
-    // and Ax stack, and vector indices are placed on top of the Ah stack
-    // if A is hypersparse.
-
-    // T is always hypersparse, even if A and T are typecasted GrB_Vector
-    // objects.  A can be non-hypersparse or hypersparse.  If A is hypersparse
-    // then this step does not take O(A->vdim) time.  It takes at most
-    // O(nnz(Z)+nnz(A)) time, regardless of the vector dimension of A and T,
-    // A->vdim and T->vdim.
-
-    bool A_is_hyper = A->is_hyper ;
-
-    int64_t asize = A->type->size ;
-
-    // pdest points to the top of the stack at the end of the A matrix;
-    // this is also the total number of nonzeros in A+T.  Since the stack
-    // is empty, pdest points to one past the position where the last entry
-    // in A will appear.
-    int64_t pdest = anz_new ;
-
-    // pdest-1 must be within the size of A->i and A->x
-    ASSERT (pdest <= A->nzmax) ;
-
-    tk = tnvec - 1 ;
-
-    // ak_dest points to the top of the hyperlist stack, also currently empty.
-    int64_t ak_dest ;
-    if (A_is_hyper)
+    // anz0 = nnz (A0) = nnz (A (:, 0:tjfirst-1)), the region not modified by T
+    if (A->h != NULL)
     { 
-        // Ah [ak] is the rightmost non-empty vector in the hypersparse A.
-        // It will be moved to Ah [anvec_new-1].
-        ak = A->nvec - 1 ;
-        ak_dest = anvec_new ;
+        // find tjfirst in A->h 
+        int64_t pright = anvec - 1 ;
+        bool found ;
+        GB_SPLIT_BINARY_SEARCH (tjfirst, A->h, kA, pright, found) ;
+        // A->h [0 ... kA-1] excludes vector tjfirst.  The list
+        // A->h [kA ... anvec-1] includes tjfirst.
+        ASSERT (kA >= 0 && kA <= anvec) ;
+        ASSERT (GB_IMPLIES (kA > 0 && kA < anvec, A->h [kA-1] < tjfirst)) ;
+        ASSERT (GB_IMPLIES (found, A->h [kA] == tjfirst)) ;
+        jlast = (kA > 0) ? A->h [kA-1] : (-1) ;
     }
     else
     { 
-        // ak is the rightmost vector in the non-hypersparse A
-        ak = A->vdim - 1 ;
-        ak_dest = A->vdim ;
-        ASSERT (A->nvec == A->vdim) ;
+        kA = tjfirst ;
+        jlast = tjfirst - 1 ;
     }
 
-    // count the number of non-empty vectors (again, if hypersparse, but for
-    // the first time if non-hypersparse)
-    anvec_new = A->nvec_nonempty ;
+    // anz1 = nnz (A1) = nnz (A (:, kA:end)), the region modified by T
+    anz0 = A->p [kA] ;
+    int64_t anz1 = anz - anz0 ;
+    bool ignore ;
 
-    // while T has non-empty vectors
-    while (tk >= 0)
+    // A + T will have anz_new entries
+    int64_t anz_new = anz + tnz ;       // must have at least this space
+
+    if (2 * anz1 < anz0)
     {
 
-        // When T is exhausted, the while loop can stop.  Let j1 be the
-        // leftmost non-empty vector of the hypersparse T.  A(:,0:j1-1) is
-        // not affected by the merge.  Only vectors A(:,j1:n-1) need to be
-        // shifted (where n == A->vdim).
-
-        // If the vectors of A are exhausted, ak becomes -1 and stays there.
-        ASSERT (ak >= -1) ;
-
         //----------------------------------------------------------------------
-        // get vectors A(:,j) and T(:,j)
+        // append new tuples to A
         //----------------------------------------------------------------------
 
-        int64_t j, ja, jt, pa, pa_end, pt, pt_end ;
-        if (A_is_hyper)
+        // A is growing incrementally.  It splits into two parts: A = [A0 A1].
+        // where A0 = A (:, 0:kA-1) and A1 = A (:, kA:end).  The
+        // first part (A0 with anz0 = nnz (A0) entries) is not modified.  The
+        // second part (A1, with anz1 = nnz (A1) entries) overlaps with T.
+        // If anz1 is zero, or small compared to anz0, then it is faster to
+        // leave A0 unmodified, and to update just A1.
+
+        // TODO: if A also had zombies, GB_selector could pad A so that
+        // GB_nnz_max (A) is equal to anz + tnz.
+
+        // make sure A has enough space for the new tuples
+        if (anz_new > GB_nnz_max (A))
         { 
-            // get the next non-empty vector ja in the prior hypersparse A
-            ja = (ak >= 0) ? Ah [ak] : -1 ;
-        }
-        else
-        { 
-            // ja always appears in the non-hypersparse A
-            ja = ak ;
-        }
-
-        // jt is the next non-empty vector in the hypersparse T
-        jt = Th [tk] ;
-
-        ASSERT (jt >= 0) ;
-        ASSERT (ja >= -1) ;
-
-        if (ja == jt)
-        { 
-            // vector j appears in both A(:,j) and T(:,j)
-            ASSERT (ak >= 0) ;
-            j = ja ;
-            pa_end = Ap [ak  ] - 1 ;
-            pa     = Ap [ak+1] - 1 ;
-            pt_end = Tp [tk  ] - 1 ;
-            pt     = Tp [tk+1] - 1 ;
-        }
-        else if (ja > jt)
-        { 
-            // vector j appears in A(:,j) but not T(:,j)
-            ASSERT (ak >= 0) ;
-            j = ja ;
-            pa_end = Ap [ak  ] - 1 ;
-            pa     = Ap [ak+1] - 1 ;
-            pt_end = -1 ;
-            pt     = -1 ;
-        }
-        else // jt > ja
-        { 
-            // vector j appears in T(:,j) but not A(:,j)
-            ASSERT (ak >= -1) ;
-            j = jt ;
-            pa_end = -1 ;
-            pa     = -1 ;
-            pt_end = Tp [tk  ] - 1 ;
-            pt     = Tp [tk+1] - 1 ;
-        }
-
-        ASSERT (j >= 0 && j < A->vdim) ;
-
-        // A (:,j) is in Ai,Ax [pa_end+1 ... pa]
-        // T (:,j) is in Ti,Tx [pt_end+1 ... pt]
-
-        //----------------------------------------------------------------------
-        // count the number of non-empty vectors in the new A
-        //----------------------------------------------------------------------
-
-        if (!(pa > pa_end) && (pt > pt_end))
-        { 
-            // A(:,j) is empty but T(:,j) is not; count one more non-empty
-            // vector in A
-            anvec_new++ ;
+            // double the size if not enough space
+            GB_OK (GB_ix_realloc (A, 2 * anz_new)) ;
+            Ai = A->i ;
+            Ax = (GB_void *) A->x ;
         }
 
         //----------------------------------------------------------------------
-        // log the new end of A(:,j)
+        // T = A1 + T
         //----------------------------------------------------------------------
 
-        // get the next free slot on the hyperlist stack
-        ASSERT (ak < ak_dest) ;
-        ASSERT (GB_IMPLIES (!A_is_hyper, ak_dest == ak+1)) ;
-        --ak_dest ;
-        ASSERT (ak <= ak_dest) ;
-        ASSERT (ak_dest >= 0) ;
-
-        if (A_is_hyper)
-        { 
-            // push j onto the stack for the new hyperlist for A
-            Ah [ak_dest] = j ;
-        }
-
-        ASSERT (GB_IMPLIES (!A_is_hyper, ak_dest == ak && j == ak)) ;
-        Ap [ak_dest+1] = pdest ;
-
-        //----------------------------------------------------------------------
-        // merge while entries exist in both A (:,j) and T (:,j) (reverse order)
-        //----------------------------------------------------------------------
-
-        while (pa > pa_end && pt > pt_end)
+        if (anz1 > 0)
         {
-            // entries exist in both A (:,j) and T (:,j); take the biggest one
-            int64_t ia = Ai [pa] ;
-            int64_t it = Ti [pt] ;
 
-            // no entries are both in A and T
-            ASSERT (ia != it) ;
+            //------------------------------------------------------------------
+            // extract A1 = A (:, kA:end) as a shallow copy
+            //------------------------------------------------------------------
 
-            // get next free slot on the top of the stack of the entries of A
-            --pdest ;
-            ASSERT (pa < pdest) ;
+            // A1 = [0, A (:, kA:end)], hypersparse with same dimensions as A
+            GB_CLEAR_STATIC_HEADER (A1, &A1_header) ;
+            GB_OK (GB_new (&A1, // hyper, existing header
+                A->type, A->vlen, A->vdim, GB_Ap_malloc, A->is_csc,
+                GxB_HYPERSPARSE, GB_ALWAYS_HYPER, anvec - kA)) ;
 
-            if (ia > it)
-            { 
-                // push Ai,Ax [pa] onto the stack
-                Ai [pdest] = ia ;
-                // Ax [pdest] = Ax [pa]
-                memcpy (Ax +(pdest*asize), Ax +(pa*asize), asize) ;
-                --pa ;
+            // the A1->i and A1->x content are shallow copies of A(:,kA:end).
+            // They are not allocated pointers, but point to space inside
+            // Ai and Ax.
+
+            A1->x = (void *) (Ax + (A_iso ? 0 : (asize * anz0))) ;
+            A1->x_size = (A_iso ? 1 : anz1) * asize  ;
+            A1->x_shallow = true ;
+            A1->i = Ai + anz0 ;
+            A1->i_size = anz1 * sizeof (int64_t) ;
+            A1->i_shallow = true ;
+            A1->iso = A_iso ;       // OK
+
+            // fill the column A1->h and A1->p with A->h and A->p, shifted
+            int64_t *restrict A1p = A1->p ;
+            int64_t *restrict A1h = A1->h ;
+            int64_t a1nvec = 0 ;
+            for (int64_t k = kA ; k < anvec ; k++)
+            {
+                // get A (:,k)
+                int64_t pA_start = Ap [k] ;
+                int64_t pA_end = Ap [k+1] ;
+                if (pA_end > pA_start)
+                { 
+                    // add this column to A1 if A (:,k) is not empty
+                    int64_t j = GBH (Ah, k) ;
+                    A1p [a1nvec] = pA_start - anz0 ;
+                    A1h [a1nvec] = j ;
+                    a1nvec++ ;
+                }
             }
-            else // it > ia
+
+            // finalize A1
+            A1p [a1nvec] = anz1 ;
+            A1->nvec = a1nvec ;
+            A1->nvec_nonempty = a1nvec ;
+            A1->nvals = anz1 ;
+            A1->magic = GB_MAGIC ;
+
+            ASSERT_MATRIX_OK (A1, "A1 slice for GB_wait", GB0) ;
+
+            //------------------------------------------------------------------
+            // S = A1 + T, with no operator or mask
+            //------------------------------------------------------------------
+    
+            GB_CLEAR_STATIC_HEADER (S, &S_header) ;
+            GB_OK (GB_add (S, A->type, A->is_csc, NULL, 0, 0, &ignore, A1, T,
+                false, NULL, NULL, op_2nd, true, Werk)) ;
+
+            ASSERT_MATRIX_OK (S, "S = A1+T", GB0) ;
+
+            // free A1 and T
+            GB_Matrix_free (&T) ;
+            GB_Matrix_free (&A1) ;
+
+            //------------------------------------------------------------------
+            // replace T with S
+            //------------------------------------------------------------------
+
+            T = S ;
+            S = NULL ;
+            tnz = GB_nnz (T) ;
+
+            //------------------------------------------------------------------
+            // remove A1 from the vectors of A, if A is hypersparse
+            //------------------------------------------------------------------
+
+            if (A->h != NULL)
             { 
-                // push Ti,Tx [pt] onto the stack
-                ASSERT (it > ia) ;
-                Ai [pdest] = it ;
-                // Ax [pdest] = Tx [pt]
-                memcpy (Ax +(pdest*asize), Tx +(pt*asize), asize) ;
-                --pt ;
+                A->nvec = kA ;
             }
         }
 
         //----------------------------------------------------------------------
-        // merge the remainder
+        // append T to the end of A0
         //----------------------------------------------------------------------
 
-        // Either A (:,j) or T (:,j) is exhausted; but the other one can have
-        // entries that still need to be shifted down.
+        const int64_t *restrict Tp = T->p ;
+        const int64_t *restrict Th = T->h ;
+        const int64_t *restrict Ti = T->i ;
+        int64_t tnvec = T->nvec ;
 
-        // FUTURE: can use two memmove's here, for Ai and Ax, with no while
-        // loop, since the source and destination can overlap
-        while (pa > pa_end)
+        anz = anz0 ;
+        int64_t anz_last = anz ;
+    
+        int nthreads = GB_nthreads (tnz, chunk, nthreads_max) ;
+
+        // append the indices and values of T to the end of A
+        GB_memcpy (Ai + anz, Ti, tnz * sizeof (int64_t), nthreads) ;
+        if (!A_iso)
         {
-            // entries still exist in A (:,j); shift downwards
-            int64_t ia = Ai [pa] ;
-
-            // get next free slot on the top of the stack of the entries of A
-            --pdest ;
-            ASSERT (pa <= pdest) ;
-
-            // push Ai,Ax [pa] onto the stack
-            if (pa != pdest)
-            { 
-                Ai [pdest] = ia ;
-                // Ax [pdest] = Ax [pa]
-                memcpy (Ax +(pdest*asize), Ax +(pa*asize), asize) ;
-            }
-            --pa ;
+            const GB_void *restrict Tx = (GB_void *) T->x ;
+            GB_memcpy (Ax + anz * asize, Tx, tnz * asize, nthreads) ;
         }
 
-        // FUTURE: can use two memcpy's here, for Ai and Ax, with no while loop
-        while (pt > pt_end)
+        // append the vectors of T to the end of A
+        for (int64_t k = 0 ; k < tnvec ; k++)
         { 
-            // entries still exist in T (:,j); shift downwards
-            int64_t it = Ti [pt] ;
-
-            // get next free slot on the top of the stack of the entries of A
-            --pdest ;
-
-            // push Ti,Tx [pt] onto the stack
-            Ai [pdest] = it ;
-            // Ax [pdest] = Tx [pt]
-            memcpy (Ax +(pdest*asize), Tx +(pt*asize), asize) ;
-            --pt ;
+            int64_t j = Th [k] ;
+            ASSERT (j >= tjfirst) ;
+            anz += (Tp [k+1] - Tp [k]) ;
+            GB_OK (GB_jappend (A, j, &jlast, anz, &anz_last, Werk)) ;
         }
 
-        //----------------------------------------------------------------------
-        // advance to the next vector (right to left)
-        //----------------------------------------------------------------------
+        GB_jwrapup (A, jlast, anz) ;
+        ASSERT (anz == anz_new) ;
 
-        if (ja == jt)
-        { 
-            // vector j appears in both A(:,j) and T(:,j)
-            --ak ;
-            --tk ;
-        }
-        else if (ja > jt)
-        { 
-            // vector j appears in A(:,j) but not T(:,j)
-            --ak ;
-        }
-        else // jt > ja
-        { 
-            // vector j appears in T(:,j) but not A(:,j)
-            --tk ;
-        }
+        // need to recompute the # of non-empty vectors in GB_conform
+        A->nvec_nonempty = -1 ;     // recomputed just below
+
+        // A->h has been modified so A->Y is now invalid
+        GB_hyper_hash_free (A) ;
+
+        ASSERT_MATRIX_OK (A, "A after GB_wait:append", GB0) ;
+
+        GB_Matrix_free (&T) ;
+
+        // conform A to its desired sparsity structure
+        GB_OK (GB_conform (A, Werk)) ;
+        ASSERT (A->nvec_nonempty >= 0) ;
+
     }
-
-    // update the count of non-empty vectors in A
-    A->nvec_nonempty = anvec_new ;
-
-    // all vectors have been merged into A
-    if (A->is_hyper)
+    else
     { 
-        A->nvec = A->nvec_nonempty ;
+
+        //----------------------------------------------------------------------
+        // A = A+T
+        //----------------------------------------------------------------------
+
+        // The update is not incremental since most of A is changing.  Just do
+        // a single parallel add: S=A+T, free T, and then transplant S back
+        // into A.  The nzmax of A is tight, with no room for future
+        // incremental growth.
+
+        // FUTURE:: if GB_add could tolerate zombies in A, then the initial
+        // prune of zombies can be skipped.
+
+        // T->Y is not present (GB_builder does not create it).  The old A->Y
+        // is still valid, if present, for the matrix A prior to added the
+        // pending tuples in T.  GB_add may need A->Y to compute S, but it does
+        // not compute S->Y.
+
+        GB_CLEAR_STATIC_HEADER (S, &S_header) ;
+        GB_OK (GB_add (S, A->type, A->is_csc, NULL, 0, 0, &ignore, A, T,
+            false, NULL, NULL, op_2nd, true, Werk)) ;
+        GB_Matrix_free (&T) ;
+        ASSERT_MATRIX_OK (S, "S after GB_wait:add", GB0) ;
+
+        if (GB_IS_HYPERSPARSE (A) && GB_IS_HYPERSPARSE (S) && A->Y != NULL
+            && !A->Y_shallow && !GB_is_shallow (A->Y))
+        {
+            // A and S are both hypersparse, and the old A->Y exists and is not
+            // shallow.  Check if S->h and A->h are identical.  If so, remove
+            // A->Y from A and save it.  Then after the transplant of S into A,
+            // below, if A is still hyperparse, transplant Y back into A->Y.
+            if (S->nvec == anvec)
+            {
+                // A and S have the same number of vectors.  Compare Ah and Sh
+                int64_t *restrict Ah = A->h ;
+                int64_t *restrict Sh = S->h ;
+                bool hsame = true ;
+                int nthreads = GB_nthreads (anvec, chunk, nthreads_max) ;
+                if (nthreads == 1)
+                { 
+                    // compare Ah and Sh with a single thread
+                    hsame = (memcmp (Ah, Sh, anvec * sizeof (int64_t)) == 0) ;
+                }
+                else
+                { 
+                    // compare Ah and Sh with several threads
+                    int ntasks = 64 * nthreads ;
+                    int tid ;
+                    #pragma omp parallel for num_threads(nthreads) \
+                        schedule(dynamic)
+                    for (tid = 0 ; tid < ntasks ; tid++)
+                    {
+                        int64_t kstart, kend ;
+                        GB_PARTITION (kstart, kend, anvec, tid, ntasks) ;
+                        bool my_hsame ;
+                        GB_ATOMIC_READ
+                        my_hsame = hsame ;
+                        if (my_hsame)
+                        {
+                            // compare this task's region of Ah and Sh
+                            my_hsame = (memcmp (Ah + kstart, Sh + kstart,
+                                (kend - kstart) * sizeof (int64_t)) == 0) ;
+                            if (!my_hsame)
+                            {
+                                // tell other tasks to exit early
+                                GB_ATOMIC_WRITE
+                                hsame = false ;
+                            }
+                        }
+                    }
+                }
+                if (hsame)
+                { 
+                    // Ah and Sh are the same, so keep A->Y
+                    Y = A->Y ;
+                    A->Y = NULL ;
+                    A->Y_shallow = false ;
+                }
+            }
+        }
+
+        // transplant S into A
+        GB_OK (GB_transplant_conform (A, A->type, &S, Werk)) ;
+        ASSERT (A->nvec_nonempty >= 0) ;
+
+        if (Y != NULL && GB_IS_HYPERSPARSE (A) && A->Y == NULL)
+        { 
+            // The hyperlist of A has not changed.  A is still hypersparse, and
+            // has no A->Y after the transplant/conform above.  The original
+            // A->Y is valid, so transplant it back into A.
+            A->Y = Y ;
+            A->Y_shallow = false ;
+            Y = NULL ;
+        }
+
+        ASSERT_MATRIX_OK (A, "A after GB_wait:add", GB0) ;
     }
 
-    // end condition: no need to log the end of A(:,-1) since Ap[0]=0
-    // already holds.
-    ASSERT (Ap [0] == 0) ;
-
     //--------------------------------------------------------------------------
-    // tuples have now been assembled into the matrix
+    // flush the matrix and return result
     //--------------------------------------------------------------------------
 
-    GB_MATRIX_FREE (&T) ;
-    ASSERT_OK (GB_check (A, "A after assembling pending tuples", GB0)) ;
-
-    // conform A to its desired hypersparsity
-    return (GB_to_hyper_conform (A, Context)) ;
+    GB_FREE_WORKSPACE ;
+    #pragma omp flush
+    return (info) ;
 }
 

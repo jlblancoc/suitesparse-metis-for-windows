@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_extend_front ===================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_extend_front: extend the current frontal matrix
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /* Called by kernel. */
 
@@ -31,7 +31,7 @@ PRIVATE void zero_front (
 	/* zero the new rows in the contribution block: */
 	F = Fj ;
 	Fj += fnr_curr ;
-#pragma ivdep
+UMFPACK_IVDEP
 	for (i = fnrows ; i < fnrows_extended ; i++)
 	{
 	    /* CLEAR (Fcblock [i + j*fnr_curr]) ; */
@@ -45,7 +45,7 @@ PRIVATE void zero_front (
 	/* zero the new columns in the contribution block: */
 	F = Fj ;
 	Fj += fnr_curr ;
-#pragma ivdep
+UMFPACK_IVDEP
 	for (i = 0 ; i < fnrows_extended ; i++)
 	{
 	    /* CLEAR (Fcblock [i + j*fnr_curr]) ; */
@@ -59,7 +59,7 @@ PRIVATE void zero_front (
 	/* zero the new rows in L block: */
 	F = Fj ;
 	Fj += fnr_curr ;
-#pragma ivdep
+UMFPACK_IVDEP
 	for (i = fnrows ; i < fnrows_extended ; i++)
 	{
 	    /* CLEAR (Flblock [i + j*fnr_curr]) ; */
@@ -73,7 +73,7 @@ PRIVATE void zero_front (
 	/* zero the new columns in U block: */
 	F = Fi ;
 	Fi += fnc_curr ;
-#pragma ivdep
+UMFPACK_IVDEP
 	for (j = fncols ; j < fncols_extended ; j++)
 	{
 	    /* CLEAR (Fublock [i*fnc_curr + j]) ; */
@@ -87,7 +87,7 @@ PRIVATE void zero_front (
 /* === UMF_extend_front ===================================================== */
 /* ========================================================================== */
 
-GLOBAL Int UMF_extend_front
+Int UMF_extend_front
 (
     NumericType *Numeric,
     WorkType *Work

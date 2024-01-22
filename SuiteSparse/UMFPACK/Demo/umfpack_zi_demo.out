@@ -1,20 +1,20 @@
 
-UMFPACK V5.7 (Nov 9, 2018) demo: _zi_ version
+UMFPACK V6.3 (Jan 10, 2024) demo: _zi_ version
 
-UMFPACK:  Copyright (c) 2005-2013 by Timothy A. Davis.  All Rights Reserved.
+UMFPACK:  Copyright (c) 2005-2024 by Timothy A. Davis.  All Rights Reserved.
 
 
-UMFPACK License:  refer to UMFPACK/Doc/License.txt for the license.
+UMFPACK License: SPDX-License-Identifier: GPL-2.0+
    UMFPACK is available under alternate licenses,
    contact T. Davis for details.
 
 
 Availability: http://www.suitesparse.com
-UMFPACK V5.7.8 (Nov 9, 2018): OK
+UMFPACK V6.3.1 (Jan 10, 2024): OK
 
-UMFPACK V5.7.8 (Nov 9, 2018), Control:
+UMFPACK V6.3.1 (Jan 10, 2024), Control:
     Matrix entry defined as: double complex
-    Int (generic integer) defined as: int
+    Int (generic integer) defined as: int32_t
 
     0: print level: 5
     1: dense row parameter:    0.2
@@ -24,6 +24,11 @@ UMFPACK V5.7.8 (Nov 9, 2018), Control:
     3: pivot tolerance: 0.1
     4: block size for dense matrix kernels: 32
     5: strategy: 0 (auto)
+        Use symmetric strategy if symmetry > tsym and fraction of
+        entries on diagonal >= tnnzdiag. Otherwise use unsymmetric
+        strategy.
+    9: tsym: 0.3
+    12: tnnzdiag: 0.9
     10: ordering: 1 AMD/COLAMD
     11: singleton filter: enabled
     6: initial allocation ratio: 0.7
@@ -40,11 +45,12 @@ UMFPACK V5.7.8 (Nov 9, 2018), Control:
     19: AMD and COLAMD aggressive absorption: 1 (yes)
 
     The following options can only be changed at compile-time:
-    8: BLAS library used:  Fortran BLAS.  size of BLAS integer: 4
+    8: BLAS library used:  Intel MKL 64lp BLAS (32-bit integers).  size of BLAS integer: 4
     compiled for ANSI C
-    no timer used.
-    computer/operating system: Mac
-    size of int: 4 SuiteSparse_long: 8 Int: 4 pointer: 8 double: 8 Entry: 16 (in bytes)
+    CPU timer: SuiteSparse_time ( )
+    compiled with CHOLMOD ordering options
+    computer/operating system: Linux
+    size of int32_t: 4 int64_t: 8 Int: 4 pointer: 8 double: 8 Entry: 16 (in bytes)
 
 
 b: dense vector, n = 5. 
@@ -112,7 +118,7 @@ Symbolic factorization of A: Symbolic object:
 	minimum initial size (Units): 90  (MBytes): 0.0
 	estimated peak size (Units):  2542  (MBytes): 0.0
 	estimated final size (Units): 25  (MBytes): 0.0
-    symbolic factorization memory usage (Units): 151  (MBytes): 0.0
+    symbolic factorization memory usage (Units): 152  (MBytes): 0.0
     frontal matrices / supercolumns:
 	number of frontal chains: 1
 	number of frontal matrices: 1
@@ -251,18 +257,18 @@ diagonal of U: dense vector, n = 5.
 
     Numeric object:  OK
 
-UMFPACK V5.7.8 (Nov 9, 2018), Info:
+UMFPACK V6.3.1 (Jan 10, 2024), Info:
     matrix entry defined as:          double complex
-    Int (generic integer) defined as: int
-    BLAS library used: Fortran BLAS.  size of BLAS integer: 4
-    MATLAB:                           no.
-    CPU timer:                        none.
+    Int (generic integer) defined as: int32_t
+    BLAS library used: Intel MKL 64lp BLAS (32-bit integers).  size of BLAS integer: 4
+    MATLAB: no.
+    CPU timer: SuiteSparse_time ( )
     number of rows in matrix A:       5
     number of columns in matrix A:    5
     entries in matrix A:              12
     memory usage reported in:         8-byte Units
-    size of int:                      4 bytes
-    size of SuiteSparse_long:         8 bytes
+    size of int32_t:                  4 bytes
+    size of int64_t:                  8 bytes
     size of pointer:                  8 bytes
     size of numerical entry:          16 bytes
 
@@ -284,9 +290,9 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         nz on diagonal of matrix S:                2
         fraction of nz on diagonal:                0.666667
     symbolic factorization defragmentations:       0
-    symbolic memory usage (Units):                 151
+    symbolic memory usage (Units):                 152
     symbolic memory usage (MBytes):                0.0
-    Symbolic size (Units):                         52
+    Symbolic size (Units):                         53
     Symbolic size (MBytes):                        0
     symbolic factorization wallclock time(sec):    0.00
 
@@ -301,7 +307,7 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         final size (Units)                        25                   21    84%
     Numeric final size (Units)                   113                  107    95%
     Numeric final size (MBytes)                  0.0                  0.0    95%
-    peak memory usage (Units)                   2751                 2736    99%
+    peak memory usage (Units)                   2752                 2737    99%
     peak memory usage (MBytes)                   0.0                  0.0    99%
     numeric factorization flops          6.70000e+01          3.40000e+01    51%
     nz in L (incl diagonal)                       10                    9    90%
@@ -326,6 +332,7 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
     numeric factorization reallocations:           1
     costly numeric factorization reallocations:    0
     numeric factorization wallclock time (sec):    0.00
+    numeric factorization mflops (wallclock):      0.02
 
     solve flops:                                   1.02800e+03
     iterative refinement steps taken:              1
@@ -337,9 +344,9 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
     total symbolic + numeric + solve flops:        1.06200e+03
 
 
-UMFPACK:  Copyright (c) 2005-2013 by Timothy A. Davis.  All Rights Reserved.
+UMFPACK:  Copyright (c) 2005-2024 by Timothy A. Davis.  All Rights Reserved.
 
-UMFPACK V5.7.8 (Nov 9, 2018): OK
+UMFPACK V6.3.1 (Jan 10, 2024): OK
 
 
 x (solution of Ax=b): dense vector, n = 5. 
@@ -353,9 +360,9 @@ x (solution of Ax=b): dense vector, n = 5.
 maxnorm of residual: 1.77636e-15
 
 
-UMFPACK:  Copyright (c) 2005-2013 by Timothy A. Davis.  All Rights Reserved.
+UMFPACK:  Copyright (c) 2005-2024 by Timothy A. Davis.  All Rights Reserved.
 
-UMFPACK V5.7.8 (Nov 9, 2018): OK
+UMFPACK V6.3.1 (Jan 10, 2024): OK
 
 determinant: (-1.7814+ (2.3784)i) * 10^(2)
 
@@ -369,18 +376,18 @@ x (solution of Ax=b, solve is split into 3 steps): dense vector, n = 5.
 
 maxnorm of residual: 1.77636e-14
 
-UMFPACK V5.7.8 (Nov 9, 2018), Info:
+UMFPACK V6.3.1 (Jan 10, 2024), Info:
     matrix entry defined as:          double complex
-    Int (generic integer) defined as: int
-    BLAS library used: Fortran BLAS.  size of BLAS integer: 4
-    MATLAB:                           no.
-    CPU timer:                        none.
+    Int (generic integer) defined as: int32_t
+    BLAS library used: Intel MKL 64lp BLAS (32-bit integers).  size of BLAS integer: 4
+    MATLAB: no.
+    CPU timer: SuiteSparse_time ( )
     number of rows in matrix A:       5
     number of columns in matrix A:    5
     entries in matrix A:              12
     memory usage reported in:         8-byte Units
-    size of int:                      4 bytes
-    size of SuiteSparse_long:         8 bytes
+    size of int32_t:                  4 bytes
+    size of int64_t:                  8 bytes
     size of pointer:                  8 bytes
     size of numerical entry:          16 bytes
 
@@ -402,9 +409,9 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         nz on diagonal of matrix S:                2
         fraction of nz on diagonal:                0.666667
     symbolic factorization defragmentations:       0
-    symbolic memory usage (Units):                 151
+    symbolic memory usage (Units):                 152
     symbolic memory usage (MBytes):                0.0
-    Symbolic size (Units):                         52
+    Symbolic size (Units):                         53
     Symbolic size (MBytes):                        0
     symbolic factorization wallclock time(sec):    0.00
 
@@ -419,7 +426,7 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         final size (Units)                        25                   21    84%
     Numeric final size (Units)                   113                  107    95%
     Numeric final size (MBytes)                  0.0                  0.0    95%
-    peak memory usage (Units)                   2751                 2736    99%
+    peak memory usage (Units)                   2752                 2737    99%
     peak memory usage (MBytes)                   0.0                  0.0    99%
     numeric factorization flops          6.70000e+01          3.40000e+01    51%
     nz in L (incl diagonal)                       10                    9    90%
@@ -444,6 +451,7 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
     numeric factorization reallocations:           1
     costly numeric factorization reallocations:    0
     numeric factorization wallclock time (sec):    0.00
+    numeric factorization mflops (wallclock):      0.02
 
     solve flops:                                   4.80000e+02
     iterative refinement steps taken:              0
@@ -510,7 +518,7 @@ Numeric factorization of modified A: Numeric object:
     largest actual frontal matrix size:         4
     memory defragmentations:                    1
     memory reallocations:                       1
-    costly memory reallocations:                0
+    costly memory reallocations:                1
     entries in compressed pattern (L and U):    2
     number of nonzeros in L (excl diag):        3
     number of entries stored in L (excl diag):  1
@@ -597,18 +605,18 @@ diagonal of U: dense vector, n = 5.
 
     Numeric object:  OK
 
-UMFPACK V5.7.8 (Nov 9, 2018), Info:
+UMFPACK V6.3.1 (Jan 10, 2024), Info:
     matrix entry defined as:          double complex
-    Int (generic integer) defined as: int
-    BLAS library used: Fortran BLAS.  size of BLAS integer: 4
-    MATLAB:                           no.
-    CPU timer:                        none.
+    Int (generic integer) defined as: int32_t
+    BLAS library used: Intel MKL 64lp BLAS (32-bit integers).  size of BLAS integer: 4
+    MATLAB: no.
+    CPU timer: SuiteSparse_time ( )
     number of rows in matrix A:       5
     number of columns in matrix A:    5
     entries in matrix A:              12
     memory usage reported in:         8-byte Units
-    size of int:                      4 bytes
-    size of SuiteSparse_long:         8 bytes
+    size of int32_t:                  4 bytes
+    size of int64_t:                  8 bytes
     size of pointer:                  8 bytes
     size of numerical entry:          16 bytes
 
@@ -630,9 +638,9 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         nz on diagonal of matrix S:                2
         fraction of nz on diagonal:                0.666667
     symbolic factorization defragmentations:       0
-    symbolic memory usage (Units):                 151
+    symbolic memory usage (Units):                 152
     symbolic memory usage (MBytes):                0.0
-    Symbolic size (Units):                         52
+    Symbolic size (Units):                         53
     Symbolic size (MBytes):                        0
     symbolic factorization wallclock time(sec):    0.00
 
@@ -647,7 +655,7 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         final size (Units)                        25                   19    76%
     Numeric final size (Units)                   113                  105    93%
     Numeric final size (MBytes)                  0.0                  0.0    93%
-    peak memory usage (Units)                   2751                 2736    99%
+    peak memory usage (Units)                   2752                 2737    99%
     peak memory usage (MBytes)                   0.0                  0.0    99%
     numeric factorization flops          6.70000e+01          1.70000e+01    25%
     nz in L (incl diagonal)                       10                    8    80%
@@ -670,7 +678,7 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
     numerical values stored in Numeric object:     8
     numeric factorization defragmentations:        1
     numeric factorization reallocations:           1
-    costly numeric factorization reallocations:    0
+    costly numeric factorization reallocations:    1
     numeric factorization wallclock time (sec):    0.00
 
     solve flops:                                   5.15000e+02
@@ -756,7 +764,7 @@ Numeric factorization of completely modified A: Numeric object:
     largest actual frontal matrix size:         4
     memory defragmentations:                    1
     memory reallocations:                       1
-    costly memory reallocations:                0
+    costly memory reallocations:                1
     entries in compressed pattern (L and U):    2
     number of nonzeros in L (excl diag):        4
     number of entries stored in L (excl diag):  2
@@ -844,18 +852,18 @@ diagonal of U: dense vector, n = 5.
 
     Numeric object:  OK
 
-UMFPACK V5.7.8 (Nov 9, 2018), Info:
+UMFPACK V6.3.1 (Jan 10, 2024), Info:
     matrix entry defined as:          double complex
-    Int (generic integer) defined as: int
-    BLAS library used: Fortran BLAS.  size of BLAS integer: 4
-    MATLAB:                           no.
-    CPU timer:                        none.
+    Int (generic integer) defined as: int32_t
+    BLAS library used: Intel MKL 64lp BLAS (32-bit integers).  size of BLAS integer: 4
+    MATLAB: no.
+    CPU timer: SuiteSparse_time ( )
     number of rows in matrix A:       5
     number of columns in matrix A:    5
     entries in matrix A:              12
     memory usage reported in:         8-byte Units
-    size of int:                      4 bytes
-    size of SuiteSparse_long:         8 bytes
+    size of int32_t:                  4 bytes
+    size of int64_t:                  8 bytes
     size of pointer:                  8 bytes
     size of numerical entry:          16 bytes
 
@@ -877,9 +885,9 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         nz on diagonal of matrix S:                2
         fraction of nz on diagonal:                0.666667
     symbolic factorization defragmentations:       0
-    symbolic memory usage (Units):                 151
+    symbolic memory usage (Units):                 152
     symbolic memory usage (MBytes):                0.0
-    Symbolic size (Units):                         52
+    Symbolic size (Units):                         53
     Symbolic size (MBytes):                        0
     symbolic factorization wallclock time(sec):    0.00
 
@@ -894,7 +902,7 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         final size (Units)                        25                   21    84%
     Numeric final size (Units)                   113                  107    95%
     Numeric final size (MBytes)                  0.0                  0.0    95%
-    peak memory usage (Units)                   2751                 2736    99%
+    peak memory usage (Units)                   2752                 2737    99%
     peak memory usage (MBytes)                   0.0                  0.0    99%
     numeric factorization flops          6.70000e+01          3.40000e+01    51%
     nz in L (incl diagonal)                       10                    9    90%
@@ -917,13 +925,13 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
     numerical values stored in Numeric object:     9
     numeric factorization defragmentations:        1
     numeric factorization reallocations:           1
-    costly numeric factorization reallocations:    0
+    costly numeric factorization reallocations:    1
     numeric factorization wallclock time (sec):    0.00
 
     solve flops:                                   5.23000e+02
     iterative refinement steps taken:              0
     iterative refinement steps attempted:          0
-    sparse backward error omega1:                  5.55e-17
+    sparse backward error omega1:                  8.05e-17
     sparse backward error omega2:                  0.00e+00
     solve wall clock time (sec):                   0.00
 
@@ -938,7 +946,7 @@ x (with completely modified A): dense vector, n = 5.
     4 : (0.658245 + 0.0407649i)
     dense vector OK
 
-maxnorm of residual: 3.9968e-15
+maxnorm of residual: 9.10383e-15
 
 
 C (transpose of A): column-form matrix, n_row 5 n_col 5, nz = 12. 
@@ -981,7 +989,7 @@ Symbolic factorization of C: Symbolic object:
 	minimum initial size (Units): 91  (MBytes): 0.0
 	estimated peak size (Units):  2543  (MBytes): 0.0
 	estimated final size (Units): 26  (MBytes): 0.0
-    symbolic factorization memory usage (Units): 151  (MBytes): 0.0
+    symbolic factorization memory usage (Units): 152  (MBytes): 0.0
     frontal matrices / supercolumns:
 	number of frontal chains: 1
 	number of frontal matrices: 1
@@ -1037,6 +1045,63 @@ Total number of pivot columns in frontal matrices: 3
 Frontal matrix chains:
    Frontal matrices 0 to 0 are factorized in a single
         working array of size 3-by-3
+
+Copying symbolic object:
+
+Symbolic factorization of C (copy): Symbolic object: 
+    matrix to be factorized:
+	n_row: 5 n_col: 5
+	number of entries: 12
+    block size used for dense matrix kernels:   32
+    strategy used:                              unsymmetric
+    ordering used:                              colamd on A
+
+    performn column etree postorder:            yes
+    prefer diagonal pivoting (attempt P=Q):     no
+    variable-size part of Numeric object:
+	minimum initial size (Units): 91  (MBytes): 0.0
+	estimated peak size (Units):  2543  (MBytes): 0.0
+	estimated final size (Units): 26  (MBytes): 0.0
+    symbolic factorization memory usage (Units): 152  (MBytes): 0.0
+    frontal matrices / supercolumns:
+	number of frontal chains: 1
+	number of frontal matrices: 1
+	largest frontal matrix row dimension: 3
+	largest frontal matrix column dimension: 3
+
+    Frontal chain: 0.  Frontal matrices 0 to 0
+	Largest frontal matrix in Frontal chain: 3-by-3
+	Front: 0  pivot cols: 3 (pivot columns 0 to 2)
+	    pivot row candidates: 2 to 4
+	    leftmost descendant: 0
+	    1st new candidate row : 2
+	    parent: (none)
+
+Initial column permutation, Q1: permutation vector, n = 5. 
+    0 : 3 
+    1 : 2 
+    2 : 0 
+    3 : 4 
+    4 : 1 
+    permutation vector OK
+
+
+Initial row permutation, P1: permutation vector, n = 5. 
+    0 : 2 
+    1 : 3 
+    2 : 0 
+    3 : 1 
+    4 : 4 
+    permutation vector OK
+
+    Symbolic object:  OK
+
+
+Done copying symbolic object
+
+Symbolic blob size: 472
+
+Done serialize/deserialize of symbolic object
 
 Numeric factorization of C: Numeric object:  
     n_row: 5  n_col: 5
@@ -1235,18 +1300,18 @@ Freeing numeric object:
 Loading numeric object:
 
 Done loading numeric object
-UMFPACK V5.7.8 (Nov 9, 2018), Info:
+UMFPACK V6.3.1 (Jan 10, 2024), Info:
     matrix entry defined as:          double complex
-    Int (generic integer) defined as: int
-    BLAS library used: Fortran BLAS.  size of BLAS integer: 4
-    MATLAB:                           no.
-    CPU timer:                        none.
+    Int (generic integer) defined as: int32_t
+    BLAS library used: Intel MKL 64lp BLAS (32-bit integers).  size of BLAS integer: 4
+    MATLAB: no.
+    CPU timer: SuiteSparse_time ( )
     number of rows in matrix A:       5
     number of columns in matrix A:    5
     entries in matrix A:              12
     memory usage reported in:         8-byte Units
-    size of int:                      4 bytes
-    size of SuiteSparse_long:         8 bytes
+    size of int32_t:                  4 bytes
+    size of int64_t:                  8 bytes
     size of pointer:                  8 bytes
     size of numerical entry:          16 bytes
 
@@ -1268,9 +1333,9 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         nz on diagonal of matrix S:                2
         fraction of nz on diagonal:                0.666667
     symbolic factorization defragmentations:       0
-    symbolic memory usage (Units):                 151
+    symbolic memory usage (Units):                 152
     symbolic memory usage (MBytes):                0.0
-    Symbolic size (Units):                         52
+    Symbolic size (Units):                         53
     Symbolic size (MBytes):                        0
     symbolic factorization wallclock time(sec):    0.00
 
@@ -1285,7 +1350,7 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         final size (Units)                        26                   22    85%
     Numeric final size (Units)                   114                  108    95%
     Numeric final size (MBytes)                  0.0                  0.0    95%
-    peak memory usage (Units)                   2752                 2737    99%
+    peak memory usage (Units)                   2753                 2738    99%
     peak memory usage (MBytes)                   0.0                  0.0    99%
     numeric factorization flops          6.70000e+01          3.40000e+01    51%
     nz in L (incl diagonal)                        9                    8    89%
@@ -1332,19 +1397,130 @@ x (solution of C'x=b): dense vector, n = 5.
 maxnorm of residual: 4.88498e-15
 
 
-Solving C'x=b again, using umfpack_zi_wsolve instead:
-UMFPACK V5.7.8 (Nov 9, 2018), Info:
+Copying numeric object:
+
+Numeric factorization of C (copy): Numeric object:  
+    n_row: 5  n_col: 5
+    relative pivot tolerance used:              0.1
+    relative symmetric pivot tolerance used:    0.001
+    matrix scaled: yes (divided each row by sum abs value in each row)
+    minimum sum (abs (rows of A)):              5.10000e+00
+    maximum sum (abs (rows of A)):              7.64000e+01
+    initial allocation parameter used:          0.7
+    frontal matrix allocation parameter used:   0.5
+    final total size of Numeric object (Units): 107
+    final total size of Numeric object (MBytes): 0.0
+    peak size of variable-size part (Units):    2528
+    peak size of variable-size part (MBytes):   0.0
+    largest actual frontal matrix size:         4
+    memory defragmentations:                    1
+    memory reallocations:                       1
+    costly memory reallocations:                1
+    entries in compressed pattern (L and U):    2
+    number of nonzeros in L (excl diag):        3
+    number of entries stored in L (excl diag):  2
+    number of nonzeros in U (excl diag):        5
+    number of entries stored in U (excl diag):  2
+    factorization floating-point operations:    34
+    number of nonzeros on diagonal of U:        5
+    min abs. value on diagonal of U:            2.40964e-01
+    max abs. value on diagonal of U:            9.13625e-01
+    reciprocal condition number estimate:       2.64e-01
+
+Scale factors applied via multiplication
+Scale factors, Rs: dense vector, n = 5. 
+    0 : (0.196078)
+    1 : (0.0319489)
+    2 : (0.0133869)
+    3 : (0.030303)
+    4 : (0.013089)
+    dense vector OK
+
+
+P: row permutation vector, n = 5. 
+    0 : 2 
+    1 : 3 
+    2 : 0 
+    3 : 4 
+    4 : 1 
+    permutation vector OK
+
+
+Q: column permutation vector, n = 5. 
+    0 : 3 
+    1 : 2 
+    2 : 0 
+    3 : 4 
+    4 : 1 
+    permutation vector OK
+
+
+L in Numeric object, in column-oriented compressed-pattern form:
+    Diagonal entries are all equal to 1.0 (not stored)
+
+    column 0:  length 0.
+
+    column 1:  length 1.
+	row 4 :  (0.240091 + 0.0591529i)
+
+    column 2:  add 1 entries.  length 1.  Start of Lchain.
+	row 4 :  (0.847284 + 0.423642i)
+
+    column 3:  length 1.
+	row 4 :  (0.659838 - 0.0126577i)
+
+    column 4:  length 0.  Start of Lchain.
+
+
+U in Numeric object, in row-oriented compressed-pattern form:
+    Diagonal is stored separately.
+
+    row 4:  length 0.  End of Uchain.
+
+    row 3:  length 1.  End of Uchain.
+	col 4 : (0.510471 + 0i)
+
+    row 2:  length 1.
+	col 4 : (0.392157 - 0.0196078i)
+
+    row 1:  length 0.  End of Uchain.
+
+    row 1:  length 0.
+
+    row 0:  length 3.
+	col 1 :  (0.200803 + 0.00267738i)
+	col 3 :  (0.240964 - 0.00401606i)
+	col 4 :  (0.307898 - 0.00267738i)
+
+
+diagonal of U: dense vector, n = 5. 
+    0 : (0.240964 + 0i)
+    1 : (0.909091 - 0.0909091i)
+    2 : (0.392157 - 0.196078i)
+    3 : (0.484293 - 0.0052356i)
+    4 : (-0.677403 - 0.143059i)
+    dense vector OK
+
+    Numeric object:  OK
+
+
+Done copying numeric object
+
+Numeric blob size: 864
+
+Done serialize/deserialize of numeric object
+UMFPACK V6.3.1 (Jan 10, 2024), Info:
     matrix entry defined as:          double complex
-    Int (generic integer) defined as: int
-    BLAS library used: Fortran BLAS.  size of BLAS integer: 4
-    MATLAB:                           no.
-    CPU timer:                        none.
+    Int (generic integer) defined as: int32_t
+    BLAS library used: Intel MKL 64lp BLAS (32-bit integers).  size of BLAS integer: 4
+    MATLAB: no.
+    CPU timer: SuiteSparse_time ( )
     number of rows in matrix A:       5
     number of columns in matrix A:    5
     entries in matrix A:              12
     memory usage reported in:         8-byte Units
-    size of int:                      4 bytes
-    size of SuiteSparse_long:         8 bytes
+    size of int32_t:                  4 bytes
+    size of int64_t:                  8 bytes
     size of pointer:                  8 bytes
     size of numerical entry:          16 bytes
 
@@ -1366,9 +1542,9 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         nz on diagonal of matrix S:                2
         fraction of nz on diagonal:                0.666667
     symbolic factorization defragmentations:       0
-    symbolic memory usage (Units):                 151
+    symbolic memory usage (Units):                 152
     symbolic memory usage (MBytes):                0.0
-    Symbolic size (Units):                         52
+    Symbolic size (Units):                         53
     Symbolic size (MBytes):                        0
     symbolic factorization wallclock time(sec):    0.00
 
@@ -1383,7 +1559,105 @@ UMFPACK V5.7.8 (Nov 9, 2018), Info:
         final size (Units)                        26                   22    85%
     Numeric final size (Units)                   114                  108    95%
     Numeric final size (MBytes)                  0.0                  0.0    95%
-    peak memory usage (Units)                   2752                 2737    99%
+    peak memory usage (Units)                   2753                 2738    99%
+    peak memory usage (MBytes)                   0.0                  0.0    99%
+    numeric factorization flops          6.70000e+01          3.40000e+01    51%
+    nz in L (incl diagonal)                        9                    8    89%
+    nz in U (incl diagonal)                       11                   10    91%
+    nz in L+U (incl diagonal)                     15                   13    87%
+    largest front (# entries)                      9                    4    44%
+    largest # rows in front                        3                    2    67%
+    largest # columns in front                     3                    2    67%
+
+    initial allocation ratio used:                 0.7
+    # of forced updates due to frontal growth:     0
+    nz in L (incl diagonal), if none dropped       8
+    nz in U (incl diagonal), if none dropped       10
+    number of small entries dropped                0
+    nonzeros on diagonal of U:                     5
+    min abs. value on diagonal of U:               2.41e-01
+    max abs. value on diagonal of U:               9.14e-01
+    estimate of reciprocal of condition number:    2.64e-01
+    indices in compressed pattern:                 2
+    numerical values stored in Numeric object:     9
+    numeric factorization defragmentations:        1
+    numeric factorization reallocations:           1
+    costly numeric factorization reallocations:    1
+    numeric factorization wallclock time (sec):    0.00
+
+    solve flops:                                   4.80000e+02
+    iterative refinement steps taken:              0
+    iterative refinement steps attempted:          0
+    sparse backward error omega1:                  9.42e-17
+    sparse backward error omega2:                  0.00e+00
+    solve wall clock time (sec):                   0.00
+
+    total symbolic + numeric + solve flops:        5.14000e+02
+
+
+x (solution of C'x=b): (using the copy) dense vector, n = 5. 
+    0 : (7.56307 - 3.68974i)
+    1 : (-0.831991 + 0.0627998i)
+    2 : (0.166667 + 0i)
+    3 : (-0.00206892 - 0.107735i)
+    4 : (0.658245 + 0.0407649i)
+    dense vector OK
+
+maxnorm of residual: 4.88498e-15
+
+
+Solving C'x=b again, using umfpack_zi_wsolve instead:
+UMFPACK V6.3.1 (Jan 10, 2024), Info:
+    matrix entry defined as:          double complex
+    Int (generic integer) defined as: int32_t
+    BLAS library used: Intel MKL 64lp BLAS (32-bit integers).  size of BLAS integer: 4
+    MATLAB: no.
+    CPU timer: SuiteSparse_time ( )
+    number of rows in matrix A:       5
+    number of columns in matrix A:    5
+    entries in matrix A:              12
+    memory usage reported in:         8-byte Units
+    size of int32_t:                  4 bytes
+    size of int64_t:                  8 bytes
+    size of pointer:                  8 bytes
+    size of numerical entry:          16 bytes
+
+    strategy used:                    unsymmetric
+    ordering used:                    colamd on A
+    modify Q during factorization:    yes
+    prefer diagonal pivoting:         no
+    pivots with zero Markowitz cost:               2
+    submatrix S after removing zero-cost pivots:
+        number of "dense" rows:                    0
+        number of "dense" columns:                 0
+        number of empty rows:                      0
+        number of empty columns                    0
+        submatrix S square and diagonal preserved
+    pattern of square submatrix S:
+        number rows and columns                    3
+        symmetry of nonzero pattern:               1.000000
+        nz in S+S' (excl. diagonal):               4
+        nz on diagonal of matrix S:                2
+        fraction of nz on diagonal:                0.666667
+    symbolic factorization defragmentations:       0
+    symbolic memory usage (Units):                 152
+    symbolic memory usage (MBytes):                0.0
+    Symbolic size (Units):                         53
+    Symbolic size (MBytes):                        0
+    symbolic factorization wallclock time(sec):    0.00
+
+    matrix scaled: yes (divided each row by sum of abs values in each row)
+    minimum sum (abs (rows of A)):              5.10000e+00
+    maximum sum (abs (rows of A)):              7.64000e+01
+
+    symbolic/numeric factorization:      upper bound               actual      %
+    variable-sized part of Numeric object:
+        initial size (Units)                      91                   81    89%
+        peak size (Units)                       2543                 2528    99%
+        final size (Units)                        26                   22    85%
+    Numeric final size (Units)                   114                  108    95%
+    Numeric final size (MBytes)                  0.0                  0.0    95%
+    peak memory usage (Units)                   2753                 2738    99%
     peak memory usage (MBytes)                   0.0                  0.0    99%
     numeric factorization flops          6.70000e+01          3.40000e+01    51%
     nz in L (incl diagonal)                        9                    8    89%

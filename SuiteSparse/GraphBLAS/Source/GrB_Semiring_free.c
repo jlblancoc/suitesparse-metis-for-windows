@@ -2,8 +2,8 @@
 // GrB_Semiring_free: free a semiring
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
@@ -17,18 +17,22 @@ GrB_Info GrB_Semiring_free          // free a user-created semiring
 
     if (semiring != NULL)
     {
+        // only free a dynamically-allocated semiring
         GrB_Semiring s = *semiring ;
-        if (s != NULL && s->object_kind == GB_USER_RUNTIME)
+        if (s != NULL)
         {
-            if (s->magic == GB_MAGIC)
+            // free the semiring name
+            GB_FREE (&(s->name), s->name_size) ;
+            // free the semiring user_name
+            GB_FREE (&(s->user_name), s->user_name_size) ;
+            // free the semiring header
+            size_t header_size = s->header_size ;
+            if (header_size > 0)
             { 
-                // only user-defined semirings are freed.  predefined semirings
-                // are statically allocated and cannot be freed.
-                s->magic = GB_FREED ; // to help detect dangling pointers
-                GB_FREE_MEMORY (*semiring, 1,
-                    sizeof (struct GB_Semiring_opaque)) ;
+                s->magic = GB_FREED ;  // to help detect dangling pointers
+                s->header_size = 0 ;
+                GB_FREE (semiring, header_size) ;
             }
-            (*semiring) = NULL ;
         }
     }
 

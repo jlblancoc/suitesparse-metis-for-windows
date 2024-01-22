@@ -1,8 +1,8 @@
 function test19(fulltest)
 %TEST19 test GxB_subassign and GrB_*_setElement with many pending operations
 
-% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-% http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+% SPDX-License-Identifier: Apache-2.0
 
 if (nargin < 1)
     fulltest = 0 ;
@@ -10,7 +10,14 @@ end
 if (fulltest)
     nt = 3000 ;
 else
-    nt = 500 ;
+    % check if malloc debugging is enabled
+    debug_status = stat ;
+    if (debug_status)
+        % exhaustive malloc debugging
+        nt = 50 ; % was 500, which takes too long
+    else
+        nt = 500 ;
+    end
 end
 
 fprintf ('\nGxB_subassign and setElement test, many pending computations\n') ;
@@ -48,9 +55,9 @@ for problem = 0:2
         if (c == 10)
             d = struct ('outp', 'replace') ;
         elseif (c == 9)
-            d = struct ('outp', 'replace', 'mask', 'scmp') ;
+            d = struct ('outp', 'replace', 'mask', 'complement') ;
         elseif (c == 8)
-            d = struct ('mask', 'scmp') ;
+            d = struct ('mask', 'complement') ;
         else
             d = [ ] ;
         end
@@ -130,7 +137,6 @@ for problem = 0:2
     end
 
     C3 = Corig ;
-
     for k = 1:ntrials
         J = Work (k).J ;
         I = Work (k).I ;
@@ -142,9 +148,46 @@ for problem = 0:2
         C3 = GB_spec_subassign (C3, M, accum, A, I, J, d, scalar) ;
     end
 
-    C2 = GB_mex_subassign (Corig, Work2) ;
-
+    % default sparsity
+    C2 = GB_mex_subassign (Corig, Work2) ;  % WORK_ASSIGN
     GB_spec_compare (C2, C3) ;
+
+    % with sparsity control
+    for C_sparsity_control = [1 2 4 8]
+        for M_sparsity_control = [2 12]
+            ctrl = [C_sparsity_control M_sparsity_control] ;
+            C2 = GB_mex_subassign (Corig, Work2, ctrl) ; % WORK_ASSIGN
+            GB_spec_compare (C2, C3) ;
+        end
+    end
+
+    % with no accum
+
+    C3 = Corig ;
+    for k = 1:ntrials
+        J = Work (k).J ;
+        I = Work (k).I ;
+        A = Work (k).A ;
+        M = Work (k).Mask ;
+        d = Work (k).desc ;
+        scalar = Work (k).scalar ;
+        C3 = GB_spec_subassign (C3, M, [ ], A, I, J, d, scalar) ;
+        Work2 (k).accum = [ ] ;
+    end
+
+    % default sparsity
+    C2 = GB_mex_subassign (Corig, Work2) ;      % WORK_ASSIGN
+    GB_spec_compare (C2, C3) ;
+
+    % with sparsity control
+    for C_sparsity_control = [1 2 4 8]
+        for M_sparsity_control = [2 12]
+            ctrl = [C_sparsity_control M_sparsity_control] ;
+            C2 = GB_mex_subassign (Corig, Work2, ctrl) ;    % WORK_ASSIGN
+            GB_spec_compare (C2, C3) ;
+        end
+    end
+
 end
 
 fprintf ('\ntest19: all tests passed\n') ;

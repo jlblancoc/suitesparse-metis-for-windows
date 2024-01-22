@@ -1,3 +1,100 @@
+Jan 10, 2024: version 5.1.1
+
+    * MATLAB interface:  add -DNO_SSIZE_T for Windows
+    * minor updates to build system
+
+Dec 30, 2023: version 5.1.0
+
+    * major change to build system: by Markus Mützel
+    * support for single precision matrices:  for all Modules, except for the
+        GPU kernels (which are only supported for double and complex double
+        matrices).
+    * GPU: various bug fixes
+
+Oct 31, 2023, version 5.0.1
+
+    * cholmod.h: remove use of "I" which conflicts with
+        #include <complex.h>.
+
+Oct 23, 2023, version 5.0.0
+
+    * CHOLMOD v5.0.0: introduces the first part of support for single
+        precision sparse matrices, with the introduction of the new
+        CHOLMOD:Utility Module.  The CHOLMOD:Utility Module replaces
+        CHOLMOD:Core in prior versions. Single precision is not yet
+        incorporated into the remaining Modules, however.
+
+Oct 18, 2023: version 4.2.2
+
+    * CHOLMOD 4.2.2: bug fix to CHOLMOD/Supernodal (heuristic to determine
+        # threads to use for last supernode was incorrect)
+
+Sept 18, 2023: version 4.2.1
+
+    * cmake update: add "None" build type, from Antonio Rojas, for Arch Linux
+
+Sept 8, 2023: version 4.2.0
+
+    * cmake updates: SuiteSparse:: namespace by Markus Muetzel
+    * bug fix: typecast was broken in cholmod_postorder.c
+    * minor fixes to debug scaffolding and test code: cholmod_internal.h,
+        cholmod_metis_wrapper.c, Tcov/memory.c.
+    * support for SPQR: minor changes to support SPQR v4.2.0 with 32-bit
+        integers; no change to user-visible API.
+    * METIS now using GKRAND: with threadprivate state variables, to
+        avoid global system lock when using CHOLMON on many user threads
+
+June 16, 2023: version 4.0.4
+
+    * cmake build system updates: update by Markus Muetzel
+    * METIS: fixed non-standard prototypes in gk_proto.h and gk_mkrandom.h
+
+Jan 17, 2022: version 4.0.3
+
+    * NFORTRAN: option added to disable Fortran entirely
+    * SuiteSparse_config: now v7.0.0
+
+Dec 9, 2022: version 4.0.2
+
+    * minor change to build system
+    * Fortran: no longer required to build CHOLMOD
+    * NPARTITION: if CHOLMOD is compiled with -DNPARTITION, then
+        METIS is not compiled.  However, the CHOLMOD interface to METIS is
+        still present; they simply return CHOLMOD_NOT_INSTALLED.  This
+        allows methods that depend on CHOLMOD's METIS interface to use
+        a run-time test, instead of requiring them to be compiled with
+        -DNPARTITION (SPQR in particular).
+
+Nov 12, 2022: version 4.0.1
+
+    * BLAS definitions: no longer exposed to the user application
+
+Nov 12, 2022: version 4.0.0
+
+    * using CMake build system
+    * integers: int (32-bit) and SuiteSparse_long (nominally 64-bit) replaced
+        with int32_t and int64_t.
+    * cholmod.h: single include file for all Modules
+    * BLAS/LAPACK: relying on SuiteSparse_config and CMake to find and link
+        with the BLAS and LAPACK libraries
+    * libcholmod_cuda.so: CUDA support split into a separate library.
+    * OpenMP: CHOLMOD_OMP_NUM_THREADS removed, replaced with run time
+        controls (Common->nthreads_max, Common->chunk)
+    * METIS: no longer built as a separate libary.  A slightly modified version
+        of METIS is embedded into the CHOLMOD library, with a prefix appended
+        to each function name so it won't conflict with a standard METIS
+        library that may already exist in the application.
+
+June 30, 2020: no change to version number
+
+    * minor update to MATLAB tests: no change to compiled library,
+        so version number remains 3.0.14.
+    * replaced UFget with ssget in MATLAB tests
+
+Feb 20, 2020: version 3.0.14
+
+    * minor update to cholmod_check to print a matrix
+
 Dec 20, 2018: version 3.0.13
 
     * bug fix to cholmod_core.h: so that a CUDA include file is properly
@@ -72,8 +169,8 @@ July 18, 2014: version 3.0.1
         CHOLMOD is compiled on the GPU
     * added cholmod_rowfac_mask2 function for LPDASA
     * to test the GPU, use 'make big' in CHOLMOD/Demo.  You will need to first
-        download the GHS_psdef/audikw_1.mtx from the UF collection:
-        http://www.cise.ufl.edu/research/sparse/matrices/GHS_psdef/audikw_1.html
+        download the GHS_psdef/audikw_1.mtx:
+        http://sparse.tamu.edu/GHS_psdef/audikw_1
 
 March 26, 2014: version 3.0.0 (beta)
 

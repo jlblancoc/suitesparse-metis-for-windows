@@ -2,6 +2,9 @@
 // === spqr_solve mexFunction ==================================================
 // =============================================================================
 
+// SPQR, Copyright (c) 2008-2022, Timothy A Davis. All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
 #include "spqr_mx.hpp"
 
 /*  x = A\b using a sparse QR factorization.
@@ -57,9 +60,9 @@ void mexFunction
     const mxArray *pargin [ ]
 )
 {
-    Long *Bp, *Bi ;
+    int64_t *Bp, *Bi ;
     double *Ax, *Bx, dummy ;
-    Long m, n, k, bncols, p, i, rank, A_complex, B_complex, is_complex,
+    int64_t m, n, k, bncols, p, i, rank, A_complex, B_complex, is_complex,
         anz, bnz ;
     spqr_mx_options opts ;
     cholmod_sparse *A, Amatrix, *Xsparse ; 
@@ -67,7 +70,7 @@ void mexFunction
     cholmod_common Common, *cc ;
     char msg [LEN+1] ;
 
-    double t0 = (nargout > 1) ? SuiteSparse_time ( ) : 0 ;
+    double t0 = (nargout > 1) ? SUITESPARSE_TIME : 0 ;
 
     // -------------------------------------------------------------------------
     // start CHOLMOD and set parameters
@@ -269,7 +272,7 @@ void mexFunction
     if (nargout > 1)
     {
         double flops = cc->SPQR_flopcount ;
-        double t = SuiteSparse_time ( ) - t0 ;
+        double t = SUITESPARSE_TIME - t0 ;
         pargout [1] = spqr_mx_info (cc, t, flops) ;
     }
 
@@ -280,10 +283,8 @@ void mexFunction
     rank = cc->SPQR_istat [4] ;
     if (rank < MIN (m,n))
     {
-        // snprintf would be safer, but Windows is oblivious to safety ...
-        // (Visual Studio C++ 2008 does not recognize snprintf!)
-        sprintf (msg, "rank deficient. rank = %ld tol = %g\n", rank,
-            cc->SPQR_tol_used) ;
+        snprintf (msg, LEN, "rank deficient. rank = %" PRId64 " tol = %g\n",
+            rank, cc->SPQR_tol_used) ;
         mexWarnMsgIdAndTxt ("MATLAB:rankDeficientMatrix", msg) ;
     }
 

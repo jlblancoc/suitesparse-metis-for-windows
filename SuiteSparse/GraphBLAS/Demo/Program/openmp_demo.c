@@ -2,12 +2,16 @@
 // GraphBLAS/Demo/Program/openmp_demo: example of user multithreading
 //------------------------------------------------------------------------------
 
-// This demo uses OpenMP, and should work if GraphBLAS is compiled to
-// use either OpenMP or pthreads to synchronize multiple user threadds.
-// If OpenMP is not available, this program will work fine without it, in a
-// single user thread, regardless of the thread mechanism used by GraphBLAS.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+//------------------------------------------------------------------------------
+
+// This demo uses OpenMP, and illustrates how GraphBLAS can be called from
+// a multi-threaded user program.
 
 #include "GraphBLAS.h"
+#undef I
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -18,20 +22,22 @@
 #elif defined __GNUC__
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#if !defined ( __cplusplus )
 #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+#endif
 #endif
 
 #define NTHREADS 8
 #define NTRIALS 10
 #define N 6
 
+#undef  OK
 #define OK(method)                                                  \
 {                                                                   \
     GrB_Info info = method ;                                        \
     if (! (info == GrB_SUCCESS || info == GrB_NO_VALUE))            \
     {                                                               \
-        printf ("Failure (id: %d, info: %d): %s\n",                 \
-            id, info, GrB_error ( )) ;                              \
+        printf ("Failure (id: %d, info: %d):\n", id, info) ;        \
         /* return to caller (do not use inside critical section) */ \
         return (0) ;                                                \
     }                                                               \
@@ -51,14 +57,16 @@ int worker (GrB_Matrix *Ahandle, int id)
     GrB_Matrix A = *Ahandle ;
 
     // worker generates an intentional error message
-    GrB_Matrix_setElement (A, 42, 1000+id, 1000+id) ;
+    GrB_Matrix_setElement_INT32 (A, 42, 1000+id, 1000+id) ;
 
     // print the intentional error generated when the worker started
     #pragma omp critical
     {
         // critical section
         printf ("\n----------------- worker %d intentional error:\n", id) ;
-        printf ("%s\n", GrB_error ( )) ;
+        const char *s ;
+        GrB_Matrix_error (&s, A) ;
+        printf ("%s\n", s) ;
     }
 
     for (int hammer_hard = 0 ; hammer_hard < NTRIALS ; hammer_hard++)
@@ -68,13 +76,12 @@ int worker (GrB_Matrix *Ahandle, int id)
             for (int j = 0 ; j < N ; j++)
             {
                 double x = (i+1)*100000 + (j+1)*1000 + id ;
-                OK (GrB_Matrix_setElement (A, x, i, j)) ;
+                OK (GrB_Matrix_setElement_FP64 (A, x, i, j)) ;
             } 
         }
 
         // force completion
-        GrB_Index nvals ;
-        OK (GrB_Matrix_nvals (&nvals, A)) ;
+        OK (GrB_Matrix_wait (A, GrB_MATERIALIZE)) ;
     }
 
     // Printing is done in a critical section, just so it is not overly
@@ -88,12 +95,12 @@ int worker (GrB_Matrix *Ahandle, int id)
     {
         // critical section
         printf ("\n----------------- worker %d is done:\n", id) ;
-        info2 = GxB_print (A, GxB_SHORT) ;
+        info2 = GxB_Matrix_fprint (A, "A", GxB_SHORT, stdout) ;
     }
     OK (info2) ;
 
     // worker generates an intentional error message
-    GrB_Matrix_setElement (A, 42, 1000+id, 1000+id) ;
+    GrB_Matrix_setElement_INT32 (A, 42, 1000+id, 1000+id) ;
 
     // print the intentional error generated when the worker started
     // It should be unchanged.
@@ -101,7 +108,9 @@ int worker (GrB_Matrix *Ahandle, int id)
     {
         // critical section
         printf ("\n----------------- worker %d error should be same:\n", id) ;
-        printf ("%s\n", GrB_error ( )) ;
+        const char *s ;
+        GrB_Matrix_error (&s, A) ;
+        printf ("%s\n", s) ;
     }
     return (0) ;
 }
@@ -120,35 +129,11 @@ int main (int argc, char **argv)
 
     // start GraphBLAS
     OK (GrB_init (GrB_NONBLOCKING)) ;
+    int nthreads ;
+    OK (GxB_Global_Option_get (GxB_GLOBAL_NTHREADS, &nthreads)) ;
+    fprintf (stderr, "openmp demo, nthreads %d\n", nthreads) ;
 
     // Determine which user-threading model is being used.
-    GxB_Thread_Model thread_safety ;
-    GxB_get (GxB_THREAD_SAFETY, &thread_safety) ;
-    printf ("GraphBLAS is using ") ;
-    switch (thread_safety)
-    {
-        case GxB_THREAD_POSIX :
-            printf ("a POSIX pthread mutex\n") ;
-            break ;
-        case GxB_THREAD_WINDOWS :
-            printf ("a Windows CriticalSection\n") ;
-            break ;
-        case GxB_THREAD_ANSI :
-            printf ("an ANSI C11 mtx_lock\n") ;
-            break ;
-        case GxB_THREAD_OPENMP :
-            printf ("an OpenMP critical section\n") ;
-            break ;
-        default : // GxB_THREAD_NONE
-            #ifdef _OPENMP
-            printf ("(nothing! This will fail!)\n") ;
-            #else
-            printf ("nothing (OK since user program is single-threaded)\n") ;
-            #endif
-            break ;
-    }
-    printf ("to synchronize user threads.\n") ;
-
     #ifdef _OPENMP
     printf ("User threads in this program are OpenMP threads.\n") ;
     #else
@@ -159,24 +144,19 @@ int main (int argc, char **argv)
 
     // create the threads
     #pragma omp parallel for num_threads(NTHREADS) 
-    for (int id = 0 ; id < NTHREADS ; id++)
+    for (id = 0 ; id < NTHREADS ; id++)
     {
         worker (&Aarray [id], id) ;
     }
 
-    // the master thread prints them again, and frees them
+    // the leader thread prints them again, and frees them
     for (int id = 0 ; id < NTHREADS ; id++)
     {
         GrB_Matrix A = Aarray [id] ;
-        printf ("\n---- Master prints matrix %d\n", id) ;
-        OK (GxB_print (A, GxB_SHORT)) ;
-        GrB_free (&A) ;
+        printf ("\n---- Leader prints matrix %d\n", id) ;
+        OK (GxB_Matrix_fprint (A, "A", GxB_SHORT, stdout)) ;
+        GrB_Matrix_free (&A) ;
     }
-
-    // print an error message
-    printf ("\n\n---- Master thread prints an error message:\n") ;
-    GrB_Matrix_new (NULL, GrB_FP64, 1, 1) ;
-    printf ("master %d : Error: %s\n", id, GrB_error ( )) ;
 
     // finish GraphBLAS
     GrB_finalize ( ) ;

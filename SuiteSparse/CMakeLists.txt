@@ -12,17 +12,9 @@ if(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
 endif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
 
 # Global flags:
-if (BUILD_METIS)
-	include_directories("${METIS_SOURCE_DIR}/include")
-else (BUILD_METIS)
-	add_definitions(-DNPARTITION)
-endif ( BUILD_METIS)
-
-# Disable COMPLEX numbers: disable it by default, since it causes problems in some platforms.
-set(HAVE_COMPLEX OFF CACHE BOOL "Enables building SuiteSparse with complex numbers (disabled by default to avoid problems in some platforms)")
-if (NOT HAVE_COMPLEX)
-	add_definitions(-DNCOMPLEX)
-endif (NOT HAVE_COMPLEX)
+if(NOT BUILD_METIS)
+    add_definitions(-DNPARTITION)
+endif()
 
 # Used even for MSVC, so blas function names have the final "_"
 if (MSVC)

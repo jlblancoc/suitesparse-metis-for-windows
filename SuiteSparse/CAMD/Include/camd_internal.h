@@ -1,12 +1,12 @@
-/* ========================================================================= */
-/* === camd_internal.h ===================================================== */
-/* ========================================================================= */
+//------------------------------------------------------------------------------
+// CAMD/Source/camd_internal.h: internal definitions for CAMD
+//------------------------------------------------------------------------------
 
-/* ------------------------------------------------------------------------- */
-/* CAMD, Copyright (c) Timothy A. Davis, Yanqing Chen,                       */
-/* Patrick R. Amestoy, and Iain S. Duff.  See ../README.txt for License.     */
-/* email: DrTimothyAldenDavis@gmail.com                                      */
-/* ------------------------------------------------------------------------- */
+// CAMD, Copyright (c) 2007-2023, Timothy A. Davis, Yanqing Chen, Patrick R.
+// Amestoy, and Iain S. Duff.  All Rights Reserved.
+// SPDX-License-Identifier: BSD-3-clause
+
+//------------------------------------------------------------------------------
 
 /* This file is for internal use in CAMD itself, and does not normally need to
  * be included in user code (it is included in UMFPACK, however).   All others
@@ -42,35 +42,6 @@
 #undef NDEBUG
 */
 
-
-/* ------------------------------------------------------------------------- */
-/* ANSI include files */
-/* ------------------------------------------------------------------------- */
-
-/* from stdlib.h:  size_t, malloc, free, realloc, and calloc */
-#include <stdlib.h>
-
-#if !defined(NPRINT) || !defined(NDEBUG)
-/* from stdio.h:  printf.  Not included if NPRINT is defined at compile time.
- * fopen and fscanf are used when debugging. */
-#include <stdio.h>
-#endif
-
-/* from limits.h:  INT_MAX and LONG_MAX */
-#include <limits.h>
-
-/* from math.h: sqrt */
-#include <math.h>
-
-/* ------------------------------------------------------------------------- */
-/* MATLAB include files (only if being used in or via MATLAB) */
-/* ------------------------------------------------------------------------- */
-
-#ifdef MATLAB_MEX_FILE
-#include "matrix.h"
-#include "mex.h"
-#endif
-
 /* ------------------------------------------------------------------------- */
 /* basic definitions */
 /* ------------------------------------------------------------------------- */
@@ -91,13 +62,7 @@
 #undef EMPTY
 #endif
 
-#ifdef GLOBAL
-#undef GLOBAL
-#endif
-
-#ifdef PRIVATE
-#undef PRIVATE
-#endif
+#define PRIVATE static
 
 /* FLIP is a "negation about -1", and is used to mark an integer i that is
  * normally non-negative.  FLIP (EMPTY) is EMPTY.  FLIP of a number > EMPTY
@@ -125,8 +90,6 @@
 
 #define TRUE (1)
 #define FALSE (0)
-#define PRIVATE static
-#define GLOBAL
 #define EMPTY (-1)
 
 /* Note that Linux's gcc 2.96 defines NULL as ((void *) 0), but other */
@@ -149,16 +112,17 @@
 #endif
 
 /* ------------------------------------------------------------------------- */
-/* integer type for CAMD: int or SuiteSparse_long */
+/* integer type for CAMD: int32_t or int64_t */
 /* ------------------------------------------------------------------------- */
 
 #include "camd.h"
 
 #if defined (DLONG) || defined (ZLONG)
 
-#define Int SuiteSparse_long
-#define ID  SuiteSparse_long_id
-#define Int_MAX SuiteSparse_long_max
+#define Int int64_t
+#define UInt uint64_t
+#define ID  "%" PRId64
+#define Int_MAX INT64_MAX
 
 #define CAMD_order camd_l_order
 #define CAMD_defaults camd_l_defaults
@@ -170,7 +134,6 @@
 #define CAMD_cvalid camd_l_cvalid
 #define CAMD_aat camd_l_aat
 #define CAMD_postorder camd_l_postorder
-#define CAMD_post_tree camd_l_post_tree
 #define CAMD_dump camd_l_dump
 #define CAMD_debug camd_l_debug
 #define CAMD_debug_init camd_l_debug_init
@@ -178,7 +141,8 @@
 
 #else
 
-#define Int int
+#define Int int32_t
+#define UInt uint32_t
 #define ID "%d"
 #define Int_MAX INT_MAX
 
@@ -192,7 +156,6 @@
 #define CAMD_cvalid camd_cvalid
 #define CAMD_aat camd_aat
 #define CAMD_postorder camd_postorder
-#define CAMD_post_tree camd_post_tree
 #define CAMD_dump camd_dump
 #define CAMD_debug camd_debug
 #define CAMD_debug_init camd_debug_init
@@ -204,7 +167,7 @@
 /* CAMD routine definitions (not user-callable) */
 /* ------------------------------------------------------------------------- */
 
-GLOBAL size_t CAMD_aat
+size_t CAMD_aat
 (
     Int n,
     const Int Ap [ ],
@@ -214,7 +177,7 @@ GLOBAL size_t CAMD_aat
     double Info [ ]
 ) ;
 
-GLOBAL void CAMD_1
+void CAMD_1
 (
     Int n,
     const Int Ap [ ],
@@ -229,12 +192,12 @@ GLOBAL void CAMD_1
     const Int C [ ]
 ) ;
 
-GLOBAL Int CAMD_postorder
+Int CAMD_postorder
 (
     Int j, Int k, Int n, Int head [], Int next [], Int post [], Int stack []
 ) ;
 
-GLOBAL void CAMD_preprocess
+void CAMD_preprocess
 (
     Int n,
     const Int Ap [ ],
@@ -254,15 +217,11 @@ GLOBAL void CAMD_preprocess
 /* from assert.h:  assert macro */
 #include <assert.h>
 
-#ifndef EXTERN
-#define EXTERN extern
-#endif
+extern Int CAMD_debug ;
 
-EXTERN Int CAMD_debug ;
+void CAMD_debug_init ( char *s ) ;
 
-GLOBAL void CAMD_debug_init ( char *s ) ;
-
-GLOBAL void CAMD_dump
+void CAMD_dump
 (
     Int n,
     Int Pe [ ],

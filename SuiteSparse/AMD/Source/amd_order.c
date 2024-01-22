@@ -1,12 +1,12 @@
-/* ========================================================================= */
-/* === AMD_order =========================================================== */
-/* ========================================================================= */
+//------------------------------------------------------------------------------
+// AMD/Source/amd_order: user-callable AMD ordering method
+//------------------------------------------------------------------------------
 
-/* ------------------------------------------------------------------------- */
-/* AMD, Copyright (c) Timothy A. Davis,					     */
-/* Patrick R. Amestoy, and Iain S. Duff.  See ../README.txt for License.     */
-/* email: DrTimothyAldenDavis@gmail.com                                      */
-/* ------------------------------------------------------------------------- */
+// AMD, Copyright (c) 1996-2022, Timothy A. Davis, Patrick R. Amestoy, and
+// Iain S. Duff.  All Rights Reserved.
+// SPDX-License-Identifier: BSD-3-clause
+
+//------------------------------------------------------------------------------
 
 /* User-callable AMD minimum degree ordering routine.  See amd.h for
  * documentation.
@@ -18,7 +18,7 @@
 /* === AMD_order =========================================================== */
 /* ========================================================================= */
 
-GLOBAL Int AMD_order
+int AMD_order
 (
     Int n,
     const Int Ap [ ],
@@ -71,9 +71,9 @@ GLOBAL Int AMD_order
 	return (AMD_INVALID) ;
     }
 
-    /* check if n or nz will cause size_t overflow */
-    if (((size_t) n) >= SIZE_T_MAX / sizeof (Int)
-     || ((size_t) nz) >= SIZE_T_MAX / sizeof (Int))
+    /* check if n or nz will cause integer overflow */
+    if (((size_t) n) >= Int_MAX / sizeof (Int)
+     || ((size_t) nz) >= Int_MAX / sizeof (Int))
     {
 	if (info) Info [AMD_STATUS] = AMD_OUT_OF_MEMORY ;
 	return (AMD_OUT_OF_MEMORY) ;	    /* problem too large */
@@ -89,8 +89,9 @@ GLOBAL Int AMD_order
     }
 
     /* allocate two size-n integer workspaces */
-    Len  = SuiteSparse_malloc (n, sizeof (Int)) ;
-    Pinv = SuiteSparse_malloc (n, sizeof (Int)) ;
+    size_t nn = (size_t) n ;
+    Len  = SuiteSparse_malloc (nn, sizeof (Int)) ;
+    Pinv = SuiteSparse_malloc (nn, sizeof (Int)) ;
     mem += n ;
     mem += n ;
     if (!Len || !Pinv)
@@ -106,7 +107,7 @@ GLOBAL Int AMD_order
     {
 	/* sort the input matrix and remove duplicate entries */
 	AMD_DEBUG1 (("Matrix is jumbled\n")) ;
-	Rp = SuiteSparse_malloc (n+1, sizeof (Int)) ;
+	Rp = SuiteSparse_malloc (nn+1, sizeof (Int)) ;
 	Ri = SuiteSparse_malloc (nz,  sizeof (Int)) ;
 	mem += (n+1) ;
 	mem += MAX (nz,1) ;
@@ -152,12 +153,11 @@ GLOBAL Int AMD_order
     slen += nzaat/5 ;			/* add elbow room */
     for (i = 0 ; ok && i < 7 ; i++)
     {
-	ok = ((slen + n) > slen) ;	/* check for size_t overflow */
-	slen += n ;			/* size-n elbow room, 6 size-n work */
+	ok = ((slen + nn) > slen) ;	/* check for size_t overflow */
+	slen += nn ;			/* size-n elbow room, 6 size-n work */
     }
     mem += slen ;
     ok = ok && (slen < SIZE_T_MAX / sizeof (Int)) ; /* check for overflow */
-    ok = ok && (slen < Int_MAX) ;	/* S[i] for Int i must be OK */
     if (ok)
     {
 	S = SuiteSparse_malloc (slen, sizeof (Int)) ;

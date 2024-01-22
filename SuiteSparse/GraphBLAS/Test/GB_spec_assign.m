@@ -1,5 +1,5 @@
 function C = GB_spec_assign (C, Mask, accum, A, I, J, descriptor, scalar)
-%GB_SPEC_ASSIGN a MATLAB mimic of GrB_assign (but not Row or Col variants)
+%GB_SPEC_ASSIGN a mimic of GrB_assign (but not Row or Col variants)
 %
 % Usage:
 % C = GB_spec_assign (C, Mask, accum, A, I, J, descriptor, scalar)
@@ -16,8 +16,8 @@ function C = GB_spec_assign (C, Mask, accum, A, I, J, descriptor, scalar)
 % not affect any part of C outside that row or column.  Those two functions
 % have their own GB_spec_Row_assign.m and GB_spec_Col_assign.m functions.
 
-% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-% http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+% SPDX-License-Identifier: Apache-2.0
 
 %-------------------------------------------------------------------------------
 % get inputs
@@ -27,20 +27,21 @@ if (nargout > 1 || nargin ~= 8)
     error ('usage: C = GB_spec_assign (C, Mask, accum, A, I, J, descriptor, scalar)') ;
 end
 
-% Convert inputs to dense matrices with explicit patterns and classes,
+% Convert inputs to dense matrices with explicit patterns and types,
 % and with where X(~X.pattern)==identity for all matrices A, B, and C.
 C = GB_spec_matrix (C) ;
 A = GB_spec_matrix (A) ;
-Mask = GB_spec_getmask (Mask) ;
-[C_replace Mask_comp Atrans ignore] = GB_spec_descriptor (descriptor) ;
+[C_replace Mask_comp Atrans Btrans Mask_struct] = ...
+    GB_spec_descriptor (descriptor) ;
+Mask = GB_spec_getmask (Mask, Mask_struct) ;
 
 %-------------------------------------------------------------------------------
-% do the work via a clean MATLAB interpretation of the entire GraphBLAS spec
+% do the work via a clean *.m interpretation of the entire GraphBLAS spec
 %-------------------------------------------------------------------------------
 
 % apply the descriptor to A
 if (Atrans)
-    A.matrix = A.matrix' ;
+    A.matrix = A.matrix.' ;
     A.pattern = A.pattern' ;
 end
 
@@ -69,7 +70,7 @@ if (scalar)
     ni = length (I) ;
     nj = length (J) ;
     A.matrix  (1:ni, 1:nj) = A.matrix (1,1) ;
-    A.pattern (1:ni, 1:nj) = true ;
+    A.pattern (1:ni, 1:nj) = A.pattern (1,1) ;
 end
 
 %-------------------------------------------------------------------------------

@@ -1,18 +1,18 @@
-/* ========================================================================= */
-/* === CAMD_postorder ====================================================== */
-/* ========================================================================= */
+//------------------------------------------------------------------------------
+// CAMD/Source/camd_postorder: post-order the assembly tree from CAMD
+//------------------------------------------------------------------------------
 
-/* ------------------------------------------------------------------------- */
-/* CAMD, Copyright (c) Timothy A. Davis, Yanqing Chen,			     */
-/* Patrick R. Amestoy, and Iain S. Duff.  See ../README.txt for License.     */
-/* email: DrTimothyAldenDavis@gmail.com                                      */
-/* ------------------------------------------------------------------------- */
+// CAMD, Copyright (c) 2007-2022, Timothy A. Davis, Yanqing Chen, Patrick R.
+// Amestoy, and Iain S. Duff.  All Rights Reserved.
+// SPDX-License-Identifier: BSD-3-clause
+
+//------------------------------------------------------------------------------
 
 /* Perform a postordering (via depth-first search) of an assembly tree. */
 
 #include "camd_internal.h"
 
-GLOBAL Int CAMD_postorder
+Int CAMD_postorder
 (
     Int j,	    /* start at node j, a root of the assembly tree */
     Int k,	    /* on input, next node is the kth node */

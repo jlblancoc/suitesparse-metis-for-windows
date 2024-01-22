@@ -1,18 +1,18 @@
-/* ========================================================================= */
-/* === AMD_postorder ======================================================= */
-/* ========================================================================= */
+//------------------------------------------------------------------------------
+// AMD/Source/amd_postorder: post-order the assembly tree from AMD
+//------------------------------------------------------------------------------
 
-/* ------------------------------------------------------------------------- */
-/* AMD, Copyright (c) Timothy A. Davis,					     */
-/* Patrick R. Amestoy, and Iain S. Duff.  See ../README.txt for License.     */
-/* email: DrTimothyAldenDavis@gmail.com                                      */
-/* ------------------------------------------------------------------------- */
+// AMD, Copyright (c) 1996-2022, Timothy A. Davis, Patrick R. Amestoy, and
+// Iain S. Duff.  All Rights Reserved.
+// SPDX-License-Identifier: BSD-3-clause
+
+//------------------------------------------------------------------------------
 
 /* Perform a postordering (via depth-first search) of an assembly tree. */
 
 #include "amd_internal.h"
 
-GLOBAL void AMD_postorder
+void AMD_postorder
 (
     /* inputs, not modified on output: */
     Int nn,		/* nodes are in the range 0..nn-1 */

@@ -55,11 +55,6 @@ else()
     message(STATUS "Using user defined CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
 endif()
 
-# Fix GKlib path:
-if(NOT WIN32)
-  set(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/SuiteSparse/metis-5.1.0/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
-endif()
-
 # allow creating DLLs in Windows without touching the source code:
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.4.0" AND WIN32)
 	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -87,40 +82,16 @@ endif(MSVC)
 
 ## check if we can build metis
 set(BUILD_METIS_DEFAULT ON)
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse/metis-5.1.0/CMakeLists.txt")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse/CHOLMOD/SuiteSparse_metis/CMakeLists.txt")
 	set(BUILD_METIS_DEFAULT OFF)
 endif()
 
 set(WITH_CUDA OFF CACHE BOOL "Build with CUDA support")
 
 set(BUILD_METIS ${BUILD_METIS_DEFAULT} CACHE BOOL "Build METIS for partitioning?")
-set(METIS_DIR ${${PROJECT_NAME}_SOURCE_DIR}/SuiteSparse/metis-5.1.0 CACHE PATH "Source directory of METIS")
 
 if(BUILD_METIS)
-	## prepare the installation :
-	## using metis target here is not possible because this target is added in another branch of the CMake structure
-	## TRICK: need to dynamically modify the metis CMakeLists.txt file before it going to parsed...
-	## (very ugly/poor for a metis project get from SCM (git/svn/cvs) but it's works ;) and it doesn't matter if metis was get from .zip)
-	if(EXISTS "${METIS_DIR}/libmetis/CMakeLists.txt")
-		file(READ "${METIS_DIR}/libmetis/CMakeLists.txt" contentFile)
-		string(REGEX MATCH "EXPORT 	SuiteSparseTargets" alreadyModified ${contentFile}) ## use a string pattern to check if we have to do the modif
-		if(NOT alreadyModified)
-			file(APPEND "${METIS_DIR}/libmetis/CMakeLists.txt"
-			"
-				set_target_properties(metis PROPERTIES PUBLIC_HEADER \"\${CMAKE_CURRENT_BINARY_DIR}/../include/metis.h\")
-				install(TARGETS metis ## this line is also the string pattern to check if the modification had already done
-						EXPORT 	SuiteSparseTargets
-						RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-						LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-						ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-						PUBLIC_HEADER DESTINATION include
-				)
-			"
-			)
-		endif()
-	endif()
-  add_subdirectory("${METIS_DIR}" "metis") ## important part for building metis from its src files
-
+  set(METIS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SuiteSparse/CHOLMOD/SuiteSparse_metis")
   # extract METIS version string from metis.h header
   set(_METIS_VERSION_HEADER ${METIS_DIR}/include/metis.h)
   file(READ ${_METIS_VERSION_HEADER} _METIS_VERSION_CONTENTS)
@@ -320,15 +291,6 @@ else()
       message(FATAL_ERROR "lapack not found")
     endif()
   endif()
-endif()
-
-if(BUILD_METIS)
-	set(SuiteSparse_LINKER_METIS_LIBS "metis")
-	## namespaced library target for config
-	set(SuiteSparse_EXPORTED_METIS_LIBS "SuiteSparse::metis")
-else()
-	set(SuiteSparse_LINKER_METIS_LIBS "")
-	set(SuiteSparse_EXPORTED_METIS_LIBS "")
 endif()
 
 add_subdirectory(SuiteSparse)

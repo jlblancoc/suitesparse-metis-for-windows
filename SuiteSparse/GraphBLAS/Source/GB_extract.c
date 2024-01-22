@@ -2,22 +2,26 @@
 // GB_extract: C<M> = accum(C,A(I,J))
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 // Not user-callable.  Implements the user-callable GrB_*_extract functions.
 //
-// C<M> = accum (C, A (Rows,Cols)) or
-// C<M> = accum (C, AT(Rows,Cols)) where AT = A'
+//      C<M> = accum (C, A (Rows,Cols)) or
+//      C<M> = accum (C, AT(Rows,Cols)) where AT = A'
 //
 // equivalently:
 //
-// C<M> = accum (C, A(Rows,Cols) )
-// C<M> = accum (C, A(Cols,Rows)')
+//      C<M> = accum (C, A(Rows,Cols) )
+//      C<M> = accum (C, A(Cols,Rows)')
 
-#include "GB.h"
+#define GB_FREE_ALL GrB_Matrix_free (&T) ;
+
+#include "GB_extract.h"
+#include "GB_subref.h"
+#include "GB_accum_mask.h"
 
 GrB_Info GB_extract                 // C<M> = accum (C, A(I,J))
 (
@@ -25,6 +29,7 @@ GrB_Info GB_extract                 // C<M> = accum (C, A(I,J))
     const bool C_replace,           // C matrix descriptor
     const GrB_Matrix M,             // optional mask for C, unused if NULL
     const bool Mask_comp,           // mask descriptor
+    const bool Mask_struct,         // if true, use the only structure of M
     const GrB_BinaryOp accum,       // optional accum for Z=accum(C,T)
     const GrB_Matrix A,             // input matrix
     const bool A_transpose,         // A matrix descriptor
@@ -32,7 +37,7 @@ GrB_Info GB_extract                 // C<M> = accum (C, A(I,J))
     const GrB_Index nRows_in,       // number of row indices
     const GrB_Index *Cols,          // column indices
     const GrB_Index nCols_in,       // number of column indices
-    GB_Context Context
+    GB_Werk Werk
 )
 {
 
@@ -40,60 +45,63 @@ GrB_Info GB_extract                 // C<M> = accum (C, A(I,J))
     // check inputs
     //--------------------------------------------------------------------------
 
-    ASSERT (GB_ALIAS_OK2 (C, M, A)) ;
+    // C may be aliased with M and/or A
 
+    GrB_Info info ;
+    struct GB_Matrix_opaque T_header ;
+    GrB_Matrix T = NULL ;
     GB_RETURN_IF_NULL (Rows) ;
     GB_RETURN_IF_NULL (Cols) ;
-    GB_RETURN_IF_FAULTY (accum) ;
+    GB_RETURN_IF_FAULTY_OR_POSITIONAL (accum) ;
 
-    ASSERT_OK (GB_check (C, "C input for GB_Matrix_extract", GB0)) ;
-    ASSERT_OK_OR_NULL (GB_check (M, "M for GB_Matrix_extract", GB0)) ;
-    ASSERT_OK_OR_NULL (GB_check (accum, "accum for GB_Matrix_extract", GB0)) ;
-    ASSERT_OK (GB_check (A, "A input for GB_Matrix_extract", GB0)) ;
+    ASSERT_MATRIX_OK (C, "C input for GB_Matrix_extract", GB0) ;
+    ASSERT_MATRIX_OK_OR_NULL (M, "M for GB_Matrix_extract", GB0) ;
+    ASSERT_BINARYOP_OK_OR_NULL (accum, "accum for GB_Matrix_extract", GB0) ;
+    ASSERT_MATRIX_OK (A, "A input for GB_Matrix_extract", GB0) ;
 
     // check domains and dimensions for C<M> = accum (C,T)
-    GrB_Info info = GB_compatible (C->type, C, M, accum, A->type, Context) ;
-    if (info != GrB_SUCCESS)
-    { 
-        return (info) ;
-    }
+    GB_OK (GB_compatible (C->type, C, M, Mask_struct, accum, A->type,
+        Werk)) ;
 
     // check the dimensions of C
     int64_t cnrows = GB_NROWS (C) ;
     int64_t cncols = GB_NCOLS (C) ;
 
     int64_t nRows, nCols, RowColon [3], ColColon [3] ;
-    int RowsKind, ColsKind ;
+    int rkind, ckind ;
 
     if (!A_transpose)
     { 
         // T = A(Rows,Cols)
-        GB_ijlength (Rows, nRows_in, GB_NROWS (A), &nRows, &RowsKind, RowColon);
-        GB_ijlength (Cols, nCols_in, GB_NCOLS (A), &nCols, &ColsKind, ColColon);
+        GB_ijlength (Rows, nRows_in, GB_NROWS (A), &nRows, &rkind, RowColon) ;
+        GB_ijlength (Cols, nCols_in, GB_NCOLS (A), &nCols, &ckind, ColColon) ;
     }
     else
     { 
         // T = A(Cols,Rows)
-        GB_ijlength (Rows, nRows_in, GB_NCOLS (A), &nRows, &RowsKind, RowColon);
-        GB_ijlength (Cols, nCols_in, GB_NROWS (A), &nCols, &ColsKind, ColColon);
+        GB_ijlength (Rows, nRows_in, GB_NCOLS (A), &nRows, &rkind, RowColon) ;
+        GB_ijlength (Cols, nCols_in, GB_NROWS (A), &nCols, &ckind, ColColon) ;
     }
 
     if (cnrows != nRows || cncols != nCols)
     { 
-        return (GB_ERROR (GrB_DIMENSION_MISMATCH, (GB_LOG,
+        GB_ERROR (GrB_DIMENSION_MISMATCH,
             "Dimensions not compatible:\n"
-            "required size of output is "GBd"-by-"GBd"\n"
-            "but actual size output is  "GBd"-by-"GBd"\n",
-            nRows, nCols, cnrows, cncols))) ;
+            "required size of output is " GBd "-by-" GBd "\n"
+            "but actual size output is  " GBd "-by-" GBd "\n",
+            nRows, nCols, cnrows, cncols) ;
     }
 
     // quick return if an empty mask is complemented
-    GB_RETURN_IF_QUICK_MASK (C, C_replace, M, Mask_comp) ;
+    GB_RETURN_IF_QUICK_MASK (C, C_replace, M, Mask_comp, Mask_struct) ;
 
     // delete any lingering zombies and assemble any pending tuples
-    GB_WAIT (C) ;
-    GB_WAIT (M) ;
-    GB_WAIT (A) ;
+    GB_MATRIX_WAIT (M) ;        // cannot be jumbled
+    GB_MATRIX_WAIT (A) ;        // cannot be jumbled
+
+    GB_BURBLE_DENSE (C, "(C %s) ") ;
+    GB_BURBLE_DENSE (M, "(M %s) ") ;
+    GB_BURBLE_DENSE (A, "(A %s) ") ;
 
     //--------------------------------------------------------------------------
     // handle the CSR/CSC format and transpose; T = A (I,J) or T = A (J,I)
@@ -148,43 +156,22 @@ GrB_Info GB_extract                 // C<M> = accum (C, A(I,J))
 
     // T has the same hypersparsity as A.
 
-    // If T and C have different CRS/CSC formats, then GB_accum_mask must
-    // transpose T, and thus T can be returned from GB_subref_numeric with
-    // jumbled indices.  If T and C have the same CSR/CSC formats, then
-    // GB_subref_numeric must return T with sorted indices in each vector
-    // because GB_accum_mask will not transpose T.
-
-    // If T is a single column or a single row, it must be sorted, because the
-    // row/column transpose methods in GB_transpose do not do the sort.
-
-    bool must_sort = (T_is_csc == C->is_csc) || (cnrows == 1) || (cncols == 1) ;
-
     //--------------------------------------------------------------------------
     // T = A (I,J)
     //--------------------------------------------------------------------------
 
-    GrB_Matrix T ;
-    info = GB_subref_numeric (&T, T_is_csc, A, I, ni, J, nj, must_sort,
-        Context) ;
-    if (info != GrB_SUCCESS)
-    {
-        return (info) ;
-    }
+    // TODO::: iso:  if accum is PAIR, extract T as iso
 
-    if (must_sort)
-    { 
-        ASSERT_OK (GB_check (T, "T extracted", GB0)) ;
-    }
-    else
-    { 
-        ASSERT_OK_OR_JUMBLED (GB_check (T, "T extracted (jumbled OK)", GB0)) ;
-    }
+    GB_CLEAR_STATIC_HEADER (T, &T_header) ;
+    GB_OK (GB_subref (T, false, T_is_csc, A, I, ni, J, nj, false, Werk)) ;
+    ASSERT_MATRIX_OK (T, "T extracted", GB0) ;
+    ASSERT (GB_JUMBLED_OK (T)) ;
 
     //--------------------------------------------------------------------------
     // C<M> = accum (C,T): accumulate the results into C via the mask M
     //--------------------------------------------------------------------------
 
     return (GB_accum_mask (C, M, NULL, accum, &T, C_replace, Mask_comp,
-        Context)) ;
+        Mask_struct, Werk)) ;
 }
 

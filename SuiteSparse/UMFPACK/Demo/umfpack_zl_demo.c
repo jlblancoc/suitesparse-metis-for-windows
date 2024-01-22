@@ -1,13 +1,12 @@
-/* ========================================================================== */
-/* === umfpack_zl_demo ====================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Demo/umfpack_zl_demo: C demo for UMFPACK
+//------------------------------------------------------------------------------
 
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
 
-/* -------------------------------------------------------------------------- */
-/* UMFPACK Copyright (c) 2005-2012 by Timothy A. Davis,                       */
-/* http://www.suitesparse.com. All Rights Reserved.                           */
-/* See ../Doc/License.txt for License.                                        */
-/* -------------------------------------------------------------------------- */
+//------------------------------------------------------------------------------
+
 
 /*
   A demo of UMFPACK:   umfpack_zl_* version.
@@ -58,9 +57,9 @@
 /* triplet form of the matrix.  The triplets can be in any order. */
 /* -------------------------------------------------------------------------- */
 
-static SuiteSparse_long n = 5, nz = 12 ;
-static SuiteSparse_long Arow [ ] = { 0,  4,  1,  1,   2,   2,  0,  1,  2,  3,  4,  4} ;
-static SuiteSparse_long Acol [ ] = { 0,  4,  0,  2,   1,   2,  1,  4,  3,  2,  1,  2} ;
+static int64_t n = 5, nz = 12 ;
+static int64_t Arow [ ] = { 0,  4,  1,  1,   2,   2,  0,  1,  2,  3,  4,  4} ;
+static int64_t Acol [ ] = { 0,  4,  0,  2,   1,   2,  1,  4,  3,  2,  1,  2} ;
 static double Aval [ ] = {2., 1., 3., 4., -1., -3., 3., 6., 2., 1., 4., 2.} ;
 static double Avalz[ ] = {1., .4, .1, .2, -1., -.2, 0., 6., 3., 0., .3, .3} ;
 static double b [ ] = {8., 45., -3., 3., 19.}, x [5], r [5] ;
@@ -89,14 +88,14 @@ static void error
 
 static double resid
 (
-    SuiteSparse_long transpose,
-    SuiteSparse_long Ap [ ],
-    SuiteSparse_long Ai [ ],
+    int transpose,
+    int64_t Ap [ ],
+    int64_t Ai [ ],
     double Ax [ ]
     , double Az [ ]
 )
 {
-    SuiteSparse_long i, j, p ;
+    int64_t i, j, p ;
     double norm ;
 
     for (i = 0 ; i < n ; i++)
@@ -151,11 +150,11 @@ int main (int argc, char **argv)
     double Info [UMFPACK_INFO], Control [UMFPACK_CONTROL], *Ax, *Cx, *Lx, *Ux,
 	*W, t [2], *Dx, rnorm, *Rb, *y, *Rs ;
     double *Az, *Lz, *Uz, *Dz, *Cz, *Rbz, *yz ;
-    SuiteSparse_long *Ap, *Ai, *Cp, *Ci, row, col, p, lnz, unz, nr, nc, *Lp, *Li, *Ui, *Up,
+    int64_t *Ap, *Ai, *Cp, *Ci, row, col, p, lnz, unz, nr, nc, *Lp, *Li, *Ui, *Up,
 	*P, *Q, *Lj, i, j, k, anz, nfr, nchains, *Qinit, fnpiv, lnz1, unz1, nz1,
 	status, *Front_npivcol, *Front_parent, *Chain_start, *Wi, *Pinit, n1,
 	*Chain_maxrows, *Chain_maxcols, *Front_1strow, *Front_leftmostdesc,
-	nzud, do_recip ;
+	nzud, do_recip, *Dmap ;
     void *Symbolic, *Numeric ;
 
     /* ---------------------------------------------------------------------- */
@@ -196,8 +195,8 @@ int main (int argc, char **argv)
 
     /* convert to column form */
     nz1 = MAX (nz,1) ;	/* ensure arrays are not of size zero. */
-    Ap = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Ai = (SuiteSparse_long *) malloc (nz1 * sizeof (SuiteSparse_long)) ;
+    Ap = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Ai = (int64_t *) malloc (nz1 * sizeof (int64_t)) ;
     Ax = (double *) malloc (nz1 * sizeof (double)) ;
     Az = (double *) malloc (nz1 * sizeof (double)) ;
     if (!Ap || !Ai || !Ax || !Az)
@@ -206,7 +205,7 @@ int main (int argc, char **argv)
     }
 
     status = umfpack_zl_triplet_to_col (n, n, nz, Arow, Acol, Aval, Avalz,
-	Ap, Ai, Ax, Az, (SuiteSparse_long *) NULL) ;
+	Ap, Ai, Ax, Az, (int64_t *) NULL) ;
 
     if (status < 0)
     {
@@ -344,7 +343,7 @@ int main (int argc, char **argv)
     {
 	if (row == Ai [p])
 	{
-	    printf ("\nchanging A (%ld,%ld) to zero\n", row, col) ;
+	    printf ("\nchanging A (%"PRId64",%"PRId64") to zero\n", row, col) ;
 	    Ax [p] = 0.0 ;
 	    Az [p] = 0.0 ;
 	    break ;
@@ -404,7 +403,7 @@ int main (int argc, char **argv)
 	    row = Ai [p] ;
 	    printf ("changing ") ;
 	    /* complex: */ printf ("real part of ") ;
-	    printf ("A (%ld,%ld) from %g", row, col, Ax [p]) ;
+	    printf ("A (%"PRId64",%"PRId64") from %g", row, col, Ax [p]) ;
 	    Ax [p] = Ax [p] + col*10 - row ;
 	    printf (" to %g\n", Ax [p]) ;
 	}
@@ -479,8 +478,8 @@ int main (int argc, char **argv)
     /* C = transpose of A */
     /* ---------------------------------------------------------------------- */
 
-    Cp = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Ci = (SuiteSparse_long *) malloc (nz1 * sizeof (SuiteSparse_long)) ;
+    Cp = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Ci = (int64_t *) malloc (nz1 * sizeof (int64_t)) ;
     Cx = (double *) malloc (nz1 * sizeof (double)) ;
     Cz = (double *) malloc (nz1 * sizeof (double)) ;
     if (!Cp || !Ci || !Cx || !Cz)
@@ -488,7 +487,7 @@ int main (int argc, char **argv)
 	error ("out of memory") ;
     }
     status = umfpack_zl_transpose (n, n, Ap, Ai, Ax, Az,
-	(SuiteSparse_long *) NULL, (SuiteSparse_long *) NULL, Cp, Ci, Cx, Cz, TRUE) ;
+	(int64_t *) NULL, (int64_t *) NULL, Cp, Ci, Cx, Cz, TRUE) ;
     if (status < 0)
     {
 	umfpack_zl_report_status (Control, status) ;
@@ -518,17 +517,18 @@ int main (int argc, char **argv)
 
     printf ("\nGet the contents of the Symbolic object for C:\n") ;
     printf ("(compare with umfpack_zl_report_symbolic output, above)\n") ;
-    Pinit = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Qinit = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Front_npivcol = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Front_1strow = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Front_leftmostdesc = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Front_parent = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Chain_start = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Chain_maxrows = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Chain_maxcols = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
+    Pinit = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Qinit = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Front_npivcol = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Front_1strow = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Front_leftmostdesc = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Front_parent = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Chain_start = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Chain_maxrows = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Chain_maxcols = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Dmap = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
     if (!Pinit || !Qinit || !Front_npivcol || !Front_parent || !Chain_start ||
-	!Chain_maxrows || !Chain_maxcols || !Front_1strow ||
+	!Chain_maxrows || !Chain_maxcols || !Front_1strow || !Dmap ||
 	!Front_leftmostdesc)
     {
 	error ("out of memory") ;
@@ -537,29 +537,29 @@ int main (int argc, char **argv)
     status = umfpack_zl_get_symbolic (&nr, &nc, &n1, &anz, &nfr, &nchains,
 	Pinit, Qinit, Front_npivcol, Front_parent, Front_1strow,
 	Front_leftmostdesc, Chain_start, Chain_maxrows, Chain_maxcols,
-	Symbolic) ;
+	Dmap, Symbolic) ;
 
     if (status < 0)
     {
 	error ("symbolic factorization invalid") ;
     }
 
-    printf ("From the Symbolic object, C is of dimension %ld-by-%ld\n", nr, nc);
-    printf ("   with nz = %ld, number of fronts = %ld,\n", nz, nfr) ;
-    printf ("   number of frontal matrix chains = %ld\n", nchains) ;
+    printf ("From the Symbolic object, C is of dimension %"PRId64"-by-%"PRId64"\n", nr, nc);
+    printf ("   with nz = %"PRId64", number of fronts = %"PRId64",\n", nz, nfr) ;
+    printf ("   number of frontal matrix chains = %"PRId64"\n", nchains) ;
 
     printf ("\nPivot columns in each front, and parent of each front:\n") ;
     k = 0 ;
     for (i = 0 ; i < nfr ; i++)
     {
 	fnpiv = Front_npivcol [i] ;
-	printf ("    Front %ld: parent front: %ld number of pivot cols: %ld\n",
+	printf ("    Front %"PRId64": parent front: %"PRId64" number of pivot cols: %"PRId64"\n",
 		i, Front_parent [i], fnpiv) ;
 	for (j = 0 ; j < fnpiv ; j++)
 	{
 	    col = Qinit [k] ;
 	    printf (
-	    "        %ld-th pivot column is column %ld in original matrix\n",
+	    "        %"PRId64"-th pivot column is column %"PRId64" in original matrix\n",
 		k, col) ;
 	    k++ ;
 	}
@@ -569,16 +569,72 @@ int main (int argc, char **argv)
     printf ("in the numeric factorization below.  The assignment of pivot\n") ;
     printf ("columns to frontal matrices will always remain unchanged.\n") ;
 
-    printf ("\nTotal number of pivot columns in frontal matrices: %ld\n", k) ;
+    printf ("\nTotal number of pivot columns in frontal matrices: %"PRId64"\n", k) ;
 
     printf ("\nFrontal matrix chains:\n") ;
     for (j = 0 ; j < nchains ; j++)
     {
-	printf ("   Frontal matrices %ld to %ld are factorized in a single\n",
+	printf ("   Frontal matrices %"PRId64" to %"PRId64" are factorized in a single\n",
 	    Chain_start [j], Chain_start [j+1] - 1) ;
-	printf ("        working array of size %ld-by-%ld\n",
+	printf ("        working array of size %"PRId64"-by-%"PRId64"\n",
 	    Chain_maxrows [j], Chain_maxcols [j]) ;
     }
+
+    //--------------------------------------------------------------------------
+    // copy the Symbolic object
+    //--------------------------------------------------------------------------
+
+    void *Symbolic_copy = NULL ;
+    printf ("\nCopying symbolic object:\n") ;
+    status = umfpack_zl_copy_symbolic (&Symbolic_copy, Symbolic) ;
+    if (status < 0)
+    {
+	umfpack_zl_report_status (Control, status) ;
+	error ("umfpack_zl_copy_symbolic failed") ;
+    }
+    printf ("\nSymbolic factorization of C (copy): ") ;
+    (void) umfpack_zl_report_symbolic (Symbolic_copy, Control) ;
+    umfpack_zl_free_symbolic (&Symbolic) ;
+    Symbolic = Symbolic_copy ;
+    printf ("\nDone copying symbolic object\n") ;
+
+    //--------------------------------------------------------------------------
+    // serialize/deserialize the Symbolic object
+    //--------------------------------------------------------------------------
+
+    // determine the required blobsize
+    int64_t S_blobsize ;
+    status = umfpack_zl_serialize_symbolic_size (&S_blobsize, Symbolic) ;
+    if (status < 0)
+    {
+	umfpack_zl_report_status (Control, status) ;
+	error ("umfpack_zl_serialize_symbolic_size failed") ;
+    }
+    printf ("\nSymbolic blob size: %"PRId64"\n", S_blobsize) ;
+    // allocate the blob
+    void *S_blob = malloc (S_blobsize) ;
+    if (!S_blob)
+    {
+	error ("out of memory") ;
+    }
+    // serialize the blob
+    status = umfpack_zl_serialize_symbolic (S_blob, S_blobsize, Symbolic) ;
+    if (status < 0)
+    {
+	umfpack_zl_report_status (Control, status) ;
+	error ("umfpack_zl_serialize_symbolic failed") ;
+    }
+    // free the Symbolic object; its contents are preserved in the blob
+    umfpack_zl_free_symbolic (&Symbolic) ;
+    // deserialize the blob back into the Symbolic object
+    status = umfpack_zl_deserialize_symbolic (&Symbolic, S_blob, S_blobsize) ;
+    if (status < 0)
+    {
+	umfpack_zl_report_status (Control, status) ;
+	error ("umfpack_zl_deserialize_symbolic failed") ;
+    }
+    printf ("\nDone serialize/deserialize of symbolic object\n") ;
+    free (S_blob) ;
 
     /* ---------------------------------------------------------------------- */
     /* numeric factorization of C */
@@ -604,16 +660,16 @@ int main (int argc, char **argv)
     /* ensure arrays are not of zero size */
     lnz1 = MAX (lnz,1) ;
     unz1 = MAX (unz,1) ;
-    Lp = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Lj = (SuiteSparse_long *) malloc (lnz1 * sizeof (SuiteSparse_long)) ;
+    Lp = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Lj = (int64_t *) malloc (lnz1 * sizeof (int64_t)) ;
     Lx = (double *) malloc (lnz1 * sizeof (double)) ;
     Lz = (double *) malloc (lnz1 * sizeof (double)) ;
-    Up = (SuiteSparse_long *) malloc ((n+1) * sizeof (SuiteSparse_long)) ;
-    Ui = (SuiteSparse_long *) malloc (unz1 * sizeof (SuiteSparse_long)) ;
+    Up = (int64_t *) malloc ((n+1) * sizeof (int64_t)) ;
+    Ui = (int64_t *) malloc (unz1 * sizeof (int64_t)) ;
     Ux = (double *) malloc (unz1 * sizeof (double)) ;
     Uz = (double *) malloc (unz1 * sizeof (double)) ;
-    P = (SuiteSparse_long *) malloc (n * sizeof (SuiteSparse_long)) ;
-    Q = (SuiteSparse_long *) malloc (n * sizeof (SuiteSparse_long)) ;
+    P = (int64_t *) malloc (n * sizeof (int64_t)) ;
+    Q = (int64_t *) malloc (n * sizeof (int64_t)) ;
     Dx = (double *) NULL ;	/* D vector not requested */
     Dz = (double *) NULL ;
     Rs  = (double *) malloc (n * sizeof (double)) ;
@@ -645,7 +701,7 @@ int main (int argc, char **argv)
     {
 	printf ("divided by the ith scale factor\n") ;
     }
-    for (i = 0 ; i < n ; i++) printf ("%ld: %g\n", i, Rs [i]) ;
+    for (i = 0 ; i < n ; i++) printf ("%"PRId64": %g\n", i, Rs [i]) ;
 
     /* ---------------------------------------------------------------------- */
     /* convert L to triplet form and print it */
@@ -655,7 +711,7 @@ int main (int argc, char **argv)
     /* by umfpack_zl_col_to_triplet. */
 
     printf ("\nConverting L to triplet form, and printing it:\n") ;
-    Li = (SuiteSparse_long *) malloc (lnz1 * sizeof (SuiteSparse_long)) ;
+    Li = (int64_t *) malloc (lnz1 * sizeof (int64_t)) ;
     if (!Li)
     {
 	error ("out of memory") ;
@@ -707,12 +763,86 @@ int main (int argc, char **argv)
     rnorm = resid (TRUE, Cp, Ci, Cx, Cz) ;
     printf ("maxnorm of residual: %g\n\n", rnorm) ;
 
+    //--------------------------------------------------------------------------
+    // copy the Numeric object
+    //--------------------------------------------------------------------------
+
+    void *Numeric_copy = NULL ;
+    printf ("\nCopying numeric object:\n") ;
+    status = umfpack_zl_copy_numeric (&Numeric_copy, Numeric) ;
+    if (status < 0)
+    {
+	umfpack_zl_report_status (Control, status) ;
+	error ("umfpack_zl_copy_numeric failed") ;
+    }
+    printf ("\nNumeric factorization of C (copy): ") ;
+    (void) umfpack_zl_report_numeric (Numeric_copy, Control) ;
+    umfpack_zl_free_numeric (&Numeric) ;
+    Numeric = Numeric_copy ;
+    Numeric_copy = NULL ;
+    printf ("\nDone copying numeric object\n") ;
+
+    //--------------------------------------------------------------------------
+    // serialize/deserialize the Numeric object
+    //--------------------------------------------------------------------------
+
+    // determine the required blobsize
+    int64_t N_blobsize ;
+    status = umfpack_zl_serialize_numeric_size (&N_blobsize, Numeric) ;
+    if (status < 0)
+    {
+	umfpack_zl_report_status (Control, status) ;
+	error ("umfpack_zl_serialize_numeric_size failed") ;
+    }
+    printf ("\nNumeric blob size: %"PRId64"\n", N_blobsize) ;
+    // allocate the blob
+    void *N_blob = malloc (N_blobsize) ;
+    if (!N_blob)
+    {
+	error ("out of memory") ;
+    }
+    // serialize the blob
+    status = umfpack_zl_serialize_numeric (N_blob, N_blobsize, Numeric) ;
+    if (status < 0)
+    {
+	umfpack_zl_report_status (Control, status) ;
+	error ("umfpack_zl_serialize_numeric failed") ;
+    }
+    // free the Numeric object; its contents are preserved in the blob
+    umfpack_zl_free_numeric (&Numeric) ;
+    // deserialize the blob back into the Numeric object
+    status = umfpack_zl_deserialize_numeric (&Numeric, N_blob, N_blobsize) ;
+    if (status < 0)
+    {
+	umfpack_zl_report_status (Control, status) ;
+	error ("umfpack_zl_deserialize_numeric failed") ;
+    }
+    printf ("\nDone serialize/deserialize of numeric object\n") ;
+    free (N_blob) ;
+
+    //--------------------------------------------------------------------------
+    // solve C'x=b again, with the new copy
+    //--------------------------------------------------------------------------
+
+    status = umfpack_zl_solve (UMFPACK_At, Cp, Ci, Cx, Cz, x, xz, b, bz,
+	Numeric, Control, Info) ;
+    umfpack_zl_report_info (Control, Info) ;
+    if (status < 0)
+    {
+	umfpack_zl_report_status (Control, status) ;
+	error ("umfpack_zl_solve failed") ;
+    }
+    printf ("\nx (solution of C'x=b): (using the copy) ") ;
+    (void) umfpack_zl_report_vector (n, x, xz, Control) ;
+    rnorm = resid (TRUE, Cp, Ci, Cx, Cz) ;
+    printf ("maxnorm of residual: %g\n\n", rnorm) ;
+
     /* ---------------------------------------------------------------------- */
     /* solve C'x=b again, using umfpack_zl_wsolve instead */
     /* ---------------------------------------------------------------------- */
 
     printf ("\nSolving C'x=b again, using umfpack_zl_wsolve instead:\n") ;
-    Wi = (SuiteSparse_long *) malloc (n * sizeof (SuiteSparse_long)) ;
+    Wi = (int64_t *) malloc (n * sizeof (int64_t)) ;
     W = (double *) malloc (10*n * sizeof (double)) ;
     if (!Wi || !W)
     {
@@ -760,6 +890,7 @@ int main (int argc, char **argv)
     free (Chain_start) ;
     free (Chain_maxrows) ;
     free (Chain_maxcols) ;
+    free (Dmap) ;
 
     free (Lp) ;
     free (Lj) ;
@@ -778,6 +909,7 @@ int main (int argc, char **argv)
 
     free (Wi) ;
     free (W) ;
+    free (Rs) ;
 
     umfpack_zl_free_symbolic (&Symbolic) ;
     umfpack_zl_free_numeric (&Numeric) ;

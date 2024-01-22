@@ -1,31 +1,24 @@
-function cholmod_install (metis_path)
+function cholmod_install
 %CHOLMOD_INSTALL compile and install CHOLMOD, AMD, COLAMD, CCOLAMD, CAMD
 %
 % Example:
 %   cholmod_install                 % compiles using METIS
-%   cholmod_install ('/my/metis')   % using non-default path to METIS
-%   cholmod_install ('no metis')    % do not use METIS at all
 %
 % CHOLMOD relies on AMD and COLAMD, for its ordering options, and can
-% optionally use CCOLAMD, CAMD, and METIS as well.  By default, CCOLAMD, CAMD,
-% and METIS are used.
-%
-% See http://www-users.cs.umn.edu/~karypis/metis for a copy of METIS 4.0.1.
+% optionally use CCOLAMD, CAMD, and METIS as well.  By default, CCOLAMD,
+% CAMD, and METIS are used.
 %
 % You can only use cholmod_install while in the CHOLMOD/MATLAB directory.
 %
-% See also analyze, bisect, chol2, cholmod2, etree2, lchol, ldlchol, ldlsolve,
-%   ldlupdate, metis, spsym, nesdis, septree, resymbol, sdmult, sparse2,
-%   symbfact2, mread, mwrite, amd2, colamd2, camd, ccolamd, ldlrowmod
+% See also analyze, bisect, chol2, cholmod2, etree2, lchol, ldlchol,
+%   ldlsolve, ldlupdate, metis, spsym, nesdis, septree, resymbol, sdmult,
+%   symbfact2, mread, mwrite, amd2, colamd2, camd, ccolamd, ldlrowmod.
 
-%   Copyright 2006-2015, Timothy A. Davis
-
-if (nargin < 1)
-    metis_path = '../../metis-5.1.0' ;
-end
+% Copyright 2006-2023, Timothy A. Davis, All Rights Reserved.
+% SPDX-License-Identifier: GPL-2.0+
 
 % compile CHOLMOD and add to the path
-cholmod_make (metis_path) ;
+cholmod_make ;
 cholmod_path = pwd ;
 addpath (cholmod_path)
 

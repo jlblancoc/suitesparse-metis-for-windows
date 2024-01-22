@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_dump ============================================================= */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_dump.c: debug routines for UMFPACK
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /* These routines, and external variables, are used only when debugging. */
 /* If debugging is disabled (for normal operation) then this entire file */
@@ -17,9 +17,9 @@
 
 /* These global debugging variables and arrays do not exist if debugging */
 /* is disabled at compile time (which is the default). */
-GLOBAL Int UMF_debug = -999 ;
-GLOBAL Int UMF_allocfail = FALSE ;
-GLOBAL double UMF_gprob = -1.0 ;
+Int UMF_debug = -999 ;
+Int UMF_allocfail = FALSE ;
+double UMF_gprob = -1.0 ;
 
 /* static debugging arrays used only in UMF_dump_rowcol */
 PRIVATE Int UMF_DBflag = 0 ;
@@ -60,7 +60,7 @@ PRIVATE void UMF_DBinit
 /* === UMF_dump_dense ======================================================= */
 /* ========================================================================== */
 
-GLOBAL void UMF_dump_dense
+void UMF_dump_dense
 (
     Entry *C,
     Int dim,
@@ -112,7 +112,7 @@ GLOBAL void UMF_dump_dense
 /* === UMF_dump_element ===================================================== */
 /* ========================================================================== */
 
-GLOBAL void UMF_dump_element
+void UMF_dump_element
 (
     NumericType *Numeric,
     WorkType *Work,
@@ -233,7 +233,7 @@ GLOBAL void UMF_dump_element
 /* dump a row or a column, from one or more memory spaces */
 /* return exact degree */
 
-GLOBAL void UMF_dump_rowcol
+void UMF_dump_rowcol
 (
     Int dumpwhich,		/* 0 for row, 1 for column */
     NumericType *Numeric,
@@ -459,7 +459,7 @@ GLOBAL void UMF_dump_rowcol
 /* === UMF_dump_matrix ====================================================== */
 /* ========================================================================== */
 
-GLOBAL void UMF_dump_matrix
+void UMF_dump_matrix
 (
     NumericType *Numeric,
     WorkType *Work,
@@ -540,7 +540,7 @@ GLOBAL void UMF_dump_matrix
 /* === UMF_dump_current_front =============================================== */
 /* ========================================================================== */
 
-GLOBAL void UMF_dump_current_front
+void UMF_dump_current_front
 (
     NumericType *Numeric,
     WorkType *Work,
@@ -629,7 +629,7 @@ GLOBAL void UMF_dump_current_front
 /* === UMF_dump_lu ========================================================== */
 /* ========================================================================== */
 
-GLOBAL void UMF_dump_lu
+void UMF_dump_lu
 (
     NumericType *Numeric
 )
@@ -690,7 +690,7 @@ GLOBAL void UMF_dump_lu
 /* === UMF_dump_memory ====================================================== */
 /* ========================================================================== */
 
-GLOBAL void UMF_dump_memory
+void UMF_dump_memory
 (
     NumericType *Numeric
 )
@@ -713,7 +713,7 @@ GLOBAL void UMF_dump_memory
 	return ;
     }
 
-    DEBUG6 (("S: "ID"\n", (Int) Numeric)) ;
+    DEBUG6 (("S: %p\n", Numeric)) ;
     DEBUG6 (("S->ihead           : "ID"\n", Numeric->ihead)) ;
     DEBUG6 (("S->itail           : "ID"\n", Numeric->itail)) ;
     DEBUG6 (("S->size            : "ID"\n", Numeric->size)) ;
@@ -787,7 +787,7 @@ GLOBAL void UMF_dump_memory
 /* === UMF_dump_packed_memory =============================================== */
 /* ========================================================================== */
 
-GLOBAL void UMF_dump_packed_memory
+void UMF_dump_packed_memory
 (
     NumericType *Numeric,
     WorkType *Work
@@ -810,7 +810,7 @@ GLOBAL void UMF_dump_packed_memory
 	DEBUG6 (("No memory space S allocated\n")) ;
 	return ;
     }
-    DEBUG6 (("S: "ID"\n", (Int) Numeric)) ;
+    DEBUG6 (("S: %p\n", Numeric)) ;
     DEBUG6 (("S->ihead           : "ID"\n", Numeric->ihead)) ;
     DEBUG6 (("S->itail           : "ID"\n", Numeric->itail)) ;
     DEBUG6 (("S->size            : "ID"\n", Numeric->size)) ;
@@ -922,7 +922,7 @@ GLOBAL void UMF_dump_packed_memory
 
 /* This code is the same for real or complex matrices. */
 
-GLOBAL void UMF_dump_col_matrix
+void UMF_dump_col_matrix
 (
     const double Ax [ ],	/* Ax [0..nz-1]: real values, in column order */
 #ifdef COMPLEX
@@ -990,7 +990,7 @@ GLOBAL void UMF_dump_col_matrix
 /* === UMF_dump_chain ======================================================= */
 /* ========================================================================== */
 
-GLOBAL void UMF_dump_chain
+void UMF_dump_chain
 (
     Int frontid,
     Int Front_parent [ ],
@@ -1040,7 +1040,7 @@ GLOBAL void UMF_dump_chain
 /* === UMF_dump_start ======================================================= */
 /* ========================================================================== */
 
-GLOBAL void UMF_dump_start
+void UMF_dump_start
 (
     void
 )
@@ -1086,14 +1086,14 @@ GLOBAL void UMF_dump_start
     DEBUG2 (("sizeof: (bytes / int / Units) \n")) ;
     DEBUG2 (("sizeof (Int)           %u %u %u\n",
     sizeof (Int), sizeof (Int) / sizeof (int), UNITS (Int, 1) )) ;
-    DEBUG2 (("sizeof (int)           %u %u %u\n",
-    sizeof (int), sizeof (int) / sizeof (int), UNITS (int, 1) )) ;
+    DEBUG2 (("sizeof (int32_t)       %u %u %u\n",
+    sizeof (int32_t), sizeof (int32_t) / sizeof (int), UNITS (int32_t, 1) )) ;
     DEBUG2 (("sizeof (size_t)        %u %u %u\n",
-    sizeof (size_t), sizeof (size_t) / sizeof (size_t), UNITS (size_t, 1) )) ;
-    DEBUG2 (("sizeof (SuiteSparse_long)       %u %u %u\n",
-    sizeof (SuiteSparse_long),
-    sizeof (SuiteSparse_long) / sizeof (SuiteSparse_long),
-    UNITS (SuiteSparse_long, 1)));
+    sizeof (size_t), sizeof (size_t) / sizeof (int), UNITS (size_t, 1) )) ;
+    DEBUG2 (("sizeof (int64_t)       %u %u %u\n",
+    sizeof (int64_t),
+    sizeof (int64_t) / sizeof (int),
+    UNITS (int64_t, 1)));
     DEBUG2 (("sizeof (double)        %u %u %u\n",
     sizeof (double), sizeof (double) / sizeof (int), UNITS (double, 1) )) ;
     DEBUG2 (("sizeof (Unit)          %u %u %u\n",
@@ -1126,7 +1126,7 @@ GLOBAL void UMF_dump_start
 /* === UMF_dump_rowmerge ==================================================== */
 /* ========================================================================== */
 
-GLOBAL void UMF_dump_rowmerge
+void UMF_dump_rowmerge
 (
     NumericType *Numeric,
     SymbolicType *Symbolic,
@@ -1181,7 +1181,7 @@ GLOBAL void UMF_dump_rowmerge
 /* === UMF_dump_diagonal_map ================================================ */
 /* ========================================================================== */
 
-GLOBAL void UMF_dump_diagonal_map
+void UMF_dump_diagonal_map
 (
     Int Diagonal_map [ ],
     Int Diagonal_imap [ ],

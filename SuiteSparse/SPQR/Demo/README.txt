@@ -21,8 +21,8 @@ qrdemo.m            MATLAB equivalent of qrdemo.cpp.  To compare with the C++
 
 --------------------------------------------------------------------------------
 
-qrdemoc.c           C demo program, compile and test it with "make cdemo"
-qrdemoc_out.txt     output of "make cdemo"
+qrdemoc.c           C demo program, compile and test it with "make demos"
+qrdemoc_out.txt     output of "make demos"
 
 --------------------------------------------------------------------------------
 
@@ -35,4 +35,5 @@ qrdemo_gpu.out      output of qrdemo_gpu.cpp
 
 --------------------------------------------------------------------------------
 
-Timothy A. Davis, http://www.suitesparse.com
+SPQR, Copyright (c) 2008-2022, Timothy A Davis. All Rights Reserved.
+SPDX-License-Identifier: GPL-2.0+

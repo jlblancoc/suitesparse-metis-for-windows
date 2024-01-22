@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_is_permutation =================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_is_permutation: check if list of integers is a permutation
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /* Return TRUE if P is a r-permutation vector, FALSE otherwise */
 /* P [0..r-1] must be an r-permutation of 0..n-1 */
@@ -13,7 +13,7 @@
 #include "umf_internal.h"
 #include "umf_is_permutation.h"
 
-GLOBAL Int UMF_is_permutation
+Int UMF_is_permutation
 (
     const Int P [ ],	/* permutation of size r */
     Int W [ ],		/* workspace of size n */

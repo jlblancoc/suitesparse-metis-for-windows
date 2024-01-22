@@ -1,6 +1,0 @@
-	$(C) -c ../Source/btf_order.c -o btf_order.o
-	$(C) -c ../Source/btf_maxtrans.c -o btf_maxtrans.o
-	$(C) -c ../Source/btf_strongcomp.c -o btf_strongcomp.o
-	$(C) -DDLONG -c ../Source/btf_order.c -o btf_l_order.o
-	$(C) -DDLONG -c ../Source/btf_maxtrans.c -o btf_l_maxtrans.o
-	$(C) -DDLONG -c ../Source/btf_strongcomp.c -o btf_l_strongcomp.o

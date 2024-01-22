@@ -2,6 +2,9 @@
 // === sfmult.h ================================================================
 // =============================================================================
 
+// SFMULT, Copyright (c) 2009, Timothy A Davis. All Rights Reserved.
+// SPDX-License-Identifier: BSD-3-clause
+
 #ifndef _SFMULT_H
 #define _SFMULT_H
 
@@ -11,14 +14,15 @@
 // matrix functions used internally in MATLAB, these functions will NOT work
 // with mwIndex.
 
-#define Int mwSignedIndex
+#include <stdint.h>
+#define Int int64_t
 
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 
 #define MXFREE(a) { \
-    double *ptr ; \
-    ptr = (a) ; \
+    void *ptr ; \
+    ptr = (void *) (a) ; \
     if (ptr != NULL) mxFree (ptr) ; \
 }
 

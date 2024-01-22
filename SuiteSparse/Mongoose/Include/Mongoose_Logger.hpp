@@ -3,10 +3,11 @@
 /* ========================================================================== */
 
 /* -----------------------------------------------------------------------------
- * Mongoose Graph Partitioning Library  Copyright (C) 2017-2018,
+ * Mongoose Graph Partitioning Library, Copyright (C) 2017-2023,
  * Scott P. Kolodziej, Nuri S. Yeralan, Timothy A. Davis, William W. Hager
  * Mongoose is licensed under Version 3 of the GNU General Public License.
  * Mongoose is also available under other licenses; contact authors for details.
+ * SPDX-License-Identifier: GPL-3.0-only
  * -------------------------------------------------------------------------- */
 
 /**
@@ -24,7 +25,14 @@
 
 #include <iostream>
 #include <string>
-#include <time.h>
+#include <SuiteSparse_config.h>
+
+#if !defined (SUITESPARSE_VERSION) || \
+    (SUITESPARSE_VERSION < SUITESPARSE_VER_CODE(7,4))
+#error "Mongoose requires SuiteSparse_config 7.4.0 or later"
+#endif
+
+#include "Mongoose_Internal.hpp"
 
 // Default Logging Levels
 #ifndef LOG_ERROR
@@ -95,10 +103,10 @@ typedef enum TimingType
 class Logger
 {
 private:
-    static int debugLevel;
-    static bool timingOn;
-    static clock_t clocks[6];
-    static float times[6];
+    MONGOOSE_API static int debugLevel;
+    MONGOOSE_API static bool timingOn;
+    MONGOOSE_API static double clocks[6];
+    MONGOOSE_API static float times[6];
 
 public:
     static inline void tic(TimingType timingType);
@@ -128,7 +136,7 @@ inline void Logger::tic(TimingType timingType)
 {
     if (timingOn)
     {
-        clocks[timingType] = clock();
+        clocks[timingType] = SUITESPARSE_TIME;
     }
 }
 
@@ -151,7 +159,7 @@ inline void Logger::toc(TimingType timingType)
     if (timingOn)
     {
         times[timingType]
-            += ((float)(clock() - clocks[timingType])) / CLOCKS_PER_SEC;
+            += (float) (SUITESPARSE_TIME - clocks[timingType]) ;
     }
 }
 

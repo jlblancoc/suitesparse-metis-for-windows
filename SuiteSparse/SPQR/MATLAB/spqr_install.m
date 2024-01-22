@@ -1,31 +1,27 @@
-function spqr_install (tbb)
+function spqr_install
 %SPQR_INSTALL compile and install SuiteSparseQR
 %
 % Example:
-%   spqr_install                        % compiles using METIS, no TBB
-%   spqr_install ('tbb')                % compiles with TBB
+%   spqr_install                        % compiles using METIS
 %
 % SuiteSparseQR relies on CHOLMOD, AMD, and COLAMD, and can optionally use
 % CCOLAMD, CAMD, and METIS as well.  By default, CCOLAMD, CAMD, and METIS are
-% used.  METIS is assumed to be in the ../../metis-5.1.0 directory.  If not
-% present there, it is not used.
+% used.  METIS is assumed to be in the ../../CHOLMOD/SuiteSparse_metis
+% directory.  If not present there, it is not used.
 %
 % You can only use spqr_install while in the SuiteSparseQR/MATLAB directory.
 %
-% Multithreading based on Intel Threading Building Blocks (TBB) is optionally
-% used. It is not enabled by default since it conflicts with multithreading in
-% the BLAS.
-%
 % See also spqr, spqr_solve, spqr_qmult.
 
-% Copyright 2008, Timothy A. Davis, http://www.suitesparse.com
+% SPQR, Copyright (c) 2008-2022, Timothy A Davis. All Rights Reserved.
+% SPDX-License-Identifier: GPL-2.0+
 
 if (nargin < 1)
     tbb = 0 ;
 end
 
 % compile SuiteSparseQR and add to the path
-spqr_make (tbb) ;
+spqr_make ;
 spqr_path = pwd ;
 addpath (spqr_path)
 

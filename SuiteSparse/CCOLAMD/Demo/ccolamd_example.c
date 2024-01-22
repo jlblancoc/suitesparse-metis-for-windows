@@ -1,11 +1,12 @@
-/* ========================================================================== */
-/* === ccolamd and csymamd example ========================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// CCOLAMD/Demo/ccolamd_example: simple example for CCOLAMD
+//------------------------------------------------------------------------------
 
-/* ----------------------------------------------------------------------------
- * CCOLAMD Copyright (C), Univ. of Florida.  Authors: Timothy A. Davis,
- * Sivasankaran Rajamanickam, and Stefan Larimore
- * -------------------------------------------------------------------------- */
+// CCOLAMD, Copyright (c) 2005-2022, Univ. of Florida, All Rights Reserved.
+// Authors: Timothy A. Davis, Sivasankaran Rajamanickam, and Stefan Larimore.
+// SPDX-License-Identifier: BSD-3-clause
+
+//------------------------------------------------------------------------------
 
 /*
  *  ccolamd example of use, to order the columns of a 5-by-4 matrix with
@@ -97,6 +98,21 @@ int main (void)
     int stats [CCOLAMD_STATS] ;	/* for ccolamd and csymamd output statistics */
 
     int row, col, pp, length, ok ;
+
+    //--------------------------------------------------------------------------
+    // ccolamd version
+    //--------------------------------------------------------------------------
+
+    int version [3] ;
+    ccolamd_version (version) ;
+    printf ("CCOLAMD v%d.%d.%d\n", version [0], version [1], version [2]) ;
+    if ((version [0] != CCOLAMD_MAIN_VERSION) ||
+        (version [1] != CCOLAMD_SUB_VERSION) ||
+        (version [2] != CCOLAMD_SUBSUB_VERSION))
+    {
+        fprintf (stderr, "version in header does not match library\n") ;
+        abort ( ) ;
+    }
 
     /* ====================================================================== */
     /* dump the input matrix A */

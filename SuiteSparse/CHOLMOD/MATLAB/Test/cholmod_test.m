@@ -4,7 +4,8 @@ function cholmod_test (nmat, do_diary)
 % Example:
 % cholmod_test(nmat,do_diary)
 %
-% The UFget interface to the UF sparse matrix collection is required.
+% The ssget interface to the SuiteSparse matrix collection is required.
+% See sparse.tamu.edu.
 %
 % nmat is optional.  If present, it is the # of matrices used in
 %   tests 0, 8, 10, 11, 12, and 12.  tests 14 and 15 use 2*nmat matrices.
@@ -15,13 +16,7 @@ function cholmod_test (nmat, do_diary)
 % cholmod_demo: run tests on a few random matrices
 % graph_demo: graph partitioning demo
 % test0:  test most CHOLMOD functions
-% test1:  test sparse2
-% test2:  test sparse2
-% test3:  test sparse on int8, int16, and logical
 % test4:  test cholmod2 with multiple and sparse right-hand-sides
-% test5:  test sparse2
-% test6:  test sparse with large matrix, both real and complex, compare w/MATLAB
-% test7:  test sparse2
 % test8:  order many sparse matrices, test symbfact2, compare amd and metis
 % test9:  test metis, etree, bisect, nesdis
 % test10: test cholmod2's backslash on real and complex matrices
@@ -45,12 +40,13 @@ function cholmod_test (nmat, do_diary)
 % ltest:  test lxbpattern
 % lxtest: test lsubsolve
 %
-% See also test0, test1, ... test28.
+% See also test0, ... test28.
 
 % This extensive test is not included:
 % test28: test nesdis
 
-% Copyright 2006-2007, Timothy A. Davis, http://www.suitesparse.com
+% Copyright 2006-2023, Timothy A. Davis, All Rights Reserved.
+% SPDX-License-Identifier: GPL-2.0+
 
 if (nargin < 2)
     do_diary = 0 ;
@@ -66,6 +62,7 @@ end
 
 fprintf ('Running CHOLMOD tests.\n') ;
 help cholmod_test
+mex -O -R2018a GB_spones_mex.c
 
 test_path = pwd ;
 % addpath (test_path) ;
@@ -118,13 +115,7 @@ try
     end
     waitbar ( 2/tt, h, 'CHOLMOD test0') ;
     test0 (nmat)                    ; waitbar ( 3/tt, h, 'CHOLMOD test1') ;
-    test1                           ; waitbar ( 4/tt, h, 'CHOLMOD test2') ;
-    test2                           ; waitbar ( 5/tt, h, 'CHOLMOD test3') ;
-    test3                           ; waitbar ( 6/tt, h, 'CHOLMOD test4') ;
     test4                           ; waitbar ( 7/tt, h, 'CHOLMOD test5') ;
-    test5                           ; waitbar ( 8/tt, h, 'CHOLMOD test6') ;
-    test6                           ; waitbar ( 9/tt, h, 'CHOLMOD test7') ;
-    test7                           ; waitbar (10/tt, h, 'CHOLMOD test8') ;
 
     if (do_metis)
         % these tests require METIS

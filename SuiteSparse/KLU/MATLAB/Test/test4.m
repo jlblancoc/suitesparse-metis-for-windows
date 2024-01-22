@@ -4,7 +4,9 @@ function test4 (nmat)
 %   test4
 % See also klu
 
-% Copyright 2004-2012, University of Florida
+% KLU, Copyright (c) 2004-2022, University of Florida.  All Rights Reserved.
+% Authors: Timothy A. Davis and Ekanathan Palamadai.
+% SPDX-License-Identifier: LGPL-2.1+
 
 % rand ('state', 0) ;
 % warning ('off', 'MATLAB:singularMatrix') ;
@@ -12,7 +14,7 @@ function test4 (nmat)
 % warning ('off', 'KLU:rcond') ;
 % warning ('off', 'MATLAB:Axes:NegativeDataInLogAxis') ;
 
-index = UFget ;
+index = ssget ;
 f = find (index.nrows == index.ncols & index.isReal & index.amd_lnz > 0) ;
 [ignore i] = sort (index.amd_lnz (f)) ;                                     %#ok
 f = f (i) ;
@@ -48,7 +50,7 @@ clf
 
     for kk = 1:nmat
 
-        Prob = UFget (f (kk), index) ;
+        Prob = ssget (f (kk), index) ;
 
         waitbar (kk/nmat, h) ;
 

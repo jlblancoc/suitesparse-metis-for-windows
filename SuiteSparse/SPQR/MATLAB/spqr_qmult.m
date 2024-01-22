@@ -7,6 +7,11 @@ function Y = spqr_qmult (H,X,method)                                        %#ok
 %   method = 2: Y = X*Q'
 %   method = 3: Y = X*Q
 %
+% where Q is the struct from [Q,R,E] = spqr (A,opts) with
+% opts.Q = 'Householder'.  The struct Q always represents a square
+% orthonormal matrix, regardless of opts.econ.  spqr_qmult applies this
+% square matrix to compute Y.
+%
 % Example:
 %   These two examples both compute the min-norm solution to an
 %   under determined system, but the latter is much more efficient:
@@ -18,7 +23,8 @@ function Y = spqr_qmult (H,X,method)                                        %#ok
 %
 % See also SPQR, SPQR_SOLVE, QR, MTIMES
 
-% Copyright 2008, Timothy A. Davis, http://www.suitesparse.com
+% SPQR, Copyright (c) 2008-2022, Timothy A Davis. All Rights Reserved.
+% SPDX-License-Identifier: GPL-2.0+
 
 help spqr_qmult
 error ('spqr_qmult mexFunction not found') ;

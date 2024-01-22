@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_mem_alloc_head_block ============================================= */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_alloc_head_block: allocate memory from Numeric->memory
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /* The UMF_mem_* routines manage the Numeric->Memory memory space. */
 
@@ -15,7 +15,7 @@
 #include "umf_internal.h"
 #include "umf_mem_alloc_head_block.h"
 
-GLOBAL Int UMF_mem_alloc_head_block
+Int UMF_mem_alloc_head_block
 (
     NumericType *Numeric,
     Int nunits

@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_ltsolve ========================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_ltsolve: solve L'x=b
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /*  Solves L'x = b or L.'x=b, where L is the lower triangular factor of a */
 /*  matrix.  B is overwritten with the solution X. */
@@ -14,7 +14,7 @@
 #include "umf_internal.h"
 #include "umf_ltsolve.h"
 
-GLOBAL double
+double
 #ifdef CONJUGATE_SOLVE
 UMF_lhsolve			/* solve L'x=b  (complex conjugate transpose) */
 #else

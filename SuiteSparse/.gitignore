@@ -95,6 +95,8 @@ SPQR/Demo/gpu_results.txt
 SPQR/Demo/qrdemo_gpu
 SPQR/Demo/qrdemo_gpu2
 SPQR/Demo/qrdemo_gpu3
+SPQR/Demo/pfile
+SPQR/Demo/tfile
 UMFPACK/Demo/numeric.umf
 UMFPACK/Demo/symbolic.umf
 UMFPACK/Demo/umfpack_di_demo
@@ -125,6 +127,7 @@ CSparse/Tcov/cov.sort
 CSparse/Tcov/cover.out
 CSparse/Tcov/covs.out
 CSparse/Tcov/cs_*.c
+CSparse/Tcov/csparse_version.c
 CSparse/Tcov/cstcov_test
 CSparse/Tcov/*.out
 CSparse/Tcov/cs_demo1
@@ -136,10 +139,7 @@ CXSparse/Tcov/cov.sort
 CXSparse/Tcov/cover.out
 CXSparse/Tcov/covs.out
 CXSparse/Tcov/cs_*.c
-CXSparse/Tcov/cs*_ci.c
-CXSparse/Tcov/cs*_cl.c
-CXSparse/Tcov/cs*_di.c
-CXSparse/Tcov/cs*_dl.c
+CXSparse/Tcov/cxsparse_version.c
 CXSparse/Tcov/*.out
 CXSparse/Tcov/cs_demo1_ci
 CXSparse/Tcov/cs_demo1_cl
@@ -170,7 +170,9 @@ SPQR/Tcov/gpu_results.txt
 SPQR/Tcov/gpuqrengine_demo
 SPQR/Tcov/qrdemo_gpu
 SPQR/Tcov/qrtest
+SPQR/Tcov/qrtest32
 SPQR/Tcov/qrtest_out.txt
+SPQR/Tcov/qrtest_out32.txt
 SPQR/Tcov/troll.m
 SPQR/Tcov/cov.out
 
@@ -180,7 +182,7 @@ UMFPACK/Tcov/cover.out
 # ignore these specific files in the Package/MATLAB directories
 MATLAB_Tools/spqr_rank/save_samples_demo_spqr_rank.mat
 CXSparse/MATLAB/CSparse/cs_cl_*.c
-CXSparse/MATLAB/Test/cs_*.c
+CXSparse/MATLAB/Test/cs_cl_*.c
 
 RBio/Tcov/RBdemo
 RBio/Tcov/RBdemo.c

@@ -1,16 +1,18 @@
-/* ========================================================================== */
-/* === BTF package ========================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// BTF/Include/btf.h: include file for BTF
+//------------------------------------------------------------------------------
+
+// BTF, Copyright (c) 2004-2024, University of Florida.  All Rights Reserved.
+// Author: Timothy A. Davis.
+// SPDX-License-Identifier: LGPL-2.1+
+
+//------------------------------------------------------------------------------
 
 /* BTF_MAXTRANS:  find a column permutation Q to give A*Q a zero-free diagonal
  * BTF_STRONGCOMP:  find a symmetric permutation P to put P*A*P' into block
  *      upper triangular form.
  * BTF_ORDER: do both of the above (btf_maxtrans then btf_strongcomp).
- *
- * By Tim Davis.  Copyright (c) 2004-2007, University of Florida.
- * with support from Sandia National Laboratories.  All Rights Reserved.
  */
-
 
 /* ========================================================================== */
 /* === BTF_MAXTRANS ========================================================= */
@@ -88,20 +90,20 @@
 #ifndef _BTF_H
 #define _BTF_H
 
+#include "SuiteSparse_config.h"
+
 /* make it easy for C++ programs to include BTF */
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "SuiteSparse_config.h"
-
-int btf_maxtrans    /* returns # of columns matched */
+int32_t btf_maxtrans    /* returns # of columns matched */
 (
     /* --- input, not modified: --- */
-    int nrow,       /* A is nrow-by-ncol in compressed column form */
-    int ncol,
-    int Ap [ ],     /* size ncol+1 */
-    int Ai [ ],     /* size nz = Ap [ncol] */
+    int32_t nrow,   /* A is nrow-by-ncol in compressed column form */
+    int32_t ncol,
+    int32_t Ap [ ], /* size ncol+1 */
+    int32_t Ai [ ], /* size nz = Ap [ncol] */
     double maxwork, /* maximum amount of work to do is maxwork*nnz(A); no limit
                      * if <= 0 */
 
@@ -110,17 +112,17 @@ int btf_maxtrans    /* returns # of columns matched */
                      * reached the maximum of maxwork*nnz(A).
                      * Otherwise, work = the total work performed. */
 
-    int Match [ ],  /* size nrow.  Match [i] = j if column j matched to row i
+    int32_t Match [ ], /* size nrow. Match [i] = j if column j matched to row i
                      * (see above for the singular-matrix case) */
 
     /* --- workspace, not defined on input or output --- */
-    int Work [ ]    /* size 5*ncol */
+    int32_t Work [ ]    /* size 5*ncol */
 ) ;
 
-/* long integer version (all "int" parameters become "SuiteSparse_long") */
-SuiteSparse_long btf_l_maxtrans (SuiteSparse_long, SuiteSparse_long,
-    SuiteSparse_long *, SuiteSparse_long *, double, double *,
-    SuiteSparse_long *, SuiteSparse_long *) ;
+/* int64_t integer version */
+int64_t btf_l_maxtrans (int64_t, int64_t,
+    int64_t *, int64_t *, double, double *,
+    int64_t *, int64_t *) ;
 
 
 /* ========================================================================== */
@@ -145,29 +147,29 @@ SuiteSparse_long btf_l_maxtrans (SuiteSparse_long, SuiteSparse_long,
  * number of strongly connected components found.
  */
 
-int btf_strongcomp  /* return # of strongly connected components */
+int32_t btf_strongcomp  /* return # of strongly connected components */
 (
     /* input, not modified: */
-    int n,          /* A is n-by-n in compressed column form */
-    int Ap [ ],     /* size n+1 */
-    int Ai [ ],     /* size nz = Ap [n] */
+    int32_t n,      /* A is n-by-n in compressed column form */
+    int32_t Ap [ ], /* size n+1 */
+    int32_t Ai [ ], /* size nz = Ap [n] */
 
     /* optional input, modified (if present) on output: */
-    int Q [ ],      /* size n, input column permutation */
+    int32_t Q [ ],  /* size n, input column permutation */
 
     /* output, not defined on input */
-    int P [ ],      /* size n.  P [k] = j if row and column j are kth row/col
+    int32_t P [ ],  /* size n.  P [k] = j if row and column j are kth row/col
                      * in permuted matrix. */
 
-    int R [ ],      /* size n+1.  block b is in rows/cols R[b] ... R[b+1]-1 */
+    int32_t R [ ],  /* size n+1.  block b is in rows/cols R[b] ... R[b+1]-1 */
 
     /* workspace, not defined on input or output */
-    int Work [ ]    /* size 4n */
+    int32_t Work [ ]    /* size 4n */
 ) ;
 
-SuiteSparse_long btf_l_strongcomp (SuiteSparse_long, SuiteSparse_long *,
-    SuiteSparse_long *, SuiteSparse_long *, SuiteSparse_long *,
-    SuiteSparse_long *, SuiteSparse_long *) ;
+int64_t btf_l_strongcomp (int64_t, int64_t *,
+    int64_t *, int64_t *, int64_t *,
+    int64_t *, int64_t *) ;
 
 
 /* ========================================================================== */
@@ -193,30 +195,38 @@ SuiteSparse_long btf_l_strongcomp (SuiteSparse_long, SuiteSparse_long *,
  * number of strongly connected components found.
  */
 
-int btf_order       /* returns number of blocks found */
+int32_t btf_order       /* returns number of blocks found */
 (
     /* --- input, not modified: --- */
-    int n,          /* A is n-by-n in compressed column form */
-    int Ap [ ],     /* size n+1 */
-    int Ai [ ],     /* size nz = Ap [n] */
+    int32_t n,      /* A is n-by-n in compressed column form */
+    int32_t Ap [ ], /* size n+1 */
+    int32_t Ai [ ], /* size nz = Ap [n] */
     double maxwork, /* do at most maxwork*nnz(A) work in the maximum
                      * transversal; no limit if <= 0 */
 
     /* --- output, not defined on input --- */
     double *work,   /* return value from btf_maxtrans */
-    int P [ ],      /* size n, row permutation */
-    int Q [ ],      /* size n, column permutation */
-    int R [ ],      /* size n+1.  block b is in rows/cols R[b] ... R[b+1]-1 */
-    int *nmatch,    /* # nonzeros on diagonal of P*A*Q */
+    int32_t P [ ],  /* size n, row permutation */
+    int32_t Q [ ],  /* size n, column permutation */
+    int32_t R [ ],  /* size n+1.  block b is in rows/cols R[b] ... R[b+1]-1 */
+    int32_t *nmatch, /* # nonzeros on diagonal of P*A*Q */
 
     /* --- workspace, not defined on input or output --- */
-    int Work [ ]    /* size 5n */
+    int32_t Work [ ] /* size 5n */
 ) ;
 
-SuiteSparse_long btf_l_order (SuiteSparse_long, SuiteSparse_long *,
-    SuiteSparse_long *, double , double *, SuiteSparse_long *,
-    SuiteSparse_long *, SuiteSparse_long *, SuiteSparse_long *,
-    SuiteSparse_long *) ;
+int64_t btf_l_order (int64_t, int64_t *, int64_t *, double , double *,
+    int64_t *, int64_t *, int64_t *, int64_t *, int64_t *) ;
+
+//------------------------------------------------------------------------------
+// btf_version: return BTF version
+//------------------------------------------------------------------------------
+
+void btf_version (int version [3]) ;
+
+#ifdef __cplusplus
+}
+#endif
 
 
 /* ========================================================================== */
@@ -247,21 +257,25 @@ SuiteSparse_long btf_l_order (SuiteSparse_long, SuiteSparse_long *,
  *
  * This also works during compile-time:
  *
- *      #if (BTF >= BTF_VERSION_CODE (1,2))
+ *      #if (BTF_VERSION >= BTF_VERSION_CODE (1,2))
  *          printf ("This is version 1.2 or later\n") ;
  *      #else
  *          printf ("This is an early version\n") ;
  *      #endif
  */
 
-#define BTF_DATE "May 4, 2016"
-#define BTF_VERSION_CODE(main,sub) ((main) * 1000 + (sub))
-#define BTF_MAIN_VERSION 1
-#define BTF_SUB_VERSION 2
-#define BTF_SUBSUB_VERSION 6
-#define BTF_VERSION BTF_VERSION_CODE(BTF_MAIN_VERSION,BTF_SUB_VERSION)
+#define BTF_DATE "Jan 10, 2024"
+#define BTF_MAIN_VERSION   2
+#define BTF_SUB_VERSION    3
+#define BTF_SUBSUB_VERSION 1
 
-#ifdef __cplusplus
-}
+#define BTF_VERSION_CODE(main,sub) SUITESPARSE_VER_CODE(main,sub)
+#define BTF_VERSION BTF_VERSION_CODE(2,3)
+
+#define BTF__VERSION SUITESPARSE__VERCODE(2,3,1)
+#if !defined (SUITESPARSE__VERSION) || \
+    (SUITESPARSE__VERSION < SUITESPARSE__VERCODE(7,5,0))
+#error "BTF 2.3.1 requires SuiteSparse_config 7.5.0 or later"
 #endif
+
 #endif

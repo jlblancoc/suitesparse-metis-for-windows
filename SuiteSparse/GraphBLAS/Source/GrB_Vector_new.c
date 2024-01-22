@@ -2,8 +2,8 @@
 // GrB_Vector_new: create a new vector
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@
 GrB_Info GrB_Vector_new     // create a new vector with no entries
 (
     GrB_Vector *v,          // handle of vector to create
-    const GrB_Type type,    // type of vector to create
+    GrB_Type type,          // type of vector to create
     GrB_Index n             // dimension is n-by-1
 )
 {
@@ -26,16 +26,15 @@ GrB_Info GrB_Vector_new     // create a new vector with no entries
     // check inputs
     //--------------------------------------------------------------------------
 
-    GB_WHERE ("GrB_Vector_new (&v, type, n)") ;
+    GB_WHERE1 ("GrB_Vector_new (&v, type, n)") ;
     GB_RETURN_IF_NULL (v) ;
     (*v) = NULL ;
     GB_RETURN_IF_NULL_OR_FAULTY (type) ;
 
-    if (n > GB_INDEX_MAX)
+    if (n > GB_NMAX)
     { 
         // problem too large
-        return (GB_ERROR (GrB_INVALID_VALUE, (GB_LOG,
-            "problem too large: n "GBu" exceeds "GBu, n, GB_INDEX_MAX))) ;
+        return (GrB_INVALID_VALUE) ;
     }
 
     //--------------------------------------------------------------------------
@@ -45,16 +44,10 @@ GrB_Info GrB_Vector_new     // create a new vector with no entries
     GrB_Info info ;
     int64_t vlen = (int64_t) n ;
 
-    // v is always non-hypersparse, but use the auto rule so that
-    // v->hyper_ratio is assigned from the global option.  This way, if the
-    // vector is ever typecast into a matrix, and used in a matrix computation,
-    // the hyper_ratio will propagate to the result matrix.  A vector will not
-    // use its hyper_ratio, since vdim == 1 ensures that v always remains
-    // non-hypersparse.
-
-    // *v == NULL ;                 // allocate a new header for v
-    GB_NEW ((GrB_Matrix *) v, type, vlen, 1, GB_Ap_calloc, true,
-        GB_AUTO_HYPER, GB_HYPER_DEFAULT, 1) ;
+    info = GB_new ((GrB_Matrix *) v, // new user header
+        type, vlen, 1, GB_Ap_calloc,
+        true,  // a GrB_Vector is always held by-column
+        GxB_SPARSE, GB_Global_hyper_switch_get ( ), 1) ;
     ASSERT (GB_IMPLIES (info == GrB_SUCCESS, GB_VECTOR_OK (*v))) ;
     return (info) ;
 }

@@ -1,12 +1,12 @@
-/* ========================================================================= */
-/* === AMD_info ============================================================ */
-/* ========================================================================= */
+//------------------------------------------------------------------------------
+// AMD/Source/amd_info: print output statistics for AMD
+//------------------------------------------------------------------------------
 
-/* ------------------------------------------------------------------------- */
-/* AMD, Copyright (c) Timothy A. Davis,					     */
-/* Patrick R. Amestoy, and Iain S. Duff.  See ../README.txt for License.     */
-/* email: DrTimothyAldenDavis@gmail.com                                      */
-/* ------------------------------------------------------------------------- */
+// AMD, Copyright (c) 1996-2022, Timothy A. Davis, Patrick R. Amestoy, and
+// Iain S. Duff.  All Rights Reserved.
+// SPDX-License-Identifier: BSD-3-clause
+
+//------------------------------------------------------------------------------
 
 /* User-callable.  Prints the output statistics for AMD.  See amd.h
  * for details.  If the Info array is not present, nothing is printed.
@@ -16,7 +16,7 @@
 
 #define PRI(format,x) { if (x >= 0) { SUITESPARSE_PRINTF ((format, x)) ; }}
 
-GLOBAL void AMD_info
+void AMD_info
 (
     double Info [ ]
 )

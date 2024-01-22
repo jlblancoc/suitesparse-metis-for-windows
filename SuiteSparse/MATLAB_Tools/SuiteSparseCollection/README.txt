@@ -1,5 +1,6 @@
-SuiteSparseCollection, Copyright 2007-2018, Timothy A. Davis,
-http://www.suitesparse.com
+SuiteSparseCollection, Copyright (c) 2006-2019, Timothy A Davis.
+All Rights Reserved.
+SPDX-License-Identifier: GPL-2.0+
 
 SuiteSparseCollection is a MATLAB toolbox for managing the SuiteSparse Matrix
 Collection.  If you are a MATLAB user of the collection, you would not normally
@@ -133,7 +134,7 @@ ssget/files directory should not be a symbolic link.
     save (Problem.name, 'Problem', '-v7.3') ;
 
     Move the new *.mat files into
-    backslash:/archive/davis/SuiteSparseCollection/mat/Group.
+    backslash:/raid/SuiteSparseCollection/html//mat/Group.
 
 5) Compute matrix statistics and extend the ss_index. Do this in MATLAB:
 

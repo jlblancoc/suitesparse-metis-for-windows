@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_triplet ========================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_triplet: convert triplet to CSC sparse matrix
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /*
     Not user callable.  Converts triplet input to column-oriented form.
@@ -22,15 +22,15 @@
 
 #ifdef DO_MAP
 #ifdef DO_VALUES
-GLOBAL Int UMF_triplet_map_x
+Int UMF_triplet_map_x
 #else
-GLOBAL Int UMF_triplet_map_nox
+Int UMF_triplet_map_nox
 #endif
 #else
 #ifdef DO_VALUES
-GLOBAL Int UMF_triplet_nomap_x
+Int UMF_triplet_nomap_x
 #else
-GLOBAL Int UMF_triplet_nomap_nox
+Int UMF_triplet_nomap_nox
 #endif
 #endif
 (

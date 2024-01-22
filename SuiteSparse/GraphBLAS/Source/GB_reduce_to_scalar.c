@@ -2,30 +2,50 @@
 // GB_reduce_to_scalar: reduce a matrix to a scalar
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
-// c = accum (c, reduce_to_scalar(A)), reduce entries in a matrix
-// to a scalar.  Not user-callable.  Does the work for GrB_*_reduce_TYPE,
-// both matrix and vector.  This funciton tolerates zombies and does not
-// delete them.  It does not tolerate pending tuples, so if they are present,
-// all zombies are deleted and all pending tuples are assembled.
+// JIT: done.
+
+// c = accum (c, reduce_to_scalar(A)), reduce entries in a matrix to a scalar.
+// Does the work for GrB_*_reduce_TYPE, both matrix and vector.
 
 // This function does not need to know if A is hypersparse or not, and its
 // result is the same if A is in CSR or CSC format.
 
-#include "GB.h"
+// This function is the only place in all of GraphBLAS where the identity value
+// of a monoid is required, but only in one special case: it is required to be
+// the return value of c when A has no entries.  The identity value is also
+// used internally, in the parallel methods below, to initialize a scalar value
+// in each task.  The methods could be rewritten to avoid the use of the
+// identity value.  Since this function requires it anyway, for the special
+// case when nvals(A) is zero, the existence of the identity value makes the
+// code a little simpler.
 
-GrB_Info GB_reduce_to_scalar    // twork = reduce_to_scalar (A)
+#include "GB_reduce.h"
+#include "GB_binop.h"
+#include "GB_stringify.h"
+#ifndef GBCOMPACT
+#include "GB_red__include.h"
+#endif
+#include "GB_monoid_shared_definitions.h"
+
+#define GB_FREE_ALL                 \
+{                                   \
+    GB_WERK_POP (F, bool) ;         \
+    GB_WERK_POP (W, GB_void) ;      \
+}
+
+GrB_Info GB_reduce_to_scalar    // z = reduce_to_scalar (A)
 (
     void *c,                    // result scalar
     const GrB_Type ctype,       // the type of scalar, c
-    const GrB_BinaryOp accum,   // for c = accum(c,twork)
-    const GrB_Monoid reduce,    // monoid to do the reduction
+    const GrB_BinaryOp accum,   // for c = accum(c,z)
+    const GrB_Monoid monoid,    // monoid to do the reduction
     const GrB_Matrix A,         // matrix to reduce
-    GB_Context Context
+    GB_Werk Werk
 )
 {
 
@@ -33,224 +53,366 @@ GrB_Info GB_reduce_to_scalar    // twork = reduce_to_scalar (A)
     // check inputs
     //--------------------------------------------------------------------------
 
-    // Zombies are an opaque internal detail of the GrB_Matrix data structure
-    // that do not depend on anything outside the matrix.  Thus, Table 2.4 of
-    // the GrapBLAS spec, version 1.1.0, does not require their deletion.
-    // Pending tuples are different, since they rely on another object outside
-    // the matrix: the pending operator, which might be user-defined.  Per
-    // Table 2.4, the user can expect that GrB_reduce applies the pending
-    // operator, which can then be deleted by the user.  Thus, if the pending
-    // operator is user-defined it must be applied here.  Assembling pending
-    // tuples requires zombies to be deleted first.  Note that if the pending
-    // operator is built-in, then the updates could in principle be skipped,
-    // but this could be done only if the reduce monoid is the same as the
-    // pending operator.
-
-    GB_WAIT_PENDING (A) ;
-    ASSERT (GB_ZOMBIES_OK (A)) ;       // Zombies are tolerated, and not deleted
-    GB_RETURN_IF_NULL_OR_FAULTY (reduce) ;
-    GB_RETURN_IF_FAULTY (accum) ;
+    GrB_Info info ;
+    GB_RETURN_IF_NULL_OR_FAULTY (monoid) ;
+    GB_RETURN_IF_FAULTY_OR_POSITIONAL (accum) ;
     GB_RETURN_IF_NULL (c) ;
+    GB_WERK_DECLARE (W, GB_void) ;
+    GB_WERK_DECLARE (F, bool) ;
 
-    ASSERT_OK (GB_check (ctype, "type of scalar c", GB0)) ;
-    ASSERT_OK (GB_check (reduce, "reduce for reduce_to_scalar", GB0)) ;
-    ASSERT_OK_OR_NULL (GB_check (accum, "accum for reduce_to_scalar", GB0)) ;
-    ASSERT_OK (GB_check (A, "A for reduce_to_scalar", GB0)) ;
+    ASSERT_TYPE_OK (ctype, "type of scalar c", GB0) ;
+    ASSERT_MONOID_OK (monoid, "monoid for reduce_to_scalar", GB0) ;
+    ASSERT_BINARYOP_OK_OR_NULL (accum, "accum for reduce_to_scalar", GB0) ;
+    ASSERT_MATRIX_OK (A, "A for reduce_to_scalar", GB0) ;
 
-    // check domains and dimensions for c = accum (c,twork)
-    GrB_Type ztype = reduce->op->ztype ;
-    GrB_Info info = GB_compatible (ctype, NULL, NULL, accum, ztype, Context) ;
-    if (info != GrB_SUCCESS)
-    { 
-        return (info) ;
-    }
+    // check domains and dimensions for c = accum (c,z)
+    GrB_Type ztype = monoid->op->ztype ;
+    GB_OK (GB_compatible (ctype, NULL, NULL, false, accum, ztype, Werk)) ;
 
-    // twork = reduce (twork,A) must be compatible
+    // z = monoid (z,A) must be compatible
     if (!GB_Type_compatible (A->type, ztype))
     { 
-        return (GB_ERROR (GrB_DOMAIN_MISMATCH, (GB_LOG,
-            "incompatible type for reduction operator z=%s(x,y):\n"
-            "input of type [%s]\n"
-            "cannot be typecast to reduction operator of type [%s]",
-            reduce->op->name, A->type->name, reduce->op->ztype->name))) ;
+        return (GrB_DOMAIN_MISMATCH) ;
     }
 
     //--------------------------------------------------------------------------
-    // scalar workspace
+    // assemble any pending tuples; zombies are OK
+    //--------------------------------------------------------------------------
+
+    GB_MATRIX_WAIT_IF_PENDING (A) ;
+    GB_BURBLE_DENSE (A, "(A %s) ") ;
+
+    ASSERT (GB_ZOMBIES_OK (A)) ;
+    ASSERT (GB_JUMBLED_OK (A)) ;
+    ASSERT (!GB_PENDING (A)) ;
+
+    //--------------------------------------------------------------------------
+    // get A
     //--------------------------------------------------------------------------
 
     int64_t asize = A->type->size ;
-    int64_t anz = GB_NNZ (A) ;
-    const int64_t *restrict Ai = A->i ;
-
     int64_t zsize = ztype->size ;
+    int64_t anz = GB_nnz_held (A) ;
+    ASSERT (anz >= A->nzombies) ;
 
-    char awork [zsize] ;
-    char twork [zsize] ;
+    // z = identity
+    GB_void z [GB_VLA(zsize)] ;
+    memcpy (z, monoid->identity, zsize) ;   // required, if nnz(A) is zero
 
     //--------------------------------------------------------------------------
-    // twork = reduce_to_scalar (A)
+    // z = reduce_to_scalar (A) on the GPU(s) or CPU
     //--------------------------------------------------------------------------
 
-    // twork = 0
-    memcpy (twork, reduce->identity, zsize) ;
+    info = GrB_NO_VALUE ;
 
-    // reduce all the entries in the matrix, but skip any zombies
-
-    if (A->type == ztype)
+    #if defined ( GRAPHBLAS_HAS_CUDA )
+    if (GB_cuda_reduce_to_scalar_branch (monoid, A))
     {
 
         //----------------------------------------------------------------------
-        // sum up the entries; no casting needed
+        // via the CUDA kernel
         //----------------------------------------------------------------------
 
-        // There are 44 common cases of this function for built-in types and
-        // operators.  Four associative operators: min, max, plus, and times
-        // with 10 types (int*, uint*, float, and double), and three logical
-        // operators (or, and, xor, eq) with a boolean type of C.  All 44 are
-        // hard-coded below via a switch factory.  If the case is not handled
-        // by the switch factory, 'done' remains false.
+        GrB_Matrix V = NULL ;
+        info = GB_cuda_reduce_to_scalar_jit (z, &V, monoid, A) ;
 
-        // FUTURE: some operators can terminate early
-
-        bool done = false ;
-
-        // define the worker for the switch factory
-        #define GB_WORKER(type)                                             \
-        {                                                                   \
-            const type *restrict Ax = (type *) A->x ;                       \
-            type s ;                                                        \
-            memcpy (&s, twork, zsize) ;                                     \
-            if (A->nzombies == 0)                                           \
-            {                                                               \
-                for (int64_t p = 0 ; p < anz ; p++)                         \
-                {                                                           \
-                    /* s += A(i,j) */                                       \
-                    ASSERT (GB_IS_NOT_ZOMBIE (Ai [p])) ;                    \
-                    GB_DUP (s, Ax [p]) ;                                    \
-                }                                                           \
-            }                                                               \
-            else                                                            \
-            {                                                               \
-                for (int64_t p = 0 ; p < anz ; p++)                         \
-                {                                                           \
-                    /* s += A(i,j) if the entry is not a zombie */          \
-                    if (GB_IS_NOT_ZOMBIE (Ai [p])) GB_DUP (s, Ax [p]) ;     \
-                }                                                           \
-            }                                                               \
-            memcpy (twork, &s, zsize) ;                                     \
-            done = true ;                                                   \
-        }
-
-        //----------------------------------------------------------------------
-        // launch the switch factory
-        //----------------------------------------------------------------------
-
-        // If GBCOMPACT is defined, the switch factory is disabled and all
-        // work is done by the generic worker.  The compiled code will be more
-        // compact, but 3 to 4 times slower.
-
-        #ifndef GBCOMPACT
-
-            // controlled by opcode and typecode
-            GB_Opcode opcode = reduce->op->opcode ;
-            GB_Type_code typecode = A->type->code ;
-            ASSERT (typecode <= GB_UDT_code) ;
-            #include "GB_assoc_template.c"
-
-        #endif
-
-        //----------------------------------------------------------------------
-        // generic worker: sum up the entries, no typecasting
-        //----------------------------------------------------------------------
-
-        if (!done)
+        if (V != NULL)
         {
-            // the switch factory didn't handle this case
-            GxB_binary_function freduce = reduce->op->function ;
-            const GB_void *Ax = A->x ;
-            if (A->nzombies == 0)
+            // reduction must continue.  Result is in V, not the scalar z.
+            ASSERT (info == GrB_SUCCESS) ;
+            if (V->vlen == 1)
             {
-                for (int64_t p = 0 ; p < anz ; p++)
-                { 
-                    // twork += A(i,j)
-                    ASSERT (GB_IS_NOT_ZOMBIE (Ai [p])) ;
-                    // twork += Ax [p]
-                    freduce (twork, twork, Ax +(p*asize)) ; // (z x alias)
-                }
+                // the CUDA kernel has reduced A to a single scalar, V [0],
+                // with a single threadblock; no more recursion.  Copy the
+                // single scalar into z, for the accum phase below.
+                memcpy (z, V->x, zsize) ;
+                GB_Matrix_free (&V) ;
             }
             else
             {
-                for (int64_t p = 0 ; p < anz ; p++)
-                {
-                    // twork += A(i,j) if not a zombie
-                    if (GB_IS_NOT_ZOMBIE (Ai [p]))
-                    { 
-                        // twork += Ax [p]
-                        freduce (twork, twork, Ax +(p*asize)) ; // (z x alias)
-                    }
-                }
+                // the CUDA kernel has reduced A to an array V; keep going
+                info = GB_reduce_to_scalar (c, ctype, accum, monoid, V, Werk) ;
+                GB_Matrix_free (&V) ;
+                return (info) ;
             }
         }
+
+        // GB_cuda_reduce_to_scalar_jit may refuse to do the reduction and
+        // indicate this by returning GrB_NO_VALUE.  If so, the CPU will do it
+        // below.
+        if (!(info == GrB_SUCCESS || info == GrB_NO_VALUE))
+        {
+            // GB_cuda_reduce_to_scalar_jit has returned an error
+            // (out of memory, or other error)
+            return (info) ;
+        }
+
     }
-    else
+    #endif
+
+    if (info == GrB_NO_VALUE)
     {
 
         //----------------------------------------------------------------------
-        // generic worker: sum up the entries, with typecasting
+        // use OpenMP on the CPU threads
         //----------------------------------------------------------------------
 
-        GxB_binary_function freduce = reduce->op->function ;
-        GB_cast_function
-            cast_A_to_Z = GB_cast_factory (ztype->code, A->type->code) ;
+        int nthreads_max = GB_Context_nthreads_max ( ) ;
+        double chunk = GB_Context_chunk ( ) ;
+        int nthreads = GB_nthreads (anz, chunk, nthreads_max) ;
+        int ntasks = (nthreads == 1) ? 1 : (64 * nthreads) ;
+        ntasks = GB_IMIN (ntasks, anz) ;
+        ntasks = GB_IMAX (ntasks, 1) ;
 
-        const GB_void *Ax = A->x ;
-        if (A->nzombies == 0)
-        {
-            for (int64_t p = 0 ; p < anz ; p++)
-            { 
-                // twork += (ztype) A(i,j)
-                ASSERT (GB_IS_NOT_ZOMBIE (Ai [p])) ;
-                // awork = (ztype) Ax [p]
-                cast_A_to_Z (awork, Ax +(p*asize), zsize) ;
-                // twork += awork
-                freduce (twork, twork, awork) ; // (z x alias)
-            }
+        //----------------------------------------------------------------------
+        // allocate workspace
+        //----------------------------------------------------------------------
+
+        GB_WERK_PUSH (W, ntasks * zsize, GB_void) ;
+        GB_WERK_PUSH (F, ntasks, bool) ;
+        if (W == NULL || F == NULL)
+        { 
+            // out of memory
+            GB_FREE_ALL ;
+            return (GrB_OUT_OF_MEMORY) ;
         }
-        else
-        {
-            for (int64_t p = 0 ; p < anz ; p++)
-            {
-                // twork += (ztype) A(i,j) if not a zombie
-                if (GB_IS_NOT_ZOMBIE (Ai [p]))
-                { 
-                    // awork = (ztype) Ax [p]
-                    cast_A_to_Z (awork, Ax +(p*asize), zsize) ;
 
-                    // twork += awork
-                    freduce (twork, twork, awork) ;     // (z x alias)
+        //----------------------------------------------------------------------
+        // z = reduce_to_scalar (A)
+        //----------------------------------------------------------------------
+
+        // get terminal value, if any
+        GB_void *restrict zterminal = (GB_void *) monoid->terminal ;
+
+        if (anz == A->nzombies)
+        { 
+
+            //------------------------------------------------------------------
+            // no live entries in A; nothing to do
+            //------------------------------------------------------------------
+
+            info = GrB_SUCCESS ;
+
+        }
+        else if (A->iso)
+        { 
+
+            //------------------------------------------------------------------
+            // via the iso kernel
+            //------------------------------------------------------------------
+
+            // this takes at most O(log(nvals(A))) time, for any monoid
+            GB_reduce_to_scalar_iso (z, monoid, A) ;
+            info = GrB_SUCCESS ;
+
+        }
+        else if (A->type == ztype)
+        { 
+
+            //------------------------------------------------------------------
+            // via the factory kernel
+            //------------------------------------------------------------------
+
+            #ifndef GBCOMPACT
+            GB_IF_FACTORY_KERNELS_ENABLED
+            { 
+
+                //--------------------------------------------------------------
+                // define the worker for the switch factory
+                //--------------------------------------------------------------
+
+                #define GB_red(opname,aname) \
+                    GB (_red_ ## opname ## aname)
+
+                #define GB_RED_WORKER(opname,aname,ztype)                   \
+                {                                                           \
+                    info = GB_red (opname, aname) ((ztype *) z, A, W, F,    \
+                        ntasks, nthreads) ;                                 \
+                }                                                           \
+                break ;
+
+                //--------------------------------------------------------------
+                // launch the switch factory
+                //--------------------------------------------------------------
+
+                // controlled by opcode and typecode
+                GB_Opcode opcode = monoid->op->opcode ;
+                GB_Type_code typecode = A->type->code ;
+                ASSERT (typecode <= GB_UDT_code) ;
+
+                #include "GB_red_factory.c"
+            }
+            #endif
+        }
+
+        //----------------------------------------------------------------------
+        // via the JIT or PreJIT kernel
+        //----------------------------------------------------------------------
+
+        if (info == GrB_NO_VALUE)
+        { 
+            info = GB_reduce_to_scalar_jit (z, monoid, A, W, F, ntasks,
+                nthreads) ;
+        }
+
+        //----------------------------------------------------------------------
+        // via the generic kernel
+        //----------------------------------------------------------------------
+
+        if (info == GrB_NO_VALUE)
+        {
+
+            //------------------------------------------------------------------
+            // generic worker
+            //------------------------------------------------------------------
+
+            #include "GB_generic.h"
+
+            GxB_binary_function freduce = monoid->op->binop_function ;
+
+            // ztype z = identity
+            #define GB_DECLARE_IDENTITY(z)                          \
+                GB_void z [GB_VLA(zsize)] ;                         \
+                memcpy (z, monoid->identity, zsize) ;
+
+            // const zidentity = identity
+            #define GB_DECLARE_IDENTITY_CONST(z)                    \
+                const GB_void *z = monoid->identity ;
+
+            // const zterminal = terminal_value
+            #undef  GB_DECLARE_TERMINAL_CONST
+            #define GB_DECLARE_TERMINAL_CONST(zterminal)            \
+                const GB_void *zterminal = monoid->terminal ;
+
+            #define GB_A_TYPE GB_void
+
+            // no panel used
+            #define GB_PANEL 1
+            #define GB_NO_PANEL_CASE
+
+            // W [k] = z, no typecast
+            #define GB_COPY_SCALAR_TO_ARRAY(W, k, z)                \
+                memcpy (W +(k*zsize), z, zsize)
+
+            // z += W [k], no typecast
+            #define GB_ADD_ARRAY_TO_SCALAR(z,W,k)                   \
+                freduce (z, z, W +((k)*zsize))
+
+            if (A->type == ztype)
+            {
+
+                //--------------------------------------------------------------
+                // generic worker: sum up the entries, no typecasting
+                //--------------------------------------------------------------
+
+                GB_BURBLE_MATRIX (A, "(generic reduce to scalar: %s) ",
+                    monoid->op->name) ;
+
+                // the switch factory didn't handle this case
+
+                // t += (ztype) Ax [p], but no typecasting needed
+                #define GB_GETA_AND_UPDATE(t,Ax,p)                      \
+                    freduce (t, t, Ax +((p)*zsize))
+
+                if (zterminal == NULL)
+                { 
+                    // monoid is not terminal
+                    #undef  GB_MONOID_IS_TERMINAL
+                    #define GB_MONOID_IS_TERMINAL 0
+                    #undef  GB_TERMINAL_CONDITION
+                    #define GB_TERMINAL_CONDITION(z,zterminal) 0
+                    #undef  GB_IF_TERMINAL_BREAK
+                    #define GB_IF_TERMINAL_BREAK(z,zterminal)
+                    #include "GB_reduce_to_scalar_template.c"
+                }
+                else
+                { 
+                    // break if terminal value reached
+                    #undef  GB_MONOID_IS_TERMINAL
+                    #define GB_MONOID_IS_TERMINAL 1
+                    #undef  GB_TERMINAL_CONDITION
+                    #define GB_TERMINAL_CONDITION(z,zterminal)  \
+                            (memcmp (z, zterminal, zsize) == 0)
+                    #undef  GB_IF_TERMINAL_BREAK
+                    #define GB_IF_TERMINAL_BREAK(z,zterminal)   \
+                            if (GB_TERMINAL_CONDITION (z, zterminal)) break
+                    #include "GB_reduce_to_scalar_template.c"
+                }
+
+            }
+            else
+            {
+
+                //--------------------------------------------------------------
+                // generic worker: sum up the entries, with typecasting
+                //--------------------------------------------------------------
+
+                GB_BURBLE_MATRIX (A, "(generic reduce to scalar, with typecast:"
+                    " %s) ", monoid->op->name) ;
+
+                GB_cast_function
+                    cast_A_to_Z = GB_cast_factory (ztype->code, A->type->code) ;
+
+                // t += (ztype) Ax [p], with typecast
+                #undef  GB_GETA_AND_UPDATE
+                #define GB_GETA_AND_UPDATE(t,Ax,p)                      \
+                    GB_void awork [GB_VLA(zsize)] ;                     \
+                    cast_A_to_Z (awork, Ax +((p)*asize), asize) ;       \
+                    freduce (t, t, awork)
+
+                if (zterminal == NULL)
+                { 
+                    // monoid is not terminal
+                    #undef  GB_MONOID_IS_TERMINAL
+                    #define GB_MONOID_IS_TERMINAL 0
+                    #undef  GB_TERMINAL_CONDITION
+                    #define GB_TERMINAL_CONDITION(z,zterminal) 0
+                    #undef  GB_IF_TERMINAL_BREAK
+                    #define GB_IF_TERMINAL_BREAK
+                    #include "GB_reduce_to_scalar_template.c"
+                }
+                else
+                { 
+                    // break if terminal value reached
+                    #undef  GB_MONOID_IS_TERMINAL
+                    #define GB_MONOID_IS_TERMINAL 1
+                    #undef  GB_TERMINAL_CONDITION
+                    #define GB_TERMINAL_CONDITION(z,zterminal)  \
+                            (memcmp (z, zterminal, zsize) == 0)
+                    #undef  GB_IF_TERMINAL_BREAK
+                    #define GB_IF_TERMINAL_BREAK(z,zterminal)   \
+                            if (GB_TERMINAL_CONDITION (z, zterminal)) break
+                    #include "GB_reduce_to_scalar_template.c"
                 }
             }
+            info = GrB_SUCCESS ;
         }
     }
 
+    if (info != GrB_SUCCESS)
+    { 
+        // out of memory, or other error
+        GB_FREE_ALL ;
+        return (info) ;
+    }
+
     //--------------------------------------------------------------------------
-    // c = twork or c = accum (c,twork)
+    // c = z or c = accum (c,z)
     //--------------------------------------------------------------------------
 
-    // This operation does not use GB_accum_mask, since c and twork are
+    // This operation does not use GB_accum_mask, since c and z are
     // scalars, not matrices.  There is no scalar mask.
 
     if (accum == NULL)
     { 
-        // c = (ctype) twork
+        // c = (ctype) z
         GB_cast_function
             cast_Z_to_C = GB_cast_factory (ctype->code, ztype->code) ;
-        cast_Z_to_C (c, twork, ctype->size) ;
+        cast_Z_to_C (c, z, ctype->size) ;
     }
     else
     { 
-        GxB_binary_function faccum = accum->function ;
+        GxB_binary_function faccum = accum->binop_function ;
 
         GB_cast_function cast_C_to_xaccum, cast_Z_to_yaccum, cast_zaccum_to_C ;
         cast_C_to_xaccum = GB_cast_factory (accum->xtype->code, ctype->code) ;
@@ -258,15 +420,15 @@ GrB_Info GB_reduce_to_scalar    // twork = reduce_to_scalar (A)
         cast_zaccum_to_C = GB_cast_factory (ctype->code, accum->ztype->code) ;
 
         // scalar workspace
-        char xaccum [accum->xtype->size] ;
-        char yaccum [accum->ytype->size] ;
-        char zaccum [accum->ztype->size] ;
+        GB_void xaccum [GB_VLA(accum->xtype->size)] ;
+        GB_void yaccum [GB_VLA(accum->ytype->size)] ;
+        GB_void zaccum [GB_VLA(accum->ztype->size)] ;
 
         // xaccum = (accum->xtype) c
         cast_C_to_xaccum (xaccum, c, ctype->size) ;
 
-        // yaccum = (accum->ytype) twork
-        cast_Z_to_yaccum (yaccum, twork, zsize) ;
+        // yaccum = (accum->ytype) z
+        cast_Z_to_yaccum (yaccum, z, zsize) ;
 
         // zaccum = xaccum "+" yaccum
         faccum (zaccum, xaccum, yaccum) ;
@@ -275,6 +437,12 @@ GrB_Info GB_reduce_to_scalar    // twork = reduce_to_scalar (A)
         cast_zaccum_to_C (c, zaccum, ctype->size) ;
     }
 
+    //--------------------------------------------------------------------------
+    // free workspace and return result
+    //--------------------------------------------------------------------------
+
+    GB_FREE_ALL ;
+    #pragma omp flush
     return (GrB_SUCCESS) ;
 }
 

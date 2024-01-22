@@ -4,7 +4,9 @@ function test2 (nmat)
 %   test2
 % See also klu
 
-% Copyright 2004-2012, University of Florida
+% KLU, Copyright (c) 2004-2022, University of Florida.  All Rights Reserved.
+% Authors: Timothy A. Davis and Ekanathan Palamadai.
+% SPDX-License-Identifier: LGPL-2.1+
 
 clear functions
 % rand ('state', 0) ;
@@ -12,7 +14,7 @@ clear functions
 % warning ('off', 'MATLAB:nearlySingularMatrix') ;
 % warning ('off', 'MATLAB:divideByZero') ;
 
-index = UFget ;
+index = ssget ;
 f = find (index.nrows == index.ncols) ;
 [ignore i] = sort (index.nnz (f)) ;                                         %#ok
 f = f (i) ;
@@ -43,7 +45,7 @@ clf
 
     for kk = 1:nmat
 
-        Prob = UFget (f (kk), index) ;
+        Prob = ssget (f (kk), index) ;
 
         waitbar (kk/nmat, h) ;
 
@@ -155,12 +157,14 @@ clf
             end
 
             lumax = max (LUnz (1:k)) ;
-            loglog (...
-                LUnz (1:k), Tmatlab (1:k) ./ Tklu (1:k), 'o', ...
-                LUnz (1:k), Tcsparse (1:k) ./ Tklu (1:k), 'x', ...
-                [20 lumax], [1 1], 'r-') ;
-            axis ([20 lumax .1 20]) ;
-            drawnow
+            if (k > 1)
+                loglog (...
+                    LUnz (1:k), Tmatlab (1:k) ./ Tklu (1:k), 'o', ...
+                    LUnz (1:k), Tcsparse (1:k) ./ Tklu (1:k), 'x', ...
+                    [20 lumax], [1 1], 'r-') ;
+                axis ([sort([20 lumax]) .1 20]) ;
+                drawnow
+            end
 
             fprintf ('err %g %g %g\n', err, er2, erc) ;
         end

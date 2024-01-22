@@ -2,8 +2,8 @@
 // GB_mex_Matrix_subref: C=A(I,J)
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
@@ -13,9 +13,9 @@
 
 #define FREE_ALL                        \
 {                                       \
-    GB_MATRIX_FREE (&A) ;               \
-    GB_MATRIX_FREE (&C) ;               \
-    GB_mx_put_global (true, 0) ;        \
+    GrB_Matrix_free_(&A) ;              \
+    GrB_Matrix_free_(&C) ;              \
+    GB_mx_put_global (true) ;           \
 }
 
 void mexFunction
@@ -26,16 +26,17 @@ void mexFunction
     const mxArray *pargin [ ]
 )
 {
+    struct GB_Matrix_opaque C_header ;
+    GrB_Matrix C = GB_clear_static_header (&C_header) ;
 
     bool malloc_debug = GB_mx_get_global (true) ;
     GrB_Matrix A = NULL ;
-    GrB_Matrix C = NULL ;
     GrB_Index *I = NULL, ni = 0, I_range [3] ;
     GrB_Index *J = NULL, nj = 0, J_range [3] ;
     bool ignore ;
 
     // check inputs
-    GB_WHERE (USAGE) ;
+    GB_WERK (USAGE) ;
     if (nargout > 1 || nargin != 3)
     {
         mexErrMsgTxt ("Usage: " USAGE) ;
@@ -66,11 +67,10 @@ void mexFunction
         mexErrMsgTxt ("J failed") ;
     }
 
-    // C = A(I,J)
-    METHOD (GB_subref_numeric (&C, true /* CSC */, A, I, ni, J, nj, true,
-        Context)) ;
+    // C = A(I,J), numeric not symbolic
+    METHOD (GB_subref (C, C->iso, true, A, I, ni, J, nj, false, Werk)) ;
 
-    // return C to MATLAB
+    // return C
     pargout [0] = GB_mx_Matrix_to_mxArray (&C, "C subref result", false) ;
 
     FREE_ALL ;

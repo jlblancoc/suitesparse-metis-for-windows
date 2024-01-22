@@ -1,11 +1,11 @@
-/* ========================================================================== */
-/* === UMF_analyze ========================================================== */
-/* ========================================================================== */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_analyze: symbolic analysis
+//------------------------------------------------------------------------------
 
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
 
 /*
     Symbolic LL' factorization of A'*A, to get upper bounds on the size of
@@ -32,7 +32,7 @@
 
 /* ========================================================================== */
 
-GLOBAL Int UMF_analyze
+Int UMF_analyze
 (
     Int n_row,		/* A is n_row-by-n_col */
     Int n_col,
@@ -90,7 +90,7 @@ GLOBAL Int UMF_analyze
     /* ==== initializations ================================================= */
     /* ====================================================================== */
 
-#pragma ivdep
+UMFPACK_IVDEP
     for (j = 0 ; j < n_col ; j++)
     {
 	Link [j] = EMPTY ;
@@ -577,7 +577,7 @@ GLOBAL Int UMF_analyze
 	k = 0 ;
 	/* Pragma added May 14, 2003.  The Intel compiler icl 6.0 (an old
 	 * version) incorrectly vectorizes this loop. */
-#pragma novector
+UMFPACK_NOVECTOR
 	for (j = 0 ; j < n_col ; j++)
 	{
 	    if (Front_npivcol [j] > 0)

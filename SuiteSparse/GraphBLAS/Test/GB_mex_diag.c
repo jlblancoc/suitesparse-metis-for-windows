@@ -1,13 +1,14 @@
 //------------------------------------------------------------------------------
-// GB_mex_diag: compute C=diag(A,1)
+// GB_mex_diag: compute C=diag(A,k)
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 // C = diag (A,k), where A and C are double
+// C is a matrix the same size as A, not a vector.
 
 #include "GB_mex.h"
 
@@ -15,9 +16,10 @@
 
 #define FREE_ALL                        \
 {                                       \
-    GB_MATRIX_FREE (&A) ;               \
-    GB_MATRIX_FREE (&C) ;               \
-    GB_mx_put_global (true, 0) ;        \
+    GrB_Scalar_free_(&Thunk) ;          \
+    GrB_Matrix_free_(&A) ;              \
+    GrB_Matrix_free_(&C) ;              \
+    GB_mx_put_global (true) ;           \
 }
 
 
@@ -32,9 +34,9 @@ void mexFunction
 
     bool malloc_debug = GB_mx_get_global (true) ;
     GrB_Matrix A = NULL, C = NULL ;
+    GrB_Scalar Thunk = NULL ;
 
     // check inputs
-    GB_WHERE (USAGE) ;
     if (nargout > 1 || nargin < 1 || nargin > 2)
     {
         mexErrMsgTxt ("Usage: " USAGE) ;
@@ -58,9 +60,6 @@ void mexFunction
         k = (int64_t) mxGetScalar (pargin [1]) ;
     }
 
-    #define GET_DEEP_COPY ;
-    #define FREE_DEEP_COPY ;
-
     // construct C
     METHOD (GrB_Matrix_new (&C, GrB_FP64, A->vlen, A->vdim)) ;
 
@@ -68,12 +67,16 @@ void mexFunction
     #undef FREE_DEEP_COPY
 
     #define GET_DEEP_COPY  GrB_Matrix_new (&C, GrB_FP64, A->vlen, A->vdim) ;
-    #define FREE_DEEP_COPY GrB_free (&C) ;
+    #define FREE_DEEP_COPY GrB_Matrix_free_(&C) ;
+
+    GrB_Scalar_new (&Thunk, GrB_INT64) ;
+    GrB_Scalar_setElement_INT64_(Thunk, k) ;
+    GrB_Scalar_wait_(Thunk, GrB_MATERIALIZE) ;
 
     // C = diag (A,k)
-    METHOD (GxB_Matrix_select (C, NULL, NULL, GxB_DIAG, A, &k, NULL)) ;
+    METHOD (GxB_Matrix_select_(C, NULL, NULL, GxB_DIAG, A, Thunk, NULL)) ;
 
-    // return C to MATLAB as a regular MATLAB sparse matrix
+    // return C as a regular built-in sparse matrix
     pargout [0] = GB_mx_Matrix_to_mxArray (&C, "C diag", false) ;
 
     FREE_ALL ;

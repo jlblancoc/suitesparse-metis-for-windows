@@ -1,13 +1,13 @@
 function w = GB_spec_vxm (w, mask, accum, semiring, u, A, descriptor)
-%GB_SPEC_VXM a MATLAB mimic of GrB_vxm
+%GB_SPEC_VXM a mimic of GrB_vxm
 %
 % Usage:
 % w = GB_spec_vxm (w, mask, accum, semiring, u, A, descriptor)
 %
 % w, mask, and u are column vectors.  Computes w'=u'*A or w'=u'*A'
 
-% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-% http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+% SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+% SPDX-License-Identifier: Apache-2.0
 
 if (nargout > 1 || nargin ~= 7)
     error ('usage: w = GB_spec_vxm (w, mask, accum, semiring, u, A, descriptor)') ;
@@ -21,12 +21,12 @@ end
 % The transformation of the problem in the C implementation is the same as
 % simply doing the transpose of u and w and leaving the descriptor unchanged.
 % Then the inputs to the multiply operator are used as-is and not flipped.
-% This simpler method is used in this MATLAB mimic.
+% This simpler method is used in this mimic.
 
 % make sure u is a column vector on input, then transpose it
 if (isstruct (u))
     n = size (u.matrix, 2) ;
-    u.matrix = u.matrix' ;
+    u.matrix = u.matrix.' ;
     u.pattern = u.pattern' ;
 else
     n = size (u, 2);
@@ -39,7 +39,7 @@ end
 % make sure w is a column vector on input, then transpose it
 if (isstruct (w))
     n = size (w.matrix, 2) ;
-    w.matrix = w.matrix' ;
+    w.matrix = w.matrix.' ;
     w.pattern = w.pattern' ;
 else
     n = size (w, 2);
@@ -60,6 +60,6 @@ end
 w = GB_spec_mxm (w, mask, accum, semiring, u, A, descriptor) ;
 
 % transpose w back into a column vector
-w.matrix = w.matrix' ;
+w.matrix = w.matrix.' ;
 w.pattern = w.pattern' ;
 

@@ -1,9 +1,13 @@
-/* -------------------------------------------------------------------------- */
-/* Copyright (c) 2005-2012 by Timothy A. Davis, http://www.suitesparse.com.   */
-/* All Rights Reserved.  See ../Doc/License.txt for License.                  */
-/* -------------------------------------------------------------------------- */
+//------------------------------------------------------------------------------
+// UMFPACK/Source/umf_singletons.h
+//------------------------------------------------------------------------------
 
-GLOBAL Int UMF_singletons
+// UMFPACK, Copyright (c) 2005-2023, Timothy A. Davis, All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0+
+
+//------------------------------------------------------------------------------
+
+Int UMF_singletons
 (
     Int n_row,
     Int n_col,

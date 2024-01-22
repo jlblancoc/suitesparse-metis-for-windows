@@ -2,51 +2,31 @@
 // GB_free_memory: wrapper for free
 //------------------------------------------------------------------------------
 
-// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2018, All Rights Reserved.
-// http://suitesparse.com   See GraphBLAS/Doc/License.txt for license.
+// SuiteSparse:GraphBLAS, Timothy A. Davis, (c) 2017-2023, All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 //------------------------------------------------------------------------------
 
 // A wrapper for free.  If p is NULL on input, it is not freed.
 
-// By default, GB_FREE is defined in GB.h as free.  For a MATLAB mexFunction,
-// it is mxFree.  It can also be defined at compile time with
-// -DGB_FREE=myfreefunc.
+// The memory is freed using the free() function pointer passed in to GrB_init,
+// which is typically the ANSI C free function.
 
 #include "GB.h"
 
-void GB_free_memory
-(
-    void *p                 // pointer to allocated block of memory to free
-    #ifdef GB_MALLOC_TRACKING
-    , size_t nitems         // number of items to free
-    , size_t size_of_item   // sizeof each item
-    #endif
-)
+GB_CALLBACK_FREE_MEMORY_PROTO (GB_free_memory)
 {
-    if (p != NULL)
+    if (p != NULL && (*p) != NULL)
     { 
-
-        #ifdef GB_MALLOC_TRACKING
-        {
-            // at least one item is always allocated
-            nitems = GB_IMAX (1, nitems) ;
-            int nmalloc = --GB_Global.nmalloc ;
-            GB_Global.inuse -= nitems * size_of_item ;
-            #ifdef GB_PRINT_MALLOC
-            printf ("free:    %14p %3d %1d n "GBd" size "GBd"\n",
-                p, nmalloc, GB_Global.malloc_debug,
-                (int64_t) nitems, (int64_t) size_of_item) ;
-            if (nmalloc < 0)
-            {
-                printf ("%d free    %p negative mallocs!\n", nmalloc, p) ;
-            }
-            #endif
-            ASSERT (nmalloc >= 0) ;
-        }
+        ASSERT (size_allocated == GB_Global_memtable_size (*p)) ;
+        #ifdef GB_MEMDUMP
+        printf ("\nhard free %p %ld\n", *p, size_allocated) ;   // MEMDUMP
         #endif
-
-        GB_FREE (p) ;
+        GB_Global_free_function (*p) ;
+        #ifdef GB_MEMDUMP
+        GB_Global_memtable_dump ( ) ;
+        #endif
+        (*p) = NULL ;
     }
 }
 

@@ -92,27 +92,14 @@ function [Q,R,P,info] = spqr (A,arg2,arg3)                                  %#ok
 %   [Q,R,P]=spqr(A) where spqr finds P and Q is discarded instead). 'matrix'
 %   returns Q as a sparse matrix where A=Q*R or A*P=Q*R.  'Householder' returns
 %   Q as a struct containing the Householder reflections applied to A to obtain
-%   R, resulting in a far sparser Q than the 'matrix' option.  
+%   R, resulting in a far sparser Q than the 'matrix' option.  When returned as
+%   a struct, Q always represents a square orthonormal matrix, regardless of
+%   opts.econ.
 %
 %   opts.permutation: a string describing how P is to be returned.  The default
 %   is 'matrix', so that A*P=Q*R.  'vector' gives A(:,P)=Q*R instead.
 %
 %   opts.spumoni: acts just like spparms('spumoni',k).
-%
-%   opts.grain, opts.small, opts.nthreads: multitasking control (if compiled
-%   with TBB); the scheduler tries to ensure that all parallel tasks have at
-%   least max (total_flops / opts.grain, opts.small) flops.  No TBB parallelism
-%   is exploited if opts.grain = 1.  opts.nthreads gives the number of threads
-%   to use for TBB (which is different than the number of threads used by the
-%   BLAS).  opts.nthreads <= 0 means to let TBB determine the number of threads
-%   (normally equal to the number of cores); otherwise, use exactly
-%   opts.nthreads threads.  Defaults: 1, 1e6, and 0, respectively.  TBB is
-%   disabled by default since it conflicts with BLAS multithreading.  If you
-%   enable TBB, be sure to disable BLAS multithreading with
-%   maxNumCompThreads(1), or choose opts.nthreads * (number of BLAS threads)
-%   equal to the number of cores.  A good value of opts.grain is twice that of
-%   opts.nthreads.  If TBB parallelism is enabled, the METIS ordering normally
-%   gives the best speedup for large problems.
 %
 %   opts.solution: used by spqr_solve; 'basic' (default), or 'min2norm'.
 %   Determines the kind of solution that spqr_solve computes for
@@ -122,6 +109,7 @@ function [Q,R,P,info] = spqr (A,arg2,arg3)                                  %#ok
 % See also SPQR_QMULT, SPQR_SOLVE, LU, NULL, ORTH, QRDELETE, QRINSERT,
 % QRUPDATE, SPQR_SINGLETONS.
 
-% Copyright 2008, Timothy A. Davis, http://www.suitesparse.com
+% SPQR, Copyright (c) 2008-2022, Timothy A Davis. All Rights Reserved.
+% SPDX-License-Identifier: GPL-2.0+
 
 error ('spqr mexFunction not found') ;
