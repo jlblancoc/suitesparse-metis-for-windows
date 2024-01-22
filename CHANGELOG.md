@@ -1,4 +1,11 @@
 # Unreleased
+- Update SuiteSparse to 7.5.1 with embedded Metis [#125](https://github.com/jlblancoc/suitesparse-metis-for-windows/pull/125)
+  - fixes Metis based segmentation fault [#123](https://github.com/jlblancoc/suitesparse-metis-for-windows/issues/123)
+  - remove `SuiteSparse::metis` target as Metis is now a private dependency of `CHOLMOD` module
+  - remove option `METIS_DIR`
+  - always compile `SuiteSparse_config` with `-DNTIMER` disabling tic-toc support
+  - compile `CXSparse` without complex support
+  - remove SourceWrappers for `CHOLMOD` and `CXSparse` modules
 
 # Release 1.8.0: October 25th, 2023
 - Increase minimum required CMake version to v3.5 to prevent deprecation warnings [#117](https://github.com/jlblancoc/suitesparse-metis-for-windows/issues/117).
