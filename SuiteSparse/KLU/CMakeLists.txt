@@ -10,5 +10,5 @@ file(GLOB LIBHDRS "Include/*.h")
 file(GLOB LIBSRCS "SourceWrappers/*.c")
 
 declare_suitesparse_library(klu "${LIBSRCS}" "${LIBHDRS}"
-	TARGET_PUBLIC_LINK amd colamd btf
+    TARGET_PUBLIC_LINK amd colamd btf
 )

@@ -9,21 +9,23 @@ include_directories("${CCOLAMD_SOURCE_DIR}/Include")
 # Headers:
 file(GLOB LIBHDRS "${CHOLMOD_SOURCE_DIR}/Include/*.h")
 
-file ( GLOB CHOLMOD_SOURCES
+file(GLOB CHOLMOD_SOURCES
     "Check/cholmod_*.c"
     "Cholesky/cholmod_*.c"
     "Utility/cholmod_*.c"
     "MatrixOps/cholmod_*.c"
     "Modify/cholmod_*.c"
     "Partition/cholmod_*.c"
-    "Supernodal/cholmod_*.c" )
+    "Supernodal/cholmod_*.c"
+)
 
-include ( CheckTypeSize )
-check_type_size ( "ssize_t" SSIZE_T )
-if ( NOT HAVE_SSIZE_T )
+include(CheckTypeSize)
+check_type_size("ssize_t" SSIZE_T)
+
+if(NOT HAVE_SSIZE_T)
     # #include <sys/types.h> and ssize_t not defined (typically on Windows)
-    add_compile_definitions ( NO_SSIZE_T )
-endif ( )
+    add_compile_definitions(NO_SSIZE_T)
+endif()
 
 # METIS and the Partition module:
 if(BUILD_METIS)
@@ -35,22 +37,24 @@ if(BUILD_METIS)
     include_directories("${CMAKE_CURRENT_BINARY_DIR}") # include for modified metis.h
     include_directories("${CMAKE_CURRENT_BINARY_DIR}/SuiteSparse_metis/include")
 
-    #includes to make metis-wrapper work
+    # includes to make metis-wrapper work
     include_directories("${CHOLMOD_SOURCE_DIR}")
     include_directories("${CHOLMOD_SOURCE_DIR}/SuiteSparse_metis/GKlib")
+
     # add metis-wrapper to compiled files
     set(LIBHDRS ${LIBHDRS} "${CHOLMOD_SOURCE_DIR}/Partition/cholmod_metis_wrapper.h")
-    file ( GLOB CHOLMOD_SOURCES_PARTITION "Partition/cholmod_*.c")
+    file(GLOB CHOLMOD_SOURCES_PARTITION "Partition/cholmod_*.c")
     list(APPEND CHOLMOD_SOURCES ${CHOLMOD_SOURCES_PARTITION})
 else()
     add_compile_definitions(NPARTITION)
 endif()
+
 include_directories("${CHOLMOD_SOURCE_DIR}/Include")
 declare_suitesparse_library(cholmod "${CHOLMOD_SOURCES}" "${LIBHDRS}"
     TARGET_PRIVATE_LINK ${SuiteSparse_LINKER_LAPACK_BLAS_LIBS}
-    TARGET_PUBLIC_LINK  amd camd colamd ccolamd
+    TARGET_PUBLIC_LINK amd camd colamd ccolamd
 )
 
 if(WITH_CUDA)
-	target_link_libraries(cholmod ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES})
+    target_link_libraries(cholmod ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES})
 endif(WITH_CUDA)
